@@ -11,6 +11,6 @@ namespace Fintex.Investments
     {
         Task<MarketDataPoint> GetLatestAsync(string symbol, MarketDataProvider provider);
 
-        Task<List<MarketDataPoint>> GetRecentAsync(string symbol, int take);
+        Task<List<MarketDataPoint>> GetRecentAsync(string symbol, MarketDataProvider provider, int take);
     }
 }

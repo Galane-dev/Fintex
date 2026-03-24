@@ -79,15 +79,59 @@ namespace Fintex.Investments
 
         public decimal? StdDev { get; protected set; }
 
+        public decimal? Macd { get; protected set; }
+
+        public decimal? MacdSignal { get; protected set; }
+
+        public decimal? MacdHistogram { get; protected set; }
+
+        public decimal? Momentum { get; protected set; }
+
+        public decimal? RateOfChange { get; protected set; }
+
+        public decimal? BollingerUpper { get; protected set; }
+
+        public decimal? BollingerLower { get; protected set; }
+
+        public decimal? TrendScore { get; protected set; }
+
+        public decimal? ConfidenceScore { get; protected set; }
+
+        public MarketVerdict Verdict { get; protected set; }
+
         /// <summary>
         /// Adds the calculated indicator values to the market point.
         /// </summary>
-        public void ApplyIndicators(decimal? sma, decimal? ema, decimal? rsi, decimal? stdDev)
+        public void ApplyIndicators(
+            decimal? sma,
+            decimal? ema,
+            decimal? rsi,
+            decimal? stdDev,
+            decimal? macd,
+            decimal? macdSignal,
+            decimal? macdHistogram,
+            decimal? momentum,
+            decimal? rateOfChange,
+            decimal? bollingerUpper,
+            decimal? bollingerLower,
+            decimal? trendScore,
+            decimal? confidenceScore,
+            MarketVerdict verdict)
         {
             Sma = sma;
             Ema = ema;
             Rsi = rsi;
             StdDev = stdDev;
+            Macd = macd;
+            MacdSignal = macdSignal;
+            MacdHistogram = macdHistogram;
+            Momentum = momentum;
+            RateOfChange = rateOfChange;
+            BollingerUpper = bollingerUpper;
+            BollingerLower = bollingerLower;
+            TrendScore = trendScore;
+            ConfidenceScore = confidenceScore;
+            Verdict = verdict;
         }
 
         private static decimal EnsurePositive(decimal value, string name)

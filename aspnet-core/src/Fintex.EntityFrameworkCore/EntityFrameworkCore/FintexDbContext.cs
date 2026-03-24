@@ -101,6 +101,16 @@ namespace Fintex.EntityFrameworkCore
                 entity.Property(x => x.Ema).HasPrecision(18, 8);
                 entity.Property(x => x.Rsi).HasPrecision(18, 8);
                 entity.Property(x => x.StdDev).HasPrecision(18, 8);
+                entity.Property(x => x.Macd).HasPrecision(18, 8);
+                entity.Property(x => x.MacdSignal).HasPrecision(18, 8);
+                entity.Property(x => x.MacdHistogram).HasPrecision(18, 8);
+                entity.Property(x => x.Momentum).HasPrecision(18, 8);
+                entity.Property(x => x.RateOfChange).HasPrecision(18, 8);
+                entity.Property(x => x.BollingerUpper).HasPrecision(18, 8);
+                entity.Property(x => x.BollingerLower).HasPrecision(18, 8);
+                entity.Property(x => x.TrendScore).HasPrecision(10, 4);
+                entity.Property(x => x.ConfidenceScore).HasPrecision(10, 4);
+                entity.Property(x => x.Verdict).HasConversion<string>().HasMaxLength(16);
             });
         }
 

@@ -42,7 +42,7 @@ namespace Fintex.Investments.MarketData
         {
             using (var uow = _unitOfWorkManager.Begin())
             {
-                var recentPoints = await _marketDataPointRepository.GetRecentAsync(tick.Symbol, 60);
+                var recentPoints = await _marketDataPointRepository.GetRecentAsync(tick.Symbol, tick.Provider, 60);
                 recentPoints.Reverse();
 
                 var priceSeries = new List<decimal>(recentPoints.Select(x => x.Price)) { tick.Price };
@@ -63,7 +63,21 @@ namespace Fintex.Investments.MarketData
                     tick.Sequence,
                     tick.Timestamp);
 
-                point.ApplyIndicators(indicators.Sma, indicators.Ema, indicators.Rsi, indicators.StdDev);
+                point.ApplyIndicators(
+                    indicators.Sma,
+                    indicators.Ema,
+                    indicators.Rsi,
+                    indicators.StdDev,
+                    indicators.Macd,
+                    indicators.MacdSignal,
+                    indicators.MacdHistogram,
+                    indicators.Momentum,
+                    indicators.RateOfChange,
+                    indicators.BollingerUpper,
+                    indicators.BollingerLower,
+                    indicators.TrendScore,
+                    indicators.ConfidenceScore,
+                    indicators.Verdict);
 
                 await _marketDataPointRepository.InsertAsync(point);
                 await _unitOfWorkManager.Current.SaveChangesAsync();
@@ -90,6 +104,16 @@ namespace Fintex.Investments.MarketData
                     Ema = point.Ema,
                     Rsi = point.Rsi,
                     StdDev = point.StdDev,
+                    Macd = point.Macd,
+                    MacdSignal = point.MacdSignal,
+                    MacdHistogram = point.MacdHistogram,
+                    Momentum = point.Momentum,
+                    RateOfChange = point.RateOfChange,
+                    BollingerUpper = point.BollingerUpper,
+                    BollingerLower = point.BollingerLower,
+                    TrendScore = point.TrendScore,
+                    ConfidenceScore = point.ConfidenceScore,
+                    Verdict = point.Verdict,
                     Timestamp = point.Timestamp
                 });
 

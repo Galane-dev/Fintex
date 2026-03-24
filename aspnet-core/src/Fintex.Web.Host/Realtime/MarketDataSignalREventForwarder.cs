@@ -39,6 +39,16 @@ namespace Fintex.Web.Host.Realtime
                 eventData.Ema,
                 eventData.Rsi,
                 eventData.StdDev,
+                eventData.Macd,
+                eventData.MacdSignal,
+                eventData.MacdHistogram,
+                eventData.Momentum,
+                eventData.RateOfChange,
+                eventData.BollingerUpper,
+                eventData.BollingerLower,
+                eventData.TrendScore,
+                eventData.ConfidenceScore,
+                Verdict = eventData.Verdict.ToString(),
                 eventData.Timestamp
             };
 

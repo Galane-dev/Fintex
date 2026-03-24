@@ -159,6 +159,42 @@ namespace Fintex.Investments.Analytics
                 score += Math.Min(10m, smaDeviation * 2m);
             }
 
+            if (latestPoint.MacdHistogram.HasValue)
+            {
+                var macdOpposesTrade = trade.Direction == TradeDirection.Buy
+                    ? latestPoint.MacdHistogram.Value < 0m
+                    : latestPoint.MacdHistogram.Value > 0m;
+
+                if (macdOpposesTrade)
+                {
+                    score += 12m;
+                }
+            }
+
+            if (latestPoint.Momentum.HasValue)
+            {
+                var momentumOpposesTrade = trade.Direction == TradeDirection.Buy
+                    ? latestPoint.Momentum.Value < 0m
+                    : latestPoint.Momentum.Value > 0m;
+
+                if (momentumOpposesTrade)
+                {
+                    score += 8m;
+                }
+            }
+
+            if (latestPoint.RateOfChange.HasValue)
+            {
+                score += Math.Min(10m, Math.Abs(latestPoint.RateOfChange.Value) * 0.4m);
+            }
+
+            if (latestPoint.BollingerUpper.HasValue
+                && latestPoint.BollingerLower.HasValue
+                && (latestPoint.Price > latestPoint.BollingerUpper.Value || latestPoint.Price < latestPoint.BollingerLower.Value))
+            {
+                score += 6m;
+            }
+
             if (trade.UnrealizedProfitLoss < 0m)
             {
                 score += 10m;
@@ -192,8 +228,12 @@ namespace Fintex.Investments.Analytics
                 var trendIsSupportive = trade.Direction == TradeDirection.Buy
                     ? latestPoint.Price >= latestPoint.Ema.Value
                     : latestPoint.Price <= latestPoint.Ema.Value;
+                var macdIsSupportive = !latestPoint.MacdHistogram.HasValue
+                    || (trade.Direction == TradeDirection.Buy
+                        ? latestPoint.MacdHistogram.Value >= 0m
+                        : latestPoint.MacdHistogram.Value <= 0m);
 
-                if (trendIsSupportive)
+                if (trendIsSupportive && macdIsSupportive)
                 {
                     return TradeRecommendation.ScaleIn;
                 }
@@ -222,6 +262,32 @@ namespace Fintex.Investments.Analytics
             if (latestPoint.StdDev.HasValue)
             {
                 builder.AppendFormat(" StdDev={0:0.########}.", latestPoint.StdDev.Value);
+            }
+
+            if (latestPoint.Macd.HasValue && latestPoint.MacdSignal.HasValue)
+            {
+                builder.AppendFormat(
+                    " MACD={0:0.########}/{1:0.########}.",
+                    latestPoint.Macd.Value,
+                    latestPoint.MacdSignal.Value);
+            }
+
+            if (latestPoint.Momentum.HasValue)
+            {
+                builder.AppendFormat(" Momentum={0:0.########}.", latestPoint.Momentum.Value);
+            }
+
+            if (latestPoint.RateOfChange.HasValue)
+            {
+                builder.AppendFormat(" ROC={0:0.####}%.", latestPoint.RateOfChange.Value);
+            }
+
+            if (latestPoint.BollingerUpper.HasValue && latestPoint.BollingerLower.HasValue)
+            {
+                builder.AppendFormat(
+                    " Bollinger=[{0:0.########}, {1:0.########}].",
+                    latestPoint.BollingerLower.Value,
+                    latestPoint.BollingerUpper.Value);
             }
 
             if (behavioralInsight != null && !string.IsNullOrWhiteSpace(behavioralInsight.Summary))

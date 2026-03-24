@@ -34,6 +34,26 @@ namespace Fintex.Investments.Events
 
         public decimal? StdDev { get; set; }
 
+        public decimal? Macd { get; set; }
+
+        public decimal? MacdSignal { get; set; }
+
+        public decimal? MacdHistogram { get; set; }
+
+        public decimal? Momentum { get; set; }
+
+        public decimal? RateOfChange { get; set; }
+
+        public decimal? BollingerUpper { get; set; }
+
+        public decimal? BollingerLower { get; set; }
+
+        public decimal? TrendScore { get; set; }
+
+        public decimal? ConfidenceScore { get; set; }
+
+        public MarketVerdict Verdict { get; set; }
+
         public DateTime Timestamp { get; set; }
     }
 }

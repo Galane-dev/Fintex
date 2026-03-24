@@ -11,6 +11,10 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Abp.Castle.Log4Net" Version="10.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fintex.Core\Fintex.Core.csproj" />
