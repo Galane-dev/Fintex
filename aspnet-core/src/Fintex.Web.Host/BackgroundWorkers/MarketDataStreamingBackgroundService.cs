@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,9 +32,19 @@ namespace Fintex.Web.Host.BackgroundWorkers
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var tasks = new List<Task>();
-            foreach (var client in _streamClients)
+            var clients = _streamClients.ToList();
+            _logger.LogInformation("Market data background worker starting with {ClientCount} stream clients.", clients.Count);
+
+            if (clients.Count == 0)
             {
+                _logger.LogWarning("No market data stream clients were registered. Live ingestion will not run.");
+                return Task.CompletedTask;
+            }
+
+            var tasks = new List<Task>();
+            foreach (var client in clients)
+            {
+                _logger.LogInformation("Starting market data stream client {ClientName}.", client.GetType().Name);
                 tasks.Add(client.RunAsync(ProcessTickAsync, stoppingToken));
             }
 
@@ -48,6 +59,7 @@ namespace Fintex.Web.Host.BackgroundWorkers
                 {
                     var ingestionService = scope.ServiceProvider.GetRequiredService<IMarketDataIngestionService>();
                     await ingestionService.IngestAsync(tick, cancellationToken);
+                    _logger.LogDebug("Persisted market tick for {Symbol} from {Provider} at {Timestamp}.", tick.Symbol, tick.Provider, tick.Timestamp);
                 }
             }
             catch (OperationCanceledException)

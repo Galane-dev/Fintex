@@ -5,9 +5,12 @@ using Abp.Castle.Logging.Log4Net;
 using Abp.Extensions;
 using Fintex.Configuration;
 using Fintex.Identity;
+using Fintex.Investments.Analytics;
+using Fintex.Investments.MarketData;
 using Fintex.Web.Host.BackgroundWorkers;
 using Fintex.Web.Host.Hubs;
 using Fintex.Web.Host.MarketData.Configuration;
+using Fintex.Web.Host.MarketData.Streaming;
 using Castle.Facilities.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -52,6 +55,13 @@ namespace Fintex.Web.Host.Startup
             services.AddSignalR();
             services.AddHttpClient();
             services.Configure<MarketDataStreamingOptions>(_appConfiguration.GetSection("MarketData"));
+            services.AddTransient<IIndicatorCalculator, IndicatorCalculator>();
+            services.AddTransient<IBehavioralAnalysisClient, OpenAiBehavioralAnalysisClient>();
+            services.AddTransient<TradeAnalysisService>();
+            services.AddTransient<IMarketDataIngestionService, MarketDataIngestionService>();
+            services.AddTransient<IMarketDataStreamClient, BinanceMarketDataStreamClient>();
+            services.AddTransient<IMarketDataStreamClient, CoinbaseMarketDataStreamClient>();
+            services.AddTransient<IMarketDataStreamClient, OandaMarketDataStreamClient>();
             services.AddHostedService<MarketDataStreamingBackgroundService>();
 
             // Configure CORS for angular2 UI

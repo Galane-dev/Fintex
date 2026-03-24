@@ -34,10 +34,12 @@ namespace Fintex.Web.Host.MarketData.Streaming
             var config = _options.Value.Binance;
             if (config == null || !config.Enabled || string.IsNullOrWhiteSpace(config.Symbols))
             {
+                _logger.LogInformation("Binance stream is disabled or has no configured symbols.");
                 return;
             }
 
             var streamUrl = BuildStreamUrl(config);
+            _logger.LogInformation("Connecting to Binance combined stream {StreamUrl}.", streamUrl);
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
@@ -45,6 +47,7 @@ namespace Fintex.Web.Host.MarketData.Streaming
                     using (var socket = new ClientWebSocket())
                     {
                         await socket.ConnectAsync(new Uri(streamUrl), cancellationToken);
+                        _logger.LogInformation("Connected to Binance stream.");
                         await ReceiveLoopAsync(socket, onTickAsync, cancellationToken);
                     }
                 }
