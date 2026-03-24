@@ -14,4 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Fintex.Core\Fintex.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Services\" />
+  </ItemGroup>
 </Project>
