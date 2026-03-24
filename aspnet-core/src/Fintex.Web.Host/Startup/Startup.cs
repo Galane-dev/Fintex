@@ -5,6 +5,9 @@ using Abp.Castle.Logging.Log4Net;
 using Abp.Extensions;
 using Fintex.Configuration;
 using Fintex.Identity;
+using Fintex.Web.Host.BackgroundWorkers;
+using Fintex.Web.Host.Hubs;
+using Fintex.Web.Host.MarketData.Configuration;
 using Castle.Facilities.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -47,6 +50,9 @@ namespace Fintex.Web.Host.Startup
             AuthConfigurer.Configure(services, _appConfiguration);
 
             services.AddSignalR();
+            services.AddHttpClient();
+            services.Configure<MarketDataStreamingOptions>(_appConfiguration.GetSection("MarketData"));
+            services.AddHostedService<MarketDataStreamingBackgroundService>();
 
             // Configure CORS for angular2 UI
             services.AddCors(
@@ -99,6 +105,7 @@ namespace Fintex.Web.Host.Startup
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<AbpCommonHub>("/signalr");
+                endpoints.MapHub<MarketDataHub>("/signalr/market-data");
                 endpoints.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapControllerRoute("defaultWithArea", "{area}/{controller=Home}/{action=Index}/{id?}");
             });

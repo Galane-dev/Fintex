@@ -58,3 +58,4 @@ appsettings.Production.json
 appsettings.Staging.json
 aspnet-core/src/Fintex.Web.Host/appsettings.json
 aspnet-core/src/Fintex.Web.Host/appsettings.json
+aspnet-core/src/Fintex.Web.Host/appsettings.json

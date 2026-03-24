@@ -12,6 +12,10 @@ public class FintexAuthorizationProvider : AuthorizationProvider
         context.CreatePermission(PermissionNames.Pages_Users_Activation, L("UsersActivation"));
         context.CreatePermission(PermissionNames.Pages_Roles, L("Roles"));
         context.CreatePermission(PermissionNames.Pages_Tenants, L("Tenants"), multiTenancySides: MultiTenancySides.Host);
+        context.CreatePermission(PermissionNames.Pages_Trading, L("Trading"));
+        context.CreatePermission(PermissionNames.Pages_MarketData, L("MarketData"));
+        context.CreatePermission(PermissionNames.Pages_Analytics, L("Analytics"));
+        context.CreatePermission(PermissionNames.Pages_UserProfiles, L("UserProfiles"));
     }
 
     private static ILocalizableString L(string name)
