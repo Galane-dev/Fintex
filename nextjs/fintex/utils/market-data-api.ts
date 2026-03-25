@@ -8,6 +8,7 @@ import { apiClient } from "./api-client";
 import { unwrapAbpResponse } from "./abp-response";
 import {
   normalizeMarketDataPoint,
+  normalizeTimeframeRsi,
   normalizeMarketVerdict,
   sortHistoryAscending,
 } from "./market-data";
@@ -61,16 +62,6 @@ export const getRelativeStrengthIndexTimeframes = async (
   );
 
   return Array.isArray(result?.items)
-    ? result.items.map((item) => ({
-        timeframe: String(item.timeframe ?? item.Timeframe ?? ""),
-        value:
-          item.value == null && item.Value == null
-            ? null
-            : Number(item.value ?? item.Value),
-        candleTimestamp:
-          item.candleTimestamp == null && item.CandleTimestamp == null
-            ? null
-            : String(item.candleTimestamp ?? item.CandleTimestamp),
-      }))
+    ? result.items.map(normalizeTimeframeRsi)
     : [];
 };

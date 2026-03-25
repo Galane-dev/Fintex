@@ -33,6 +33,26 @@ namespace Fintex.EntityFrameworkCore
         public DbSet<Trade> Trades { get; set; }
 
         /// <summary>
+        /// Stores user paper trading accounts.
+        /// </summary>
+        public DbSet<PaperTradingAccount> PaperTradingAccounts { get; set; }
+
+        /// <summary>
+        /// Stores simulated orders for paper trading.
+        /// </summary>
+        public DbSet<PaperOrder> PaperOrders { get; set; }
+
+        /// <summary>
+        /// Stores open and closed simulated positions.
+        /// </summary>
+        public DbSet<PaperPosition> PaperPositions { get; set; }
+
+        /// <summary>
+        /// Stores simulated trade fills.
+        /// </summary>
+        public DbSet<PaperTradeFill> PaperTradeFills { get; set; }
+
+        /// <summary>
         /// Stores user preferences and behavioral insights.
         /// </summary>
         public DbSet<UserProfile> UserProfiles { get; set; }
@@ -47,6 +67,10 @@ namespace Fintex.EntityFrameworkCore
             base.OnModelCreating(modelBuilder);
 
             ConfigureTrade(modelBuilder);
+            ConfigurePaperTradingAccount(modelBuilder);
+            ConfigurePaperOrder(modelBuilder);
+            ConfigurePaperPosition(modelBuilder);
+            ConfigurePaperTradeFill(modelBuilder);
             ConfigureMarketDataPoint(modelBuilder);
             ConfigureMarketDataTimeframeCandle(modelBuilder);
             ConfigureUserProfile(modelBuilder);
@@ -117,6 +141,95 @@ namespace Fintex.EntityFrameworkCore
                 entity.Property(x => x.TrendScore).HasPrecision(10, 4);
                 entity.Property(x => x.ConfidenceScore).HasPrecision(10, 4);
                 entity.Property(x => x.Verdict).HasConversion<string>().HasMaxLength(16);
+            });
+        }
+
+        private static void ConfigurePaperTradingAccount(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PaperTradingAccount>(entity =>
+            {
+                entity.ToTable("AppPaperTradingAccounts");
+                entity.HasIndex(x => new { x.TenantId, x.UserId, x.IsActive });
+
+                entity.Property(x => x.Name).IsRequired().HasMaxLength(PaperTradingAccount.MaxNameLength);
+                entity.Property(x => x.BaseCurrency).IsRequired().HasMaxLength(PaperTradingAccount.MaxCurrencyLength);
+
+                entity.Property(x => x.StartingBalance).HasPrecision(18, 8);
+                entity.Property(x => x.CashBalance).HasPrecision(18, 8);
+                entity.Property(x => x.Equity).HasPrecision(18, 8);
+                entity.Property(x => x.RealizedProfitLoss).HasPrecision(18, 8);
+                entity.Property(x => x.UnrealizedProfitLoss).HasPrecision(18, 8);
+            });
+        }
+
+        private static void ConfigurePaperOrder(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PaperOrder>(entity =>
+            {
+                entity.ToTable("AppPaperOrders");
+                entity.HasIndex(x => new { x.AccountId, x.SubmittedAt });
+                entity.HasIndex(x => new { x.UserId, x.Status });
+                entity.HasIndex(x => new { x.Symbol, x.Provider, x.SubmittedAt });
+
+                entity.Property(x => x.Symbol).IsRequired().HasMaxLength(PaperOrder.MaxSymbolLength);
+                entity.Property(x => x.Notes).HasMaxLength(PaperOrder.MaxNotesLength);
+
+                entity.Property(x => x.AssetClass).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Provider).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.OrderType).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+
+                entity.Property(x => x.Quantity).HasPrecision(18, 8);
+                entity.Property(x => x.RequestedPrice).HasPrecision(18, 8);
+                entity.Property(x => x.ExecutedPrice).HasPrecision(18, 8);
+                entity.Property(x => x.StopLoss).HasPrecision(18, 8);
+                entity.Property(x => x.TakeProfit).HasPrecision(18, 8);
+            });
+        }
+
+        private static void ConfigurePaperPosition(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PaperPosition>(entity =>
+            {
+                entity.ToTable("AppPaperPositions");
+                entity.HasIndex(x => new { x.AccountId, x.Status });
+                entity.HasIndex(x => new { x.AccountId, x.Symbol, x.Provider, x.Status });
+
+                entity.Property(x => x.Symbol).IsRequired().HasMaxLength(PaperPosition.MaxSymbolLength);
+
+                entity.Property(x => x.AssetClass).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Provider).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+
+                entity.Property(x => x.Quantity).HasPrecision(18, 8);
+                entity.Property(x => x.AverageEntryPrice).HasPrecision(18, 8);
+                entity.Property(x => x.CurrentMarketPrice).HasPrecision(18, 8);
+                entity.Property(x => x.RealizedProfitLoss).HasPrecision(18, 8);
+                entity.Property(x => x.UnrealizedProfitLoss).HasPrecision(18, 8);
+                entity.Property(x => x.StopLoss).HasPrecision(18, 8);
+                entity.Property(x => x.TakeProfit).HasPrecision(18, 8);
+            });
+        }
+
+        private static void ConfigurePaperTradeFill(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PaperTradeFill>(entity =>
+            {
+                entity.ToTable("AppPaperTradeFills");
+                entity.HasIndex(x => new { x.AccountId, x.ExecutedAt });
+                entity.HasIndex(x => new { x.OrderId, x.ExecutedAt });
+
+                entity.Property(x => x.Symbol).IsRequired().HasMaxLength(PaperTradeFill.MaxSymbolLength);
+
+                entity.Property(x => x.AssetClass).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Provider).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(16);
+
+                entity.Property(x => x.Quantity).HasPrecision(18, 8);
+                entity.Property(x => x.Price).HasPrecision(18, 8);
+                entity.Property(x => x.RealizedProfitLoss).HasPrecision(18, 8);
             });
         }
 

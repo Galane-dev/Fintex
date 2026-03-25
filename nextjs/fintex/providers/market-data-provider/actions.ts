@@ -26,6 +26,13 @@ export type MarketDataReducerAction =
         timeframeRsi: MarketTimeframeRsi[];
       };
     }
+  | {
+      type: "LIVE_VERDICT_UPDATED";
+      payload: {
+        verdict: MarketVerdictSnapshot | null;
+        timeframeRsi: MarketTimeframeRsi[];
+      };
+    }
   | { type: "LOAD_FAILURE"; payload: string }
   | { type: "CONNECTION_STATUS_CHANGED"; payload: MarketConnectionStatus }
   | { type: "MARKET_DATA_UPDATED"; payload: MarketDataPoint };
@@ -64,6 +71,13 @@ export const marketDataActions = {
     timeframeRsi: MarketTimeframeRsi[];
   }): MarketDataReducerAction => ({
     type: "DERIVED_DATA_REFRESHED",
+    payload,
+  }),
+  liveVerdictUpdated: (payload: {
+    verdict: MarketVerdictSnapshot | null;
+    timeframeRsi: MarketTimeframeRsi[];
+  }): MarketDataReducerAction => ({
+    type: "LIVE_VERDICT_UPDATED",
     payload,
   }),
   loadFailure: (message: string): MarketDataReducerAction => ({

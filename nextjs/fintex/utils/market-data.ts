@@ -5,6 +5,7 @@ import type {
   MarketDataPoint,
   MarketDataProvider,
   MarketInsight,
+  MarketTimeframeRsi,
   MarketVerdict,
   MarketVerdictSnapshot,
 } from "@/types/market-data";
@@ -65,6 +66,18 @@ const normalizeIndicatorScore = (value: Record<string, unknown>): IndicatorScore
   value: Number(value.value ?? value.Value ?? 0),
   score: Number(value.score ?? value.Score ?? 0),
   signal: getStringOrEmpty(value.signal ?? value.Signal),
+});
+
+export const normalizeTimeframeRsi = (item: Record<string, unknown>): MarketTimeframeRsi => ({
+  timeframe: getStringOrEmpty(item.timeframe ?? item.Timeframe),
+  value:
+    item.value == null && item.Value == null
+      ? null
+      : Number(item.value ?? item.Value),
+  candleTimestamp:
+    item.candleTimestamp == null && item.CandleTimestamp == null
+      ? null
+      : String(item.candleTimestamp ?? item.CandleTimestamp),
 });
 
 export const normalizeMarketVerdict = (value: Record<string, unknown>): MarketVerdictSnapshot => ({

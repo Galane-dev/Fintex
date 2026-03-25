@@ -55,6 +55,14 @@ export const marketDataReducer = (
         timeframeRsi: action.payload.timeframeRsi,
         lastHydratedAt: new Date().toISOString(),
       };
+    case "LIVE_VERDICT_UPDATED":
+      return {
+        ...state,
+        error: null,
+        verdict: action.payload.verdict,
+        timeframeRsi: action.payload.timeframeRsi,
+        lastHydratedAt: new Date().toISOString(),
+      };
     case "CONNECTION_STATUS_CHANGED":
       return {
         ...state,

@@ -10,7 +10,11 @@ import {
   getRealtimeVerdict,
   getRelativeStrengthIndexTimeframes,
 } from "@/utils/market-data-api";
-import { normalizeMarketDataPoint } from "@/utils/market-data";
+import {
+  normalizeMarketDataPoint,
+  normalizeMarketVerdict,
+  normalizeTimeframeRsi,
+} from "@/utils/market-data";
 import { MarketDataActionContext, MarketDataStateContext } from "./context";
 import { getMarketSelectionByKey, marketDataActions } from "./actions";
 import { initialMarketDataState, marketDataReducer } from "./reducer";
@@ -99,6 +103,35 @@ export function MarketDataProvider({ children }: PropsWithChildren) {
       }
 
       dispatch(marketDataActions.marketDataUpdated(point));
+    });
+
+    connection.on("marketVerdictUpdated", (payload: Record<string, unknown>) => {
+      const verdictPayload = payload.verdict ?? payload.Verdict;
+      const timeframePayload = payload.timeframeRsi ?? payload.TimeframeRsi;
+
+      const verdict =
+        verdictPayload && typeof verdictPayload === "object"
+          ? normalizeMarketVerdict(verdictPayload as Record<string, unknown>)
+          : null;
+
+      if (
+        verdict &&
+        (verdict.symbol.toUpperCase() !== state.selection.symbol.toUpperCase() ||
+          verdict.provider !== state.selection.provider)
+      ) {
+        return;
+      }
+
+      const timeframeRsi = Array.isArray(timeframePayload)
+        ? timeframePayload.map((item) => normalizeTimeframeRsi(item as Record<string, unknown>))
+        : [];
+
+      dispatch(
+        marketDataActions.liveVerdictUpdated({
+          verdict,
+          timeframeRsi,
+        }),
+      );
     });
 
     connection.onreconnecting(() => {

@@ -1,6 +1,7 @@
 using AutoMapper;
 using Fintex.Investments.Analytics.Dto;
 using Fintex.Investments.MarketData.Dto;
+using Fintex.Investments.PaperTrading.Dto;
 using Fintex.Investments.Profiles.Dto;
 using Fintex.Investments.Trading.Dto;
 
@@ -17,6 +18,10 @@ namespace Fintex.Investments
             CreateMap<MarketDataPoint, MarketDataPointDto>();
             CreateMap<UserProfile, UserProfileDto>();
             CreateMap<TradeAnalysisSnapshot, TradeAnalysisSnapshotDto>();
+            CreateMap<PaperTradingAccount, PaperTradingAccountDto>();
+            CreateMap<PaperOrder, PaperOrderDto>();
+            CreateMap<PaperPosition, PaperPositionDto>();
+            CreateMap<PaperTradeFill, PaperTradeFillDto>();
         }
     }
 }
