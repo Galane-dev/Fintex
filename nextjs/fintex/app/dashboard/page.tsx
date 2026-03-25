@@ -16,6 +16,7 @@ import {
   formatPercent,
   formatPrice,
   formatSigned,
+  formatSignedPoints,
   formatTime,
   getConnectionTone,
 } from "@/utils/market-data";
@@ -45,24 +46,38 @@ function DashboardContent() {
   );
 
   const oneMinuteRsi = timeframeRsiMap["1m"] ?? latest?.rsi ?? null;
+  const effectiveSma = verdict?.sma ?? latest?.sma ?? null;
+  const effectiveEma = verdict?.ema ?? latest?.ema ?? null;
+  const effectiveMacd = verdict?.macd ?? latest?.macd ?? null;
+  const effectiveMacdSignal = verdict?.macdSignal ?? latest?.macdSignal ?? null;
+  const effectiveMacdHistogram = verdict?.macdHistogram ?? latest?.macdHistogram ?? null;
+  const effectiveMomentum = verdict?.momentum ?? latest?.momentum ?? null;
+  const effectiveAtrPercent = verdict?.atrPercent ?? null;
+  const effectiveAdx = verdict?.adx ?? null;
 
   const calculations = useMemo(
     () => [
       {
         name: "Simple moving average",
         note: "20-period trend anchor",
-        value: formatPrice(latest?.sma),
-        tone: latest?.sma != null && latest.price >= latest.sma ? "positive" : "neutral",
+        value: formatPrice(effectiveSma),
+        tone:
+          effectiveSma != null && latest?.price != null && latest.price >= effectiveSma
+            ? "positive"
+            : "neutral",
       },
       {
         name: "Exponential moving average",
         note: "9-period fast response",
-        value: formatPrice(latest?.ema),
-        tone: latest?.ema != null && latest.price >= latest.ema ? "positive" : "neutral",
+        value: formatPrice(effectiveEma),
+        tone:
+          effectiveEma != null && latest?.price != null && latest.price >= effectiveEma
+            ? "positive"
+            : "neutral",
       },
       {
         name: "Relative strength index",
-        note: "1m Wilder RSI",
+        note: "14-period Wilder RSI",
         value: oneMinuteRsi != null ? oneMinuteRsi.toFixed(1) : "-",
         tone:
           oneMinuteRsi == null
@@ -74,31 +89,71 @@ function DashboardContent() {
                 : "neutral",
       },
       {
+        name: "MACD signal",
+        note: "9-period signal line",
+        value: formatSigned(effectiveMacdSignal),
+        tone:
+          effectiveMacd != null && effectiveMacdSignal != null
+            ? effectiveMacd >= effectiveMacdSignal
+              ? "positive"
+              : "negative"
+            : "neutral",
+      },
+      {
         name: "MACD histogram",
         note: "Bullish versus bearish expansion",
-        value: formatSigned(latest?.macdHistogram),
+        value: formatSigned(effectiveMacdHistogram),
         tone:
-          latest?.macdHistogram == null
+          effectiveMacdHistogram == null
             ? "neutral"
-            : latest.macdHistogram >= 0
+            : effectiveMacdHistogram >= 0
               ? "positive"
               : "negative",
       },
       {
-        name: "Standard deviation",
-        note: "Session volatility",
-        value: latest?.stdDev != null ? latest.stdDev.toFixed(2) : "-",
-        tone: "neutral",
+        name: "ATR volatility",
+        note: "14-period normalized ATR",
+        value: effectiveAtrPercent != null ? formatPercent(effectiveAtrPercent, 2) : "-",
+        tone:
+          effectiveAtrPercent == null
+            ? "neutral"
+            : effectiveAtrPercent >= 0.65
+              ? "negative"
+              : "positive",
       },
       {
         name: "Momentum",
         note: "14-period acceleration",
-        value: formatPercent(latest?.momentum),
+        value: formatSignedPoints(effectiveMomentum),
         tone:
-          latest?.momentum == null ? "neutral" : latest.momentum >= 0 ? "positive" : "negative",
+          effectiveMomentum == null ? "neutral" : effectiveMomentum >= 0 ? "positive" : "negative",
+      },
+      {
+        name: "ADX trend strength",
+        note: "14-period directional strength",
+        value: effectiveAdx != null ? effectiveAdx.toFixed(1) : "-",
+        tone:
+          effectiveAdx == null
+            ? "neutral"
+            : effectiveAdx >= 25
+              ? "positive"
+              : effectiveAdx < 15
+                ? "negative"
+                : "neutral",
       },
     ],
-    [latest, oneMinuteRsi],
+    [
+      effectiveAdx,
+      effectiveAtrPercent,
+      effectiveEma,
+      effectiveMacd,
+      effectiveMacdHistogram,
+      effectiveMacdSignal,
+      effectiveMomentum,
+      effectiveSma,
+      latest,
+      oneMinuteRsi,
+    ],
   );
 
   const marketSignals = useMemo(() => buildMarketInsights(latest, verdict), [latest, verdict]);
@@ -184,17 +239,21 @@ function DashboardContent() {
                 </div>
 
                 <Typography.Paragraph className={styles.verdictCopy}>
-                  Real-time calculations like EMA, RSI, MACD, momentum, and trend score surface actionable direction beside the chart without forcing the trader to hunt for context.
+                  Multi-timeframe EMA, RSI, MACD, ATR, ADX, structure, and alignment checks surface actionable direction beside the chart without forcing the trader to hunt for context.
                 </Typography.Paragraph>
 
                 <Space wrap>
-                  <Tag color="green">MACD {formatSigned(latest?.macd)}</Tag>
-                  <Tag color="lime">Momentum {formatPercent(latest?.momentum)}</Tag>
+                  <Tag color="green">MACD {formatSigned(effectiveMacd)}</Tag>
+                  <Tag color="blue">Signal {formatSigned(effectiveMacdSignal)}</Tag>
+                  <Tag color="lime">Momentum {formatSignedPoints(effectiveMomentum)}</Tag>
                   <Tag color="gold">
                     RSI 1m {oneMinuteRsi != null ? oneMinuteRsi.toFixed(1) : "-"}
                   </Tag>
                   <Tag color="blue">
                     Trend {verdict?.trendScore != null ? formatSigned(verdict.trendScore, 0) : "-"}
+                  </Tag>
+                  <Tag color="purple">
+                    ADX {effectiveAdx != null ? effectiveAdx.toFixed(1) : "-"}
                   </Tag>
                 </Space>
               </div>
@@ -212,7 +271,7 @@ function DashboardContent() {
                     <div key={timeframeKey} className={styles.metricRow}>
                       <div className={styles.metricMeta}>
                         <span className={styles.metricName}>{timeframeKey}</span>
-                        <span className={styles.metricNote}>MetaTrader-style Wilder RSI</span>
+                        <span className={styles.metricNote}>Wilder RSI based on {timeframeKey} candles </span>
                       </div>
                       <span
                         className={cx(
@@ -231,6 +290,40 @@ function DashboardContent() {
                     </div>
                   );
                 })}
+              </div>
+            </Card>
+
+            <Card className={styles.panelCard} title="Timeframe confirmation">
+              <div className={styles.metricList}>
+                {(verdict?.timeframeSignals ?? []).map((item) => (
+                  <div key={item.timeframe} className={styles.metricRow}>
+                    <div className={styles.metricMeta}>
+                      <span className={styles.metricName}>{item.timeframe}</span>
+                      <span className={styles.metricNote}>Cross-timeframe directional bias</span>
+                    </div>
+                    <span
+                      className={cx(
+                        styles.metricValue,
+                        item.signal === "Bullish" ? styles.positive : undefined,
+                        item.signal === "Bearish" ? styles.negative : undefined,
+                        item.signal === "Neutral" ? styles.neutral : undefined,
+                      )}
+                    >
+                      {item.biasScore != null ? formatSigned(item.biasScore, 0) : "-"}
+                    </span>
+                  </div>
+                ))}
+                <div className={styles.metricRow}>
+                  <div className={styles.metricMeta}>
+                    <span className={styles.metricName}>Alignment score</span>
+                    <span className={styles.metricNote}>5m, 15m, and 1h confirmation mix</span>
+                  </div>
+                  <span className={cx(styles.metricValue, styles.neutral)}>
+                    {verdict?.timeframeAlignmentScore != null
+                      ? formatSigned(verdict.timeframeAlignmentScore, 0)
+                      : "-"}
+                  </span>
+                </div>
               </div>
             </Card>
 
@@ -270,6 +363,29 @@ function DashboardContent() {
                     </Typography.Paragraph>
                   </div>
                 ))}
+              </div>
+            </Card>
+
+            <Card className={styles.panelCard} title="Decision overlays">
+              <div className={styles.signalList}>
+                <div className={styles.signalItem}>
+                  <div className={styles.signalHeading}>
+                    <span className={styles.signalTitle}>Market structure</span>
+                    <Tag color="blue">{verdict?.structureLabel || "Loading"}</Tag>
+                  </div>
+                  <Typography.Paragraph className={styles.signalCopy}>
+                    Structure score {verdict?.structureScore != null ? formatSigned(verdict.structureScore, 0) : "-"} adds breakout and swing-quality context on top of pure indicators.
+                  </Typography.Paragraph>
+                </div>
+                <div className={styles.signalItem}>
+                  <div className={styles.signalHeading}>
+                    <span className={styles.signalTitle}>Behavior and academy gates</span>
+                    <Tag color="default">Future layer</Tag>
+                  </div>
+                  <Typography.Paragraph className={styles.signalCopy}>
+                    The current verdict is market-only. Later we can overlay behavioral discipline, simulator performance, and academy unlock rules before allowing real-market action.
+                  </Typography.Paragraph>
+                </div>
               </div>
             </Card>
 

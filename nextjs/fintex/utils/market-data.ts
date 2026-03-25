@@ -9,6 +9,8 @@ import type {
   MarketVerdictSnapshot,
 } from "@/types/market-data";
 
+const EMPTY = "—";
+
 const getNumberOrNull = (value: unknown) =>
   typeof value === "number" ? value : value == null ? null : Number(value);
 
@@ -74,9 +76,34 @@ export const normalizeMarketVerdict = (value: Record<string, unknown>): MarketVe
   confidenceScore: getNumberOrNull(value.confidenceScore ?? value.ConfidenceScore),
   verdict: getVerdictLabel(value.verdict ?? value.Verdict),
   timestamp: getStringOrEmpty(value.timestamp ?? value.Timestamp),
+  sma: getNumberOrNull(value.sma ?? value.Sma),
+  ema: getNumberOrNull(value.ema ?? value.Ema),
+  rsi: getNumberOrNull(value.rsi ?? value.Rsi),
+  macd: getNumberOrNull(value.macd ?? value.Macd),
+  macdSignal: getNumberOrNull(value.macdSignal ?? value.MacdSignal),
+  macdHistogram: getNumberOrNull(value.macdHistogram ?? value.MacdHistogram),
+  momentum: getNumberOrNull(value.momentum ?? value.Momentum),
+  rateOfChange: getNumberOrNull(value.rateOfChange ?? value.RateOfChange),
+  atr: getNumberOrNull(value.atr ?? value.Atr),
+  atrPercent: getNumberOrNull(value.atrPercent ?? value.AtrPercent),
+  adx: getNumberOrNull(value.adx ?? value.Adx),
+  structureScore: getNumberOrNull(value.structureScore ?? value.StructureScore),
+  structureLabel: getStringOrEmpty(value.structureLabel ?? value.StructureLabel),
+  timeframeAlignmentScore: getNumberOrNull(
+    value.timeframeAlignmentScore ?? value.TimeframeAlignmentScore,
+  ),
   indicatorScores: Array.isArray(value.indicatorScores ?? value.IndicatorScores)
     ? ((value.indicatorScores ?? value.IndicatorScores) as Record<string, unknown>[]).map(
         normalizeIndicatorScore,
+      )
+    : [],
+  timeframeSignals: Array.isArray(value.timeframeSignals ?? value.TimeframeSignals)
+    ? ((value.timeframeSignals ?? value.TimeframeSignals) as Record<string, unknown>[]).map(
+        (item) => ({
+          timeframe: getStringOrEmpty(item.timeframe ?? item.Timeframe),
+          biasScore: getNumberOrNull(item.biasScore ?? item.BiasScore),
+          signal: getStringOrEmpty(item.signal ?? item.Signal),
+        }),
       )
     : [],
 });
@@ -94,7 +121,7 @@ export const upsertHistoryPoint = (history: MarketDataPoint[], point: MarketData
 
 export const formatPrice = (value: number | null | undefined) =>
   value == null
-    ? "—"
+    ? EMPTY
     : value.toLocaleString(undefined, {
         minimumFractionDigits: value > 100 ? 2 : 4,
         maximumFractionDigits: value > 100 ? 2 : 4,
@@ -102,17 +129,20 @@ export const formatPrice = (value: number | null | undefined) =>
 
 export const formatCompact = (value: number | null | undefined) =>
   value == null
-    ? "—"
+    ? EMPTY
     : new Intl.NumberFormat(undefined, {
         notation: "compact",
         maximumFractionDigits: 1,
       }).format(value);
 
 export const formatSigned = (value: number | null | undefined, digits = 2) =>
-  value == null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
+  value == null ? EMPTY : `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 
 export const formatPercent = (value: number | null | undefined, digits = 2) =>
-  value == null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(digits)}%`;
+  value == null ? EMPTY : `${value >= 0 ? "+" : ""}${value.toFixed(digits)}%`;
+
+export const formatSignedPoints = (value: number | null | undefined, digits = 2) =>
+  value == null ? EMPTY : `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 
 export const formatTime = (value: string | null | undefined) =>
   value
@@ -121,7 +151,7 @@ export const formatTime = (value: string | null | undefined) =>
         minute: "2-digit",
         second: "2-digit",
       }).format(new Date(value))
-    : "—";
+    : EMPTY;
 
 export const getConnectionTone = (status: MarketConnectionStatus) => {
   switch (status) {
@@ -151,41 +181,48 @@ export const buildMarketInsights = (
     ];
   }
 
-  const isBullish = latest.verdict === "Buy";
+  const effectiveVerdict = verdict?.verdict ?? latest.verdict;
+  const effectiveRsi = verdict?.rsi ?? latest.rsi;
+  const effectiveMomentum = verdict?.momentum ?? latest.momentum;
+  const effectiveMacd = verdict?.macd ?? latest.macd;
+  const effectiveMacdSignal = verdict?.macdSignal ?? latest.macdSignal;
+  const effectiveAtrPercent = verdict?.atrPercent;
+  const isBullish = effectiveVerdict === "Buy";
+
   const rsiState =
-    latest.rsi == null
+    effectiveRsi == null
       ? "RSI is still loading from the feed."
-      : latest.rsi >= 70
+      : effectiveRsi >= 70
         ? "RSI is elevated, so upside is strong but increasingly stretched."
-        : latest.rsi <= 35
+        : effectiveRsi <= 35
           ? "RSI is compressed, which keeps mean-reversion risk in focus."
           : "RSI remains balanced enough to support continuation without flashing exhaustion.";
 
   const macdState =
-    latest.macd == null || latest.macdSignal == null
+    effectiveMacd == null || effectiveMacdSignal == null
       ? "MACD is still loading."
-      : latest.macd >= latest.macdSignal
+      : effectiveMacd >= effectiveMacdSignal
         ? "MACD remains above its signal line, so momentum structure is constructive."
         : "MACD is below its signal line, which weakens continuation quality.";
 
   const volatilityState =
-    latest.stdDev == null
+    effectiveAtrPercent == null
       ? "Volatility is still loading."
-      : latest.stdDev >= 1
-        ? "Volatility is elevated, so entries need tighter confirmation."
-        : "Volatility is controlled enough for cleaner directional reads.";
+      : effectiveAtrPercent >= 0.65
+        ? "ATR volatility is elevated relative to price, so entries need tighter confirmation."
+        : "ATR volatility is controlled enough for cleaner directional reads.";
 
   return [
     {
       title: "Realtime verdict",
-      tag: `${latest.verdict} bias`,
-      tone: isBullish ? "green" : latest.verdict === "Sell" ? "red" : "blue",
+      tag: `${effectiveVerdict} bias`,
+      tone: isBullish ? "green" : effectiveVerdict === "Sell" ? "red" : "blue",
       copy: `${macdState} ${volatilityState}`,
     },
     {
       title: "Momentum read",
-      tag: latest.momentum != null ? formatPercent(latest.momentum) : "Loading",
-      tone: latest.momentum != null && latest.momentum >= 0 ? "green" : "gold",
+      tag: effectiveMomentum != null ? formatSignedPoints(effectiveMomentum) : "Loading",
+      tone: effectiveMomentum != null && effectiveMomentum >= 0 ? "green" : "gold",
       copy: rsiState,
     },
     {

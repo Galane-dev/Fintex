@@ -181,17 +181,17 @@ export function DashboardChart({ symbol, venue }: DashboardChartProps) {
         const bodyHeight = Math.max(Math.abs(closeY - openY), 1.8);
         const isBullish = candle.close >= candle.open;
 
-        context.strokeStyle = isBullish ? "#4be16b" : "#ff7875";
+        context.strokeStyle = isBullish ? "#0bfc3f" : "#f40400";
         context.lineWidth = 1;
         context.beginPath();
         context.moveTo(wickX, highY);
         context.lineTo(wickX, lowY);
         context.stroke();
 
-        context.fillStyle = isBullish ? "rgba(75, 225, 107, 0.88)" : "rgba(255, 120, 117, 0.82)";
+        context.fillStyle = isBullish ? "rgba(25, 255, 75, 0.88)" : "rgba(255, 23, 19, 0.82)";
         context.fillRect(x, bodyY, candleWidth, bodyHeight);
 
-        context.strokeStyle = isBullish ? "rgba(155, 242, 177, 0.95)" : "rgba(255, 181, 177, 0.92)";
+        context.strokeStyle = isBullish ? "rgba(19, 249, 76, 0.95)" : "rgba(246, 38, 27, 0.92)";
         context.strokeRect(x, bodyY, candleWidth, bodyHeight);
 
         const volumeY = volumeToY(candle.volume);
@@ -204,7 +204,7 @@ export function DashboardChart({ symbol, venue }: DashboardChartProps) {
 
       if (latestCandle) {
         const currentPriceY = priceToY(latestCandle.close);
-        context.strokeStyle = "rgba(75, 225, 107, 0.24)";
+        context.strokeStyle = "rgba(46, 249, 0, 0.68)";
         context.setLineDash([5, 5]);
         context.beginPath();
         context.moveTo(leftPadding, currentPriceY);

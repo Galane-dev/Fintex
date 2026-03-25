@@ -10,21 +10,25 @@ namespace Fintex.Investments.Analytics
     /// </summary>
     public class IndicatorCalculator : IIndicatorCalculator, ITransientDependency
     {
-        private const int IndicatorPeriod = 14;
+        private const int SmaPeriod = 20;
+        private const int EmaPeriod = 9;
+        private const int RsiPeriod = 14;
         private const int StdDevPeriod = 20;
-        private const int MomentumPeriod = 10;
+        private const int MomentumPeriod = 14;
+        private const int AtrPeriod = 14;
+        private const int AdxPeriod = 14;
         private const int MacdFastPeriod = 12;
         private const int MacdSlowPeriod = 26;
         private const int MacdSignalPeriod = 9;
         private const decimal BollingerBandMultiplier = 2m;
-        private const decimal SmaWeight = 12m;
-        private const decimal EmaWeight = 15m;
-        private const decimal RsiWeight = 16m;
-        private const decimal MacdWeight = 20m;
-        private const decimal MomentumWeight = 12m;
-        private const decimal RateOfChangeWeight = 10m;
-        private const decimal BollingerWeight = 8m;
-        private const decimal VolatilityCautionWeight = 15m;
+        private const decimal SmaWeight = 8m;
+        private const decimal EmaWeight = 16m;
+        private const decimal RsiWeight = 10m;
+        private const decimal MacdWeight = 18m;
+        private const decimal MomentumWeight = 8m;
+        private const decimal RateOfChangeWeight = 6m;
+        private const decimal BollingerWeight = 4m;
+        private const decimal VolatilityCautionWeight = 10m;
         private const decimal TotalDirectionalWeight = SmaWeight + EmaWeight + RsiWeight + MacdWeight + MomentumWeight + RateOfChangeWeight + BollingerWeight;
 
         public IndicatorSnapshot Calculate(IReadOnlyList<decimal> closingPrices)
@@ -38,9 +42,9 @@ namespace Fintex.Investments.Analytics
             var bollingerSnapshot = CalculateBollingerBands(closingPrices, StdDevPeriod, BollingerBandMultiplier);
             var snapshot = new IndicatorSnapshot
             {
-                Sma = CalculateSma(closingPrices, IndicatorPeriod),
-                Ema = CalculateEma(closingPrices, IndicatorPeriod),
-                Rsi = CalculateRsi(closingPrices, IndicatorPeriod),
+                Sma = CalculateSma(closingPrices, SmaPeriod),
+                Ema = CalculateEma(closingPrices, EmaPeriod),
+                Rsi = CalculateRsi(closingPrices, RsiPeriod),
                 StdDev = CalculateStdDev(closingPrices, StdDevPeriod),
                 Macd = macdSnapshot.Macd,
                 MacdSignal = macdSnapshot.Signal,
@@ -88,7 +92,7 @@ namespace Fintex.Investments.Analytics
             return decimal.Round(ema, 8, MidpointRounding.AwayFromZero);
         }
 
-        public decimal? CalculateRsi(IReadOnlyList<decimal> values, int period = IndicatorPeriod)
+        public decimal? CalculateRsi(IReadOnlyList<decimal> values, int period = RsiPeriod)
         {
             if (values.Count <= period)
             {
@@ -147,6 +151,111 @@ namespace Fintex.Investments.Analytics
             var relativeStrength = averageGain / averageLoss;
             var rsi = 100m - (100m / (1m + relativeStrength));
             return decimal.Round(rsi, 8, MidpointRounding.AwayFromZero);
+        }
+
+        public decimal? CalculateAtr(IReadOnlyList<MarketDataTimeframeCandle> candles, int period = AtrPeriod)
+        {
+            if (candles == null || candles.Count <= period)
+            {
+                return null;
+            }
+
+            var trueRanges = new List<decimal>();
+            for (var index = 1; index < candles.Count; index++)
+            {
+                var current = candles[index];
+                var previousClose = candles[index - 1].Close;
+                var trueRange = Math.Max(
+                    current.High - current.Low,
+                    Math.Max(Math.Abs(current.High - previousClose), Math.Abs(current.Low - previousClose)));
+                trueRanges.Add(trueRange);
+            }
+
+            if (trueRanges.Count < period)
+            {
+                return null;
+            }
+
+            var atr = trueRanges.Take(period).Average();
+            for (var index = period; index < trueRanges.Count; index++)
+            {
+                atr = ((atr * (period - 1m)) + trueRanges[index]) / period;
+            }
+
+            return decimal.Round(atr, 8, MidpointRounding.AwayFromZero);
+        }
+
+        public decimal? CalculateAdx(IReadOnlyList<MarketDataTimeframeCandle> candles, int period = AdxPeriod)
+        {
+            if (candles == null || candles.Count <= period * 2)
+            {
+                return null;
+            }
+
+            var trueRanges = new List<decimal>();
+            var positiveDirectionalMoves = new List<decimal>();
+            var negativeDirectionalMoves = new List<decimal>();
+
+            for (var index = 1; index < candles.Count; index++)
+            {
+                var current = candles[index];
+                var previous = candles[index - 1];
+
+                var upMove = current.High - previous.High;
+                var downMove = previous.Low - current.Low;
+
+                positiveDirectionalMoves.Add(upMove > downMove && upMove > 0m ? upMove : 0m);
+                negativeDirectionalMoves.Add(downMove > upMove && downMove > 0m ? downMove : 0m);
+
+                trueRanges.Add(Math.Max(
+                    current.High - current.Low,
+                    Math.Max(Math.Abs(current.High - previous.Close), Math.Abs(current.Low - previous.Close))));
+            }
+
+            var atr = trueRanges.Take(period).Sum();
+            var positiveDm = positiveDirectionalMoves.Take(period).Sum();
+            var negativeDm = negativeDirectionalMoves.Take(period).Sum();
+            var dxValues = new List<decimal>();
+
+            for (var index = period; index < trueRanges.Count; index++)
+            {
+                if (index > period)
+                {
+                    atr = atr - (atr / period) + trueRanges[index];
+                    positiveDm = positiveDm - (positiveDm / period) + positiveDirectionalMoves[index];
+                    negativeDm = negativeDm - (negativeDm / period) + negativeDirectionalMoves[index];
+                }
+
+                if (atr <= 0m)
+                {
+                    continue;
+                }
+
+                var positiveDi = (positiveDm / atr) * 100m;
+                var negativeDi = (negativeDm / atr) * 100m;
+                var diSum = positiveDi + negativeDi;
+                if (diSum <= 0m)
+                {
+                    dxValues.Add(0m);
+                    continue;
+                }
+
+                var dx = (Math.Abs(positiveDi - negativeDi) / diSum) * 100m;
+                dxValues.Add(dx);
+            }
+
+            if (dxValues.Count < period)
+            {
+                return null;
+            }
+
+            var adx = dxValues.Take(period).Average();
+            for (var index = period; index < dxValues.Count; index++)
+            {
+                adx = ((adx * (period - 1m)) + dxValues[index]) / period;
+            }
+
+            return decimal.Round(adx, 8, MidpointRounding.AwayFromZero);
         }
 
         private static decimal? CalculateStdDev(IReadOnlyList<decimal> values, int period)
@@ -385,17 +494,27 @@ namespace Fintex.Investments.Analytics
 
         private static decimal NormalizeRsi(decimal rsi)
         {
-            if (rsi >= 75m)
+            if (rsi <= 30m)
             {
-                return -Clamp((rsi - 75m) / 15m, 0m, 1m);
+                return Clamp(((30m - rsi) / 15m) + 0.20m, 0m, 1m);
             }
 
-            if (rsi <= 25m)
+            if (rsi >= 70m)
             {
-                return Clamp((25m - rsi) / 15m, 0m, 1m);
+                return -Clamp(((rsi - 70m) / 15m) + 0.20m, 0m, 1m);
             }
 
-            return Clamp((rsi - 50m) / 20m, -1m, 1m);
+            if (rsi < 45m)
+            {
+                return Clamp((45m - rsi) / 30m, 0m, 0.45m);
+            }
+
+            if (rsi > 55m)
+            {
+                return -Clamp((rsi - 55m) / 30m, 0m, 0.45m);
+            }
+
+            return 0m;
         }
 
         private static decimal NormalizeBollinger(decimal latestPrice, decimal lowerBand, decimal upperBand)

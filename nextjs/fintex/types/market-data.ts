@@ -50,6 +50,12 @@ export interface IndicatorScore {
   signal: string;
 }
 
+export interface MarketVerdictTimeframeSignal {
+  timeframe: string;
+  biasScore: number | null;
+  signal: string;
+}
+
 export interface MarketTimeframeRsi {
   timeframe: string;
   value: number | null;
@@ -65,7 +71,22 @@ export interface MarketVerdictSnapshot {
   confidenceScore: number | null;
   verdict: MarketVerdict;
   timestamp: string;
+  sma: number | null;
+  ema: number | null;
+  rsi: number | null;
+  macd: number | null;
+  macdSignal: number | null;
+  macdHistogram: number | null;
+  momentum: number | null;
+  rateOfChange: number | null;
+  atr: number | null;
+  atrPercent: number | null;
+  adx: number | null;
+  structureScore: number | null;
+  structureLabel: string;
+  timeframeAlignmentScore: number | null;
   indicatorScores: IndicatorScore[];
+  timeframeSignals: MarketVerdictTimeframeSignal[];
 }
 
 export interface MarketInsight {

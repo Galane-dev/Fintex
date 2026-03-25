@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Fintex.Investments;
 
 namespace Fintex.Investments.Analytics
 {
@@ -10,5 +11,9 @@ namespace Fintex.Investments.Analytics
         IndicatorSnapshot Calculate(IReadOnlyList<decimal> closingPrices);
 
         decimal? CalculateRsi(IReadOnlyList<decimal> closingPrices, int period = 14);
+
+        decimal? CalculateAtr(IReadOnlyList<MarketDataTimeframeCandle> candles, int period = 14);
+
+        decimal? CalculateAdx(IReadOnlyList<MarketDataTimeframeCandle> candles, int period = 14);
     }
 }
