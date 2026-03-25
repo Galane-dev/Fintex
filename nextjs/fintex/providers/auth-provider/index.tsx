@@ -1,99 +1,83 @@
 "use client";
 
-import { PropsWithChildren, useMemo, useSyncExternalStore } from "react";
-import type { AuthState, SignInValues, SignUpValues } from "@/types/auth";
-import { AuthContext } from "./context";
-import { clearStoredSession, readStoredSession, storeSession, AUTH_CHANGE_EVENT } from "@/utils/auth-storage";
-
-const initialState: AuthState = {
-  isReady: false,
-  isAuthenticated: false,
-  user: null,
-};
-
-let cachedState: AuthState = initialState;
-
-const getAuthSnapshot = (): AuthState => {
-  const session = readStoredSession();
-
-  const nextState: AuthState = session
-    ? {
-        isReady: true,
-        isAuthenticated: true,
-        user: session.user,
-      }
-    : {
-        isReady: true,
-        isAuthenticated: false,
-        user: null,
-      };
-
-  if (
-    cachedState.isReady === nextState.isReady &&
-    cachedState.isAuthenticated === nextState.isAuthenticated &&
-    cachedState.user?.email === nextState.user?.email &&
-    cachedState.user?.firstName === nextState.user?.firstName &&
-    cachedState.user?.lastName === nextState.user?.lastName
-  ) {
-    return cachedState;
-  }
-
-  cachedState = nextState;
-  return cachedState;
-};
+import { PropsWithChildren, useCallback, useEffect, useMemo, useReducer } from "react";
+import type { AuthProviderActions, SignInValues, SignUpValues } from "@/types/auth";
+import { AuthActionContext, AuthStateContext } from "./context";
+import { authActions, authReducer, initialAuthState } from "./reducer";
+import {
+  clearStoredSession,
+  readStoredSession,
+  storeSession,
+  AUTH_CHANGE_EVENT,
+} from "@/utils/auth-storage";
+import { signInRequest, signUpRequest } from "@/utils/auth-api";
+import { apiClient } from "@/utils/api-client";
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const state = useSyncExternalStore(
-    (callback) => {
-      if (typeof window === "undefined") {
-        return () => undefined;
+  const [state, dispatch] = useReducer(authReducer, initialAuthState);
+
+  useEffect(() => {
+    const session = readStoredSession();
+
+    if (session?.token) {
+      apiClient.defaults.headers.common.Authorization = `Bearer ${session.token}`;
+    } else {
+      delete apiClient.defaults.headers.common.Authorization;
+    }
+
+    dispatch(authActions.hydrateSession(session));
+
+    const syncSession = () => {
+      const nextSession = readStoredSession();
+
+      if (nextSession?.token) {
+        apiClient.defaults.headers.common.Authorization = `Bearer ${nextSession.token}`;
+      } else {
+        delete apiClient.defaults.headers.common.Authorization;
       }
 
-      const onChange = () => callback();
-
-      window.addEventListener("storage", onChange);
-      window.addEventListener(AUTH_CHANGE_EVENT, onChange);
-
-      return () => {
-        window.removeEventListener("storage", onChange);
-        window.removeEventListener(AUTH_CHANGE_EVENT, onChange);
-      };
-    },
-    getAuthSnapshot,
-    () => initialState,
-  );
-
-  const signIn = async (values: SignInValues) => {
-    const emailName = values.email.split("@")[0] ?? "trader";
-    const firstName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-    const user = { email: values.email, firstName };
-
-    storeSession(user);
-  };
-
-  const signUp = async (values: SignUpValues) => {
-    const user = {
-      email: values.email,
-      firstName: values.firstName,
-      lastName: values.lastName,
+      dispatch(authActions.hydrateSession(nextSession));
     };
 
-    storeSession(user);
-  };
+    window.addEventListener("storage", syncSession);
+    window.addEventListener(AUTH_CHANGE_EVENT, syncSession);
 
-  const signOut = () => {
+    return () => {
+      window.removeEventListener("storage", syncSession);
+      window.removeEventListener(AUTH_CHANGE_EVENT, syncSession);
+    };
+  }, []);
+
+  const signIn = useCallback(async (values: SignInValues) => {
+    const session = await signInRequest(values);
+    storeSession(session);
+    dispatch(authActions.hydrateSession(session));
+  }, []);
+
+  const signUp = useCallback(async (values: SignUpValues) => {
+    const session = await signUpRequest(values);
+    storeSession(session);
+    dispatch(authActions.hydrateSession(session));
+  }, []);
+
+  const signOut = useCallback(() => {
+    delete apiClient.defaults.headers.common.Authorization;
     clearStoredSession();
-  };
+    dispatch(authActions.hydrateSession(null));
+  }, []);
 
-  const value = useMemo(
+  const actionValues = useMemo<AuthProviderActions>(
     () => ({
-      ...state,
       signIn,
       signUp,
       signOut,
     }),
-    [state],
+    [signIn, signOut, signUp],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthStateContext.Provider value={state}>
+      <AuthActionContext.Provider value={actionValues}>{children}</AuthActionContext.Provider>
+    </AuthStateContext.Provider>
+  );
 }

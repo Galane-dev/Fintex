@@ -65,8 +65,10 @@ export function AuthCard({ mode }: AuthCardProps) {
       }
 
       router.replace(redirectPath);
-    } catch {
-      setErrorMessage("We could not complete that request. Please try again.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "We could not complete that request. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }

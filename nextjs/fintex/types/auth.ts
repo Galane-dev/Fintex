@@ -7,6 +7,8 @@ export interface AuthUser {
 export interface AuthSession {
   user: AuthUser;
   token: string;
+  userId: number | null;
+  expiresInSeconds: number | null;
 }
 
 export interface AuthState {
@@ -25,7 +27,7 @@ export interface SignUpValues extends SignInValues {
   lastName: string;
 }
 
-export interface AuthContextValue extends AuthState {
+export interface AuthProviderActions {
   signIn: (values: SignInValues) => Promise<void>;
   signUp: (values: SignUpValues) => Promise<void>;
   signOut: () => void;
