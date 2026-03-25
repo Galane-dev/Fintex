@@ -6,9 +6,8 @@ export const useStyles = createStyles(({ css, token }) => ({
   page: css`
     min-height: 100vh;
     background:
-      radial-gradient(circle at top right, rgba(52, 245, 197, 0.12), transparent 22%),
-      radial-gradient(circle at left center, rgba(85, 110, 255, 0.12), transparent 25%),
-      linear-gradient(180deg, #05070b 0%, #070d16 45%, #05070b 100%);
+      radial-gradient(circle at 78% 12%, rgba(0, 0, 0, 0.16), transparent 24%),
+      linear-gradient(180deg, #000000 0%, #000000 46%, #000000 100%);
     color: ${token.colorText};
   `,
   shell: css`
@@ -20,8 +19,8 @@ export const useStyles = createStyles(({ css, token }) => ({
     top: 0;
     z-index: 20;
     backdrop-filter: blur(18px);
-    background: rgba(5, 7, 11, 0.72);
-    border-bottom: 1px solid rgba(118, 154, 198, 0.16);
+    background: rgba(4, 7, 5, 0.78);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.16);
   `,
   navInner: css`
     min-height: 84px;
@@ -41,9 +40,10 @@ export const useStyles = createStyles(({ css, token }) => ({
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #34f5c5 0%, #79c7ff 100%);
-    color: #051017;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.16);
+    border: 1px solid rgba(177, 245, 195, 0.34);
+    color: #effcf1;
     font-weight: 800;
     font-size: 18px;
   `,
@@ -113,9 +113,9 @@ export const useStyles = createStyles(({ css, token }) => ({
     gap: 10px;
     padding: 10px 16px;
     border-radius: 999px;
-    background: rgba(52, 245, 197, 0.08);
-    border: 1px solid rgba(52, 245, 197, 0.18);
-    color: #7cfbd9;
+    background: rgba(3, 101, 29, 0.1);
+    border: 1px solid rgba(0, 255, 68, 0.24);
+    color: #4be16b;
     font-size: 13px;
     font-weight: 600;
     text-transform: uppercase;
@@ -129,10 +129,7 @@ export const useStyles = createStyles(({ css, token }) => ({
     font-weight: 300 !important;
   `,
   heroAccent: css`
-    background: linear-gradient(135deg, #34f5c5 0%, #79c7ff 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: #4be16b;
   `,
   heroCopy: css`
     max-width: 620px;
@@ -159,9 +156,9 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   metricCard: css`
     padding: 20px 22px;
-    border-radius: 24px;
-    background: rgba(10, 16, 24, 0.78);
-    border: 1px solid rgba(118, 154, 198, 0.18);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(146, 145, 145, 0.16);
     backdrop-filter: blur(16px);
   `,
   metricValue: css`
@@ -180,31 +177,36 @@ export const useStyles = createStyles(({ css, token }) => ({
   heroPanel: css`
     position: relative;
     min-height: 620px;
-    border-radius: 32px;
+    border-radius: 36px;
     overflow: hidden;
-    background:
-      linear-gradient(180deg, rgba(13, 22, 34, 0.48), rgba(5, 7, 11, 0.92)),
-      radial-gradient(circle at top left, rgba(52, 245, 197, 0.18), transparent 28%),
-      rgba(10, 16, 24, 0.92);
-    border: 1px solid rgba(118, 154, 198, 0.16);
-    box-shadow: ${token.boxShadowSecondary};
+    background: transparent;
   `,
   chartCanvas: css`
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
+    opacity: 0.96;
+    mask-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.88) 14%, rgba(0, 0, 0, 0.96) 78%, transparent 100%);
+  `,
+  chartFadeLeft: css`
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 10%;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.98) 0%, rgba(1, 1, 1, 0.74) 42%, rgba(0, 0, 0, 0) 100%);
   `,
   floatingPanel: css`
     position: absolute;
     right: 24px;
-    left: 24px;
-    bottom: 24px;
+    left: 15px;
+    bottom: 0px;
     padding: 22px;
-    border-radius: 24px;
-    background: rgba(6, 12, 18, 0.88);
-    border: 1px solid rgba(118, 154, 198, 0.16);
-    backdrop-filter: blur(16px);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0);
+    border: 1px solid rgba(26, 165, 11, 0.14);
+    backdrop-filter: blur(5px);
+    box-shadow: inset 0 1px 0 rgba(19, 19, 19, 0.03);
   `,
   floatingLabel: css`
     color: ${token.colorTextSecondary};
@@ -229,9 +231,9 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   sectionMuted: css`
     padding: 112px 0;
-    background: rgba(7, 13, 22, 0.8);
-    border-top: 1px solid rgba(118, 154, 198, 0.08);
-    border-bottom: 1px solid rgba(118, 154, 198, 0.08);
+    background: rgba(4, 4, 4, 0.8);
+    border-top: 1px solid rgba(111, 132, 117, 0.08);
+    border-bottom: 1px solid rgba(111, 132, 117, 0.08);
   `,
   sectionHeader: css`
     max-width: 720px;
@@ -252,15 +254,15 @@ export const useStyles = createStyles(({ css, token }) => ({
   featureCard: css`
     height: 100%;
     border-radius: 28px;
-    background: rgba(6, 11, 17, 0.82);
-    border: 1px solid rgba(118, 154, 198, 0.16);
+    background: rgba(0, 0, 0, 0.84);
+    border: 1px solid rgba(111, 132, 117, 0.14);
     transition:
       transform 0.2s ease,
       border-color 0.2s ease;
 
     &:hover {
       transform: translateY(-4px);
-      border-color: rgba(52, 245, 197, 0.38);
+      border-color: rgba(177, 245, 195, 0.34);
     }
   `,
   featureIcon: css`
@@ -270,9 +272,9 @@ export const useStyles = createStyles(({ css, token }) => ({
     align-items: center;
     justify-content: center;
     border-radius: 18px;
-    background: rgba(52, 245, 197, 0.1);
-    border: 1px solid rgba(52, 245, 197, 0.24);
-    color: #7cfbd9;
+    background: rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(30, 241, 86, 0.28);
+    color: #4be16b;
     font-size: 24px;
   `,
   featureTitle: css`
@@ -300,8 +302,8 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   marketCard: css`
     border-radius: 24px;
-    background: rgba(6, 11, 17, 0.9);
-    border: 1px solid rgba(118, 154, 198, 0.16);
+    background: rgba(7, 12, 9, 0.92);
+    border: 1px solid rgba(111, 132, 117, 0.14);
   `,
   marketSymbol: css`
     color: ${token.colorTextSecondary};
@@ -319,15 +321,15 @@ export const useStyles = createStyles(({ css, token }) => ({
     margin-top: 28px;
     padding: 28px;
     border-radius: 28px;
-    background: linear-gradient(135deg, rgba(52, 245, 197, 0.12), rgba(84, 124, 255, 0.14));
-    border: 1px solid rgba(82, 242, 201, 0.26);
+    background: rgba(0, 0, 0, 0.92);
+    border: 1px solid rgba(177, 245, 195, 0.2);
   `,
   platformCard: css`
     height: 100%;
     overflow: hidden;
     border-radius: 28px;
-    background: rgba(8, 13, 20, 0.92);
-    border: 1px solid rgba(118, 154, 198, 0.16);
+    background: rgba(0, 0, 0, 0.92);
+    border: 1px solid rgba(111, 132, 117, 0.14);
   `,
   platformVisual: css`
     min-height: 220px;
@@ -340,8 +342,8 @@ export const useStyles = createStyles(({ css, token }) => ({
     width: 100%;
     padding: 18px;
     border-radius: 22px;
-    background: rgba(4, 8, 12, 0.7);
-    border: 1px solid rgba(245, 251, 255, 0.08);
+    background: rgba(5, 9, 6, 0.72);
+    border: 1px solid rgba(241, 245, 240, 0.08);
   `,
   bulletList: css`
     display: grid;
@@ -357,13 +359,13 @@ export const useStyles = createStyles(({ css, token }) => ({
     width: 8px;
     height: 8px;
     border-radius: 999px;
-    background: #34f5c5;
-    box-shadow: 0 0 12px rgba(52, 245, 197, 0.45);
+    background: #4be16b;
+    box-shadow: 0 0 14px rgba(20, 20, 20, 0.28);
   `,
   footer: css`
     padding: 72px 0 36px;
-    border-top: 1px solid rgba(118, 154, 198, 0.12);
-    background: rgba(4, 7, 12, 0.92);
+    border-top: 1px solid rgba(111, 132, 117, 0.12);
+    background: rgba(4, 7, 5, 0.94);
   `,
   footerCopy: css`
     color: ${token.colorTextSecondary} !important;
@@ -372,7 +374,7 @@ export const useStyles = createStyles(({ css, token }) => ({
   footerBottom: css`
     margin-top: 34px;
     padding-top: 24px;
-    border-top: 1px solid rgba(118, 154, 198, 0.12);
+    border-top: 1px solid rgba(111, 132, 117, 0.12);
     color: ${token.colorTextSecondary};
   `,
 }));

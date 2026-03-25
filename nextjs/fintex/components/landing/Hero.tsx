@@ -37,7 +37,7 @@ export function Hero() {
             <div className={styles.heroActions}>
               <Link href={isAuthenticated ? ROUTES.dashboard : ROUTES.signUp}>
                 <Button type="primary" size="large" icon={<ArrowRightOutlined />}>
-                  {isAuthenticated ? "Open dashboard" : "Start trading now"}
+                  {isAuthenticated ? "Open dashboard" : "Create a free account"}
                 </Button>
               </Link>
               <a href="#features">
@@ -57,6 +57,7 @@ export function Hero() {
 
           <div className={styles.heroPanel}>
             <AnimatedChart />
+            <div className={styles.chartFadeLeft} />
             <div className={styles.floatingPanel}>
               <Tag color="green">Market verdict: Buy bias</Tag>
               <div className={styles.floatingValue}>87.4</div>
@@ -66,9 +67,9 @@ export function Hero() {
                 strong entries without overwhelming the trader.
               </Typography.Paragraph>
               <Space wrap>
-                <Tag color="cyan">MACD +1.42</Tag>
+                <Tag color="green">MACD +1.42</Tag>
                 <Tag color="gold">RSI 61.8</Tag>
-                <Tag color="blue">Trend +54</Tag>
+                <Tag color="lime">Trend +54</Tag>
               </Space>
             </div>
           </div>

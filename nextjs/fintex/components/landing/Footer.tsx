@@ -48,7 +48,7 @@ export function Footer() {
         <div className={styles.footerBottom}>
           <Row gutter={[18, 12]} justify="space-between">
             <Col>
-              <Typography.Text type="secondary">© 2026 FinteX. All rights reserved.</Typography.Text>
+              <Typography.Text type="secondary">Copyright 2026 FinteX. All rights reserved.</Typography.Text>
             </Col>
             <Col>
               <Typography.Text type="secondary">

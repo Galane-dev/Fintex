@@ -74,21 +74,21 @@ export const platformShowcases: PlatformShowcase[] = [
     title: "Web platform",
     description: "A desktop-grade trading surface in the browser with deep charting, watchlists, and instant execution.",
     bullets: ["Workspace layouts", "Live indicator cards", "Zero-install access"],
-    accent: "linear-gradient(135deg, rgba(52, 245, 197, 0.22), rgba(50, 91, 255, 0.18))",
+    accent: "rgba(77, 187, 119, 0.12)",
   },
   {
     key: "mobile",
     title: "Mobile app flow",
     description: "Stay in sync with alerts, quick order tickets, and biometric-ready access patterns for trading on the move.",
     bullets: ["Push alerts", "Compact trade tickets", "Fast re-entry"],
-    accent: "linear-gradient(135deg, rgba(113, 143, 255, 0.28), rgba(52, 245, 197, 0.12))",
+    accent: "rgba(97, 146, 111, 0.14)",
   },
   {
     key: "api",
     title: "API and automation",
     description: "Connect real-time feeds and strategy tooling through a modular backend and future-ready trading workflows.",
     bullets: ["Market streaming", "Signal consumption", "Strategy extensibility"],
-    accent: "linear-gradient(135deg, rgba(52, 245, 197, 0.16), rgba(113, 143, 255, 0.24))",
+    accent: "rgba(73, 124, 86, 0.14)",
   },
 ];
 
