@@ -3,6 +3,7 @@ using Abp.Authorization;
 using Fintex.Investments.Analytics;
 using Fintex.Investments.MarketData.Dto;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,14 +16,19 @@ namespace Fintex.Investments.MarketData
     [AbpAuthorize]
     public class MarketDataAppService : FintexAppServiceBase, IMarketDataAppService
     {
+        private const int RsiPeriod = 14;
+        private const int RsiWarmupCandles = 30;
         private readonly IMarketDataPointRepository _marketDataPointRepository;
+        private readonly IMarketDataTimeframeCandleRepository _marketDataTimeframeCandleRepository;
         private readonly IIndicatorCalculator _indicatorCalculator;
 
         public MarketDataAppService(
             IMarketDataPointRepository marketDataPointRepository,
+            IMarketDataTimeframeCandleRepository marketDataTimeframeCandleRepository,
             IIndicatorCalculator indicatorCalculator)
         {
             _marketDataPointRepository = marketDataPointRepository;
+            _marketDataTimeframeCandleRepository = marketDataTimeframeCandleRepository;
             _indicatorCalculator = indicatorCalculator;
         }
 
@@ -91,6 +97,25 @@ namespace Fintex.Investments.MarketData
         public Task<ListResultDto<MarketIndicatorValueDto>> GetRelativeStrengthIndexHistoryAsync(GetMarketDataHistoryInput input)
         {
             return GetIndicatorHistoryInternalAsync(input, MarketIndicatorType.Rsi);
+        }
+
+        public async Task<ListResultDto<MarketTimeframeRsiDto>> GetRelativeStrengthIndexTimeframesAsync(GetMarketDataHistoryInput input)
+        {
+            var items = new List<MarketTimeframeRsiDto>();
+
+            foreach (var timeframe in SupportedRsiTimeframes)
+            {
+                var candleSeries = await GetClosingSeriesAsync(input.Symbol, input.Provider, timeframe, RsiWarmupCandles);
+
+                items.Add(new MarketTimeframeRsiDto
+                {
+                    Timeframe = timeframe.ToCode(),
+                    Value = _indicatorCalculator.CalculateRsi(candleSeries.Select(x => x.Close).ToList(), RsiPeriod),
+                    CandleTimestamp = candleSeries.LastOrDefault()?.OpenTime
+                });
+            }
+
+            return new ListResultDto<MarketTimeframeRsiDto>(items);
         }
 
         public Task<MarketIndicatorValueDto> GetStandardDeviationLatestAsync(GetMarketDataHistoryInput input)
@@ -206,10 +231,26 @@ namespace Fintex.Investments.MarketData
                 return null;
             }
 
-            var recent = await _marketDataPointRepository.GetRecentAsync(input.Symbol, input.Provider, 60);
+            var recent = await _marketDataTimeframeCandleRepository.GetRecentAsync(
+                input.Symbol,
+                input.Provider,
+                MarketDataTimeframe.OneMinute,
+                120);
             recent.Reverse();
 
-            var calculated = _indicatorCalculator.Calculate(recent.Select(x => x.Price).ToList());
+            var closingPrices = recent.Select(x => x.Close).ToList();
+            if (closingPrices.Count <= RsiPeriod)
+            {
+                closingPrices = (await GetClosingSeriesAsync(
+                    input.Symbol,
+                    input.Provider,
+                    MarketDataTimeframe.OneMinute,
+                    120))
+                    .Select(x => x.Close)
+                    .ToList();
+            }
+
+            var calculated = _indicatorCalculator.Calculate(closingPrices);
 
             return new MarketVerdictDto
             {
@@ -231,6 +272,60 @@ namespace Fintex.Investments.MarketData
                     })
                     .ToList()
             };
+        }
+
+        private static readonly MarketDataTimeframe[] SupportedRsiTimeframes =
+        {
+            MarketDataTimeframe.OneMinute,
+            MarketDataTimeframe.FiveMinutes,
+            MarketDataTimeframe.FifteenMinutes,
+            MarketDataTimeframe.OneHour,
+            MarketDataTimeframe.FourHours
+        };
+
+        private async Task<List<TimeframeClosePoint>> GetClosingSeriesAsync(
+            string symbol,
+            MarketDataProvider provider,
+            MarketDataTimeframe timeframe,
+            int take)
+        {
+            var candles = await _marketDataTimeframeCandleRepository.GetRecentAsync(symbol, provider, timeframe, take);
+            candles.Reverse();
+
+            if (candles.Count > RsiPeriod)
+            {
+                return candles
+                    .Select(x => new TimeframeClosePoint
+                    {
+                        OpenTime = x.OpenTime,
+                        Close = x.Close
+                    })
+                    .ToList();
+            }
+
+            var fallbackStartTimeUtc = DateTime.UtcNow - TimeSpan.FromTicks(timeframe.ToTimeSpan().Ticks * RsiWarmupCandles);
+            var points = await _marketDataPointRepository.GetSinceAsync(symbol, provider, fallbackStartTimeUtc);
+            if (points.Count == 0)
+            {
+                return candles
+                    .Select(x => new TimeframeClosePoint
+                    {
+                        OpenTime = x.OpenTime,
+                        Close = x.Close
+                    })
+                    .ToList();
+            }
+
+            return points
+                .GroupBy(x => timeframe.FloorTimestamp(x.Timestamp))
+                .OrderBy(x => x.Key)
+                .Select(group => new TimeframeClosePoint
+                {
+                    OpenTime = group.Key,
+                    Close = group.Last().Price
+                })
+                .TakeLast(take)
+                .ToList();
         }
 
         private async Task<MarketIndicatorValueDto> GetIndicatorLatestInternalAsync(GetMarketDataHistoryInput input, MarketIndicatorType indicator)
@@ -298,6 +393,13 @@ namespace Fintex.Investments.MarketData
                 default:
                     return null;
             }
+        }
+
+        private sealed class TimeframeClosePoint
+        {
+            public DateTime OpenTime { get; set; }
+
+            public decimal Close { get; set; }
         }
     }
 }

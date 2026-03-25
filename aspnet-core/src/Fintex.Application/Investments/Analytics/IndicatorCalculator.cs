@@ -88,17 +88,17 @@ namespace Fintex.Investments.Analytics
             return decimal.Round(ema, 8, MidpointRounding.AwayFromZero);
         }
 
-        private static decimal? CalculateRsi(IReadOnlyList<decimal> values, int period)
+        public decimal? CalculateRsi(IReadOnlyList<decimal> values, int period = IndicatorPeriod)
         {
             if (values.Count <= period)
             {
                 return null;
             }
 
-            decimal gains = 0m;
-            decimal losses = 0m;
+            decimal totalGain = 0m;
+            decimal totalLoss = 0m;
 
-            for (var index = values.Count - period; index < values.Count; index++)
+            for (var index = 1; index <= period; index++)
             {
                 var previous = values[index - 1];
                 var current = values[index];
@@ -106,20 +106,45 @@ namespace Fintex.Investments.Analytics
 
                 if (delta >= 0m)
                 {
-                    gains += delta;
+                    totalGain += delta;
                 }
                 else
                 {
-                    losses -= delta;
+                    totalLoss -= delta;
                 }
             }
 
-            if (losses == 0m)
+            var averageGain = totalGain / period;
+            var averageLoss = totalLoss / period;
+
+            for (var index = period + 1; index < values.Count; index++)
+            {
+                var previous = values[index - 1];
+                var current = values[index];
+                var delta = current - previous;
+                var gain = delta > 0m ? delta : 0m;
+                var loss = delta < 0m ? -delta : 0m;
+
+                averageGain = ((averageGain * (period - 1m)) + gain) / period;
+                averageLoss = ((averageLoss * (period - 1m)) + loss) / period;
+            }
+
+            if (averageLoss == 0m && averageGain == 0m)
+            {
+                return 50m;
+            }
+
+            if (averageLoss == 0m)
             {
                 return 100m;
             }
 
-            var relativeStrength = gains / losses;
+            if (averageGain == 0m)
+            {
+                return 0m;
+            }
+
+            var relativeStrength = averageGain / averageLoss;
             var rsi = 100m - (100m / (1m + relativeStrength));
             return decimal.Round(rsi, 8, MidpointRounding.AwayFromZero);
         }

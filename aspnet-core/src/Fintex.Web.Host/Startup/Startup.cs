@@ -60,8 +60,6 @@ namespace Fintex.Web.Host.Startup
             services.AddTransient<TradeAnalysisService>();
             services.AddTransient<IMarketDataIngestionService, MarketDataIngestionService>();
             services.AddTransient<IMarketDataStreamClient, BinanceMarketDataStreamClient>();
-            services.AddTransient<IMarketDataStreamClient, CoinbaseMarketDataStreamClient>();
-            services.AddTransient<IMarketDataStreamClient, OandaMarketDataStreamClient>();
             services.AddHostedService<MarketDataStreamingBackgroundService>();
 
             // Configure CORS for angular2 UI

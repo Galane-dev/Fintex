@@ -2,6 +2,7 @@ using Abp.EntityFrameworkCore;
 using Fintex.EntityFrameworkCore.Repositories;
 using Fintex.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,6 +37,16 @@ namespace Fintex.Investments
                 .Where(x => x.Symbol == normalized && x.Provider == provider)
                 .OrderByDescending(x => x.Timestamp)
                 .Take(take)
+                .ToListAsync();
+        }
+
+        public async Task<List<MarketDataPoint>> GetSinceAsync(string symbol, MarketDataProvider provider, DateTime startTimeUtc)
+        {
+            var normalized = symbol == null ? string.Empty : symbol.Trim().ToUpperInvariant();
+
+            return await GetAll()
+                .Where(x => x.Symbol == normalized && x.Provider == provider && x.Timestamp >= startTimeUtc)
+                .OrderBy(x => x.Timestamp)
                 .ToListAsync();
         }
     }

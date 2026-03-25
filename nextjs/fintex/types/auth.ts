@@ -7,6 +7,7 @@ export interface AuthUser {
 export interface AuthSession {
   user: AuthUser;
   token: string;
+  encryptedToken: string | null;
   userId: number | null;
   expiresInSeconds: number | null;
 }

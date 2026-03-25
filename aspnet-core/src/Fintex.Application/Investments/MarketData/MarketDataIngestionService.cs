@@ -16,6 +16,7 @@ namespace Fintex.Investments.MarketData
     public class MarketDataIngestionService : IMarketDataIngestionService, ITransientDependency
     {
         private readonly IMarketDataPointRepository _marketDataPointRepository;
+        private readonly IMarketDataTimeframeCandleRepository _marketDataTimeframeCandleRepository;
         private readonly ITradeRepository _tradeRepository;
         private readonly IIndicatorCalculator _indicatorCalculator;
         private readonly TradeAnalysisService _tradeAnalysisService;
@@ -24,6 +25,7 @@ namespace Fintex.Investments.MarketData
 
         public MarketDataIngestionService(
             IMarketDataPointRepository marketDataPointRepository,
+            IMarketDataTimeframeCandleRepository marketDataTimeframeCandleRepository,
             ITradeRepository tradeRepository,
             IIndicatorCalculator indicatorCalculator,
             TradeAnalysisService tradeAnalysisService,
@@ -31,6 +33,7 @@ namespace Fintex.Investments.MarketData
             IUnitOfWorkManager unitOfWorkManager)
         {
             _marketDataPointRepository = marketDataPointRepository;
+            _marketDataTimeframeCandleRepository = marketDataTimeframeCandleRepository;
             _tradeRepository = tradeRepository;
             _indicatorCalculator = indicatorCalculator;
             _tradeAnalysisService = tradeAnalysisService;
@@ -42,10 +45,21 @@ namespace Fintex.Investments.MarketData
         {
             using (var uow = _unitOfWorkManager.Begin())
             {
-                var recentPoints = await _marketDataPointRepository.GetRecentAsync(tick.Symbol, tick.Provider, 60);
-                recentPoints.Reverse();
+                foreach (var timeframe in SupportedTimeframes)
+                {
+                    await UpsertTimeframeCandleAsync(tick, timeframe);
+                }
 
-                var priceSeries = new List<decimal>(recentPoints.Select(x => x.Price)) { tick.Price };
+                await _unitOfWorkManager.Current.SaveChangesAsync();
+
+                var recentCandles = await _marketDataTimeframeCandleRepository.GetRecentAsync(
+                    tick.Symbol,
+                    tick.Provider,
+                    MarketDataTimeframe.OneMinute,
+                    120);
+                recentCandles.Reverse();
+
+                var priceSeries = new List<decimal>(recentCandles.Select(x => x.Close));
                 var indicators = _indicatorCalculator.Calculate(priceSeries);
 
                 var point = new MarketDataPoint(
@@ -120,6 +134,29 @@ namespace Fintex.Investments.MarketData
                 await uow.CompleteAsync();
                 return point;
             }
+        }
+
+        private static readonly MarketDataTimeframe[] SupportedTimeframes =
+        {
+            MarketDataTimeframe.OneMinute,
+            MarketDataTimeframe.FiveMinutes,
+            MarketDataTimeframe.FifteenMinutes,
+            MarketDataTimeframe.OneHour,
+            MarketDataTimeframe.FourHours
+        };
+
+        private async Task UpsertTimeframeCandleAsync(MarketStreamTick tick, MarketDataTimeframe timeframe)
+        {
+            var bucketOpenTime = timeframe.FloorTimestamp(tick.Timestamp);
+            await _marketDataTimeframeCandleRepository.UpsertAsync(
+                tick.TenantId,
+                tick.Provider,
+                tick.AssetClass,
+                tick.Symbol,
+                timeframe,
+                bucketOpenTime,
+                tick.Price,
+                tick.Timestamp);
         }
     }
 }

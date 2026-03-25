@@ -1,26 +1,12 @@
-import axios from "axios";
-import type { AxiosError } from "axios";
 import type { AuthSession, AuthUser, SignInValues, SignUpValues } from "@/types/auth";
 import { apiClient } from "./api-client";
-
-interface AbpValidationError {
-  message?: string;
-}
-
-interface AbpErrorPayload {
-  message?: string;
-  details?: string;
-  validationErrors?: AbpValidationError[];
-}
-
-interface AbpResponse<T> {
-  result?: T;
-  error?: AbpErrorPayload;
-}
+import { unwrapAbpResponse } from "./abp-response";
 
 interface AuthenticateResponse {
   accessToken?: string;
   AccessToken?: string;
+  encryptedAccessToken?: string;
+  EncryptedAccessToken?: string;
   expireInSeconds?: number;
   ExpireInSeconds?: number;
   userId?: number;
@@ -43,33 +29,6 @@ interface RegisterResponse {
   CanLogin?: boolean;
 }
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (!axios.isAxiosError(error)) {
-    return fallback;
-  }
-
-  const payload = (error as AxiosError<AbpResponse<unknown>>).response?.data;
-  const responseError = payload?.error;
-  const validationMessage = responseError?.validationErrors?.find((item) => item.message)?.message;
-
-  return validationMessage ?? responseError?.details ?? responseError?.message ?? error.message ?? fallback;
-};
-
-const unwrapResponse = async <T>(request: Promise<{ data: AbpResponse<T> | T }>, fallbackMessage: string) => {
-  try {
-    const response = await request;
-    const payload = response.data;
-
-    if (payload && typeof payload === "object" && "result" in payload) {
-      return payload.result as T;
-    }
-
-    return payload as T;
-  } catch (error) {
-    throw new Error(getErrorMessage(error, fallbackMessage));
-  }
-};
-
 const mapAuthUser = (payload: CurrentLoginInformationsResponse["user"]): AuthUser => {
   if (!payload) {
     throw new Error("Your session was created, but no user details were returned.");
@@ -83,7 +42,7 @@ const mapAuthUser = (payload: CurrentLoginInformationsResponse["user"]): AuthUse
 };
 
 const getCurrentLoginInformations = async (token: string) =>
-  unwrapResponse<CurrentLoginInformationsResponse>(
+  unwrapAbpResponse<CurrentLoginInformationsResponse>(
     apiClient.get("/api/services/app/Session/GetCurrentLoginInformations", {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -103,6 +62,8 @@ const buildSession = async (authenticateResponse: AuthenticateResponse): Promise
 
   return {
     token,
+    encryptedToken:
+      authenticateResponse.encryptedAccessToken ?? authenticateResponse.EncryptedAccessToken ?? null,
     userId: authenticateResponse.userId ?? authenticateResponse.UserId ?? null,
     expiresInSeconds:
       authenticateResponse.expireInSeconds ?? authenticateResponse.ExpireInSeconds ?? null,
@@ -111,7 +72,7 @@ const buildSession = async (authenticateResponse: AuthenticateResponse): Promise
 };
 
 export const signInRequest = async (values: SignInValues) => {
-  const response = await unwrapResponse<AuthenticateResponse>(
+  const response = await unwrapAbpResponse<AuthenticateResponse>(
     apiClient.post("/api/TokenAuth/Authenticate", {
       userNameOrEmailAddress: values.email,
       password: values.password,
@@ -126,7 +87,7 @@ export const signInRequest = async (values: SignInValues) => {
 };
 
 export const signUpRequest = async (values: SignUpValues) => {
-  const registerResponse = await unwrapResponse<RegisterResponse>(
+  const registerResponse = await unwrapAbpResponse<RegisterResponse>(
     apiClient.post("/api/services/app/Account/Register", {
       name: values.firstName,
       surname: values.lastName,

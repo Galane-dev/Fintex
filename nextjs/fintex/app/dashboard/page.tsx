@@ -1,106 +1,300 @@
 "use client";
 
 import Link from "next/link";
-import { LogoutOutlined, ThunderboltFilled } from "@ant-design/icons";
-import { Button, Card, Col, List, Row, Space, Statistic, Tag, Typography } from "antd";
+import { useMemo } from "react";
+import { HomeOutlined, LogoutOutlined, ThunderboltFilled } from "@ant-design/icons";
+import { Alert, Button, Card, Progress, Space, Tag, Typography } from "antd";
+import { DashboardChart } from "@/components/dashboard/DashboardChart";
 import { ROUTES } from "@/constants/routes";
 import { withAuth } from "@/hoc/withAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { useMarketData } from "@/hooks/useMarketData";
+import { MarketDataProvider } from "@/providers/market-data-provider";
+import {
+  buildMarketInsights,
+  formatCompact,
+  formatPercent,
+  formatPrice,
+  formatSigned,
+  formatTime,
+  getConnectionTone,
+} from "@/utils/market-data";
 import { useStyles } from "./style";
 
-const protectedCards = [
-  { title: "Trend score", value: 54.2, suffix: "/100" },
-  { title: "Confidence", value: 87.4, suffix: "/100" },
-  { title: "Realtime verdict", value: "Buy bias" },
-  { title: "Active watchlists", value: 4 },
-];
-
-const dashboardFeed = [
-  { symbol: "BTC/USD", verdict: "Buy", note: "Momentum and MACD remain aligned above the session baseline." },
-  { symbol: "ETH/USD", verdict: "Hold", note: "Confidence is high, but the short-term move is cooling into resistance." },
-  { symbol: "EUR/USD", verdict: "Sell", note: "Rate of change turned negative while volatility expanded." },
-];
-
-function DashboardView() {
-  const { styles } = useStyles();
+function DashboardContent() {
+  const { styles, cx } = useStyles();
   const { signOut, user } = useAuth();
+  const {
+    connectionStatus,
+    error,
+    history,
+    isLoading,
+    latest,
+    refreshSnapshot,
+    timeframeRsi,
+    verdict,
+  } = useMarketData();
+
+  const timeframeRsiMap = useMemo(
+    () =>
+      timeframeRsi.reduce<Record<string, number | null>>((accumulator, item) => {
+        accumulator[item.timeframe] = item.value;
+        return accumulator;
+      }, {}),
+    [timeframeRsi],
+  );
+
+  const oneMinuteRsi = timeframeRsiMap["1m"] ?? latest?.rsi ?? null;
+
+  const calculations = useMemo(
+    () => [
+      {
+        name: "Simple moving average",
+        note: "20-period trend anchor",
+        value: formatPrice(latest?.sma),
+        tone: latest?.sma != null && latest.price >= latest.sma ? "positive" : "neutral",
+      },
+      {
+        name: "Exponential moving average",
+        note: "9-period fast response",
+        value: formatPrice(latest?.ema),
+        tone: latest?.ema != null && latest.price >= latest.ema ? "positive" : "neutral",
+      },
+      {
+        name: "Relative strength index",
+        note: "1m Wilder RSI",
+        value: oneMinuteRsi != null ? oneMinuteRsi.toFixed(1) : "-",
+        tone:
+          oneMinuteRsi == null
+            ? "neutral"
+            : oneMinuteRsi >= 65
+              ? "positive"
+              : oneMinuteRsi <= 35
+                ? "negative"
+                : "neutral",
+      },
+      {
+        name: "MACD histogram",
+        note: "Bullish versus bearish expansion",
+        value: formatSigned(latest?.macdHistogram),
+        tone:
+          latest?.macdHistogram == null
+            ? "neutral"
+            : latest.macdHistogram >= 0
+              ? "positive"
+              : "negative",
+      },
+      {
+        name: "Standard deviation",
+        note: "Session volatility",
+        value: latest?.stdDev != null ? latest.stdDev.toFixed(2) : "-",
+        tone: "neutral",
+      },
+      {
+        name: "Momentum",
+        note: "14-period acceleration",
+        value: formatPercent(latest?.momentum),
+        tone:
+          latest?.momentum == null ? "neutral" : latest.momentum >= 0 ? "positive" : "negative",
+      },
+    ],
+    [latest, oneMinuteRsi],
+  );
+
+  const marketSignals = useMemo(() => buildMarketInsights(latest, verdict), [latest, verdict]);
+
+  const miniStats = useMemo(
+    () => [
+      {
+        label: "Trend score",
+        value: verdict?.trendScore != null ? `${Math.round(verdict.trendScore)} / 100` : "-",
+      },
+      {
+        label: "Confidence",
+        value: verdict?.confidenceScore != null ? verdict.confidenceScore.toFixed(1) : "-",
+      },
+      {
+        label: "Volume window",
+        value: formatCompact(history.reduce((sum, item) => sum + (item.volume ?? 0), 0)),
+      },
+      {
+        label: "Last tick",
+        value: formatTime(latest?.timestamp),
+      },
+    ],
+    [history, latest, verdict],
+  );
 
   return (
     <div className={styles.page}>
       <div className={styles.shell}>
-        <div className={styles.hero}>
-          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-            <Space align="center" wrap style={{ justifyContent: "space-between", width: "100%" }}>
-              <div>
-                <Typography.Text type="success">
-                  <ThunderboltFilled /> Protected workspace
-                </Typography.Text>
-                <Typography.Title level={1} style={{ margin: "8px 0 12px" }}>
-                  Welcome back, {user?.firstName ?? "Trader"}
-                </Typography.Title>
-                <Typography.Paragraph className={styles.copy}>
-                  This page is wrapped in the auth HOC. Unauthenticated users are redirected to the sign-in screen before they can access protected trading content.
-                </Typography.Paragraph>
-              </div>
-              <Space wrap>
-                <Link href={ROUTES.home}>
-                  <Button>Back to landing</Button>
-                </Link>
-                <Button type="primary" icon={<LogoutOutlined />} onClick={signOut}>
-                  Sign out
-                </Button>
-              </Space>
-            </Space>
+        <div className={styles.header}>
+          <div className={styles.headingWrap}>
+            <Typography.Text className={styles.eyebrow}>
+              <ThunderboltFilled /> Live trading workspace
+            </Typography.Text>
+            <Typography.Title level={2} className={styles.title}>
+              Welcome back, {user?.firstName ?? "Trader"}
+            </Typography.Title>
+            <Typography.Paragraph className={styles.helper}>
+              The platform now focuses on Binance BTCUSDT only, which keeps storage leaner while the dashboard stays chart-first and realtime.
+            </Typography.Paragraph>
+          </div>
+
+          <Space wrap>
+            <Button onClick={() => void refreshSnapshot()} loading={isLoading}>
+              Refresh snapshot
+            </Button>
+            <Link href={ROUTES.home}>
+              <Button icon={<HomeOutlined />}>Landing page</Button>
+            </Link>
+            <Button type="primary" icon={<LogoutOutlined />} onClick={signOut}>
+              Sign out
+            </Button>
           </Space>
         </div>
 
-        <Row gutter={[18, 18]}>
-          {protectedCards.map((item) => (
-            <Col key={item.title} xs={24} md={12} xl={6}>
-              <Card className={styles.card}>
-                <Statistic title={item.title} value={item.value} suffix={item.suffix} />
-              </Card>
-            </Col>
-          ))}
-        </Row>
+        <div className={styles.workspace}>
+          <div className={styles.chartColumn}>
+            <DashboardChart symbol="BTCUSDT" venue="Binance" />
+          </div>
 
-        <Row gutter={[18, 18]} style={{ marginTop: 10 }}>
-          <Col xs={24} xl={16}>
-            <Card className={styles.card} title="Realtime verdict feed">
-              <List
-                itemLayout="vertical"
-                dataSource={dashboardFeed}
-                renderItem={(item) => (
-                  <List.Item key={item.symbol}>
-                    <Space orientation="vertical" size="small">
-                      <Space>
-                        <Typography.Text strong>{item.symbol}</Typography.Text>
-                        <Tag color={item.verdict === "Buy" ? "green" : item.verdict === "Sell" ? "red" : "gold"}>
-                          {item.verdict}
-                        </Tag>
-                      </Space>
-                      <Typography.Text type="secondary">{item.note}</Typography.Text>
-                    </Space>
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} xl={8}>
-            <Card className={styles.card} title="Protected access behavior">
-              <Space orientation="vertical" size="middle">
-                <Typography.Paragraph>
-                  `withAuth` checks the auth session after hydration and redirects guests to `/auth/sign-in`.
+          <div className={styles.sideColumn}>
+            <Card className={styles.panelCard} title="Verdict and confidence">
+              <div className={styles.verdictHero}>
+                <div className={styles.verdictRow}>
+                  <div className={styles.verdictLabel}>
+                    <Typography.Text type="secondary">Realtime stance</Typography.Text>
+                    <div className={styles.verdictValue}>{verdict?.verdict ?? latest?.verdict ?? "Hold"} bias</div>
+                  </div>
+                  <Tag color={getConnectionTone(connectionStatus)}>{connectionStatus}</Tag>
+                </div>
+
+                <div className={styles.scoreBlock}>
+                  <div className={styles.scoreLabel}>Confidence score</div>
+                  <div className={styles.scoreValue}>
+                    {verdict?.confidenceScore != null ? verdict.confidenceScore.toFixed(1) : "-"}
+                  </div>
+                  <Progress
+                    percent={Math.max(0, Math.min(Math.round(verdict?.confidenceScore ?? 0), 100))}
+                    showInfo={false}
+                    strokeColor="#9bf2b1"
+                    trailColor="rgba(255,255,255,0.08)"
+                  />
+                </div>
+
+                <Typography.Paragraph className={styles.verdictCopy}>
+                  Real-time calculations like EMA, RSI, MACD, momentum, and trend score surface actionable direction beside the chart without forcing the trader to hunt for context.
                 </Typography.Paragraph>
-                <Typography.Paragraph>
-                  Auth pages simulate session creation locally so the UI flow can be designed before backend auth is connected.
-                </Typography.Paragraph>
-              </Space>
+
+                <Space wrap>
+                  <Tag color="green">MACD {formatSigned(latest?.macd)}</Tag>
+                  <Tag color="lime">Momentum {formatPercent(latest?.momentum)}</Tag>
+                  <Tag color="gold">
+                    RSI 1m {oneMinuteRsi != null ? oneMinuteRsi.toFixed(1) : "-"}
+                  </Tag>
+                  <Tag color="blue">
+                    Trend {verdict?.trendScore != null ? formatSigned(verdict.trendScore, 0) : "-"}
+                  </Tag>
+                </Space>
+              </div>
             </Card>
-          </Col>
-        </Row>
+
+            <Card className={styles.panelCard} title="RSI by timeframe">
+              <div className={styles.metricList}>
+                {["1m", "5m", "15m", "1h", "4h"].map((timeframeKey) => {
+                  const itemValue =
+                    timeframeKey === "1m"
+                      ? oneMinuteRsi
+                      : timeframeRsiMap[timeframeKey] ?? null;
+
+                  return (
+                    <div key={timeframeKey} className={styles.metricRow}>
+                      <div className={styles.metricMeta}>
+                        <span className={styles.metricName}>{timeframeKey}</span>
+                        <span className={styles.metricNote}>MetaTrader-style Wilder RSI</span>
+                      </div>
+                      <span
+                        className={cx(
+                          styles.metricValue,
+                          itemValue == null
+                            ? styles.neutral
+                            : itemValue >= 65
+                              ? styles.positive
+                              : itemValue <= 35
+                                ? styles.negative
+                                : styles.neutral,
+                        )}
+                      >
+                        {itemValue != null ? itemValue.toFixed(1) : "-"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            <Card className={styles.panelCard} title="Live calculations">
+              <div className={styles.metricList}>
+                {calculations.map((item) => (
+                  <div key={item.name} className={styles.metricRow}>
+                    <div className={styles.metricMeta}>
+                      <span className={styles.metricName}>{item.name}</span>
+                      <span className={styles.metricNote}>{item.note}</span>
+                    </div>
+                    <span
+                      className={cx(
+                        styles.metricValue,
+                        item.tone === "positive" ? styles.positive : undefined,
+                        item.tone === "negative" ? styles.negative : undefined,
+                        item.tone === "neutral" ? styles.neutral : undefined,
+                      )}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className={styles.panelCard} title="Signal desk">
+              <div className={styles.signalList}>
+                {marketSignals.map((item) => (
+                  <div key={item.title} className={styles.signalItem}>
+                    <div className={styles.signalHeading}>
+                      <span className={styles.signalTitle}>{item.title}</span>
+                      <Tag color={item.tone}>{item.tag}</Tag>
+                    </div>
+                    <Typography.Paragraph className={styles.signalCopy}>
+                      {item.copy}
+                    </Typography.Paragraph>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {error ? <Alert title={error} type="warning" showIcon /> : null}
+          </div>
+        </div>
+
+        <div className={styles.miniStrip}>
+          {miniStats.map((item) => (
+            <div key={item.label} className={styles.miniCard}>
+              <div className={styles.miniLabel}>{item.label}</div>
+              <div className={styles.miniValue}>{item.value}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
+  );
+}
+
+function DashboardView() {
+  return (
+    <MarketDataProvider>
+      <DashboardContent />
+    </MarketDataProvider>
   );
 }
 

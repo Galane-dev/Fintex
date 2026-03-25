@@ -23,6 +23,11 @@ namespace Fintex.EntityFrameworkCore
         public DbSet<MarketDataPoint> MarketDataPoints { get; set; }
 
         /// <summary>
+        /// Stores derived candles for supported indicator timeframes.
+        /// </summary>
+        public DbSet<MarketDataTimeframeCandle> MarketDataTimeframeCandles { get; set; }
+
+        /// <summary>
         /// Stores user-managed and system-monitored trades.
         /// </summary>
         public DbSet<Trade> Trades { get; set; }
@@ -43,6 +48,7 @@ namespace Fintex.EntityFrameworkCore
 
             ConfigureTrade(modelBuilder);
             ConfigureMarketDataPoint(modelBuilder);
+            ConfigureMarketDataTimeframeCandle(modelBuilder);
             ConfigureUserProfile(modelBuilder);
             ConfigureTradeAnalysisSnapshot(modelBuilder);
         }
@@ -111,6 +117,26 @@ namespace Fintex.EntityFrameworkCore
                 entity.Property(x => x.TrendScore).HasPrecision(10, 4);
                 entity.Property(x => x.ConfidenceScore).HasPrecision(10, 4);
                 entity.Property(x => x.Verdict).HasConversion<string>().HasMaxLength(16);
+            });
+        }
+
+        private static void ConfigureMarketDataTimeframeCandle(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<MarketDataTimeframeCandle>(entity =>
+            {
+                entity.ToTable("AppMarketDataTimeframeCandles");
+                entity.HasIndex(x => new { x.Provider, x.Symbol, x.Timeframe, x.OpenTime }).IsUnique();
+                entity.HasIndex(x => new { x.Symbol, x.Timeframe, x.OpenTime });
+
+                entity.Property(x => x.Symbol).IsRequired().HasMaxLength(MarketDataPoint.MaxSymbolLength);
+                entity.Property(x => x.Provider).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.AssetClass).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Timeframe).HasConversion<string>().HasMaxLength(16);
+
+                entity.Property(x => x.Open).HasPrecision(18, 8);
+                entity.Property(x => x.High).HasPrecision(18, 8);
+                entity.Property(x => x.Low).HasPrecision(18, 8);
+                entity.Property(x => x.Close).HasPrecision(18, 8);
             });
         }
 

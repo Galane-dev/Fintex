@@ -30,6 +30,8 @@ namespace Fintex.Investments.MarketData
 
         Task<ListResultDto<MarketIndicatorValueDto>> GetRelativeStrengthIndexHistoryAsync(GetMarketDataHistoryInput input);
 
+        Task<ListResultDto<MarketTimeframeRsiDto>> GetRelativeStrengthIndexTimeframesAsync(GetMarketDataHistoryInput input);
+
         Task<MarketIndicatorValueDto> GetStandardDeviationLatestAsync(GetMarketDataHistoryInput input);
 
         Task<ListResultDto<MarketIndicatorValueDto>> GetStandardDeviationHistoryAsync(GetMarketDataHistoryInput input);

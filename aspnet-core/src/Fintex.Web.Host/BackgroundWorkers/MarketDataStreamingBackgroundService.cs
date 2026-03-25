@@ -19,6 +19,7 @@ namespace Fintex.Web.Host.BackgroundWorkers
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IEnumerable<IMarketDataStreamClient> _streamClients;
         private readonly ILogger<MarketDataStreamingBackgroundService> _logger;
+        private readonly SemaphoreSlim _tickProcessingLock = new SemaphoreSlim(1, 1);
 
         public MarketDataStreamingBackgroundService(
             IServiceScopeFactory serviceScopeFactory,
@@ -53,6 +54,8 @@ namespace Fintex.Web.Host.BackgroundWorkers
 
         private async Task ProcessTickAsync(MarketStreamTick tick, CancellationToken cancellationToken)
         {
+            await _tickProcessingLock.WaitAsync(cancellationToken);
+
             try
             {
                 using (var scope = _serviceScopeFactory.CreateScope())
@@ -68,6 +71,10 @@ namespace Fintex.Web.Host.BackgroundWorkers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to process market tick for {Symbol}.", tick.Symbol);
+            }
+            finally
+            {
+                _tickProcessingLock.Release();
             }
         }
     }

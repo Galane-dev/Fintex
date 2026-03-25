@@ -8,5 +8,7 @@ namespace Fintex.Investments.Analytics
     public interface IIndicatorCalculator
     {
         IndicatorSnapshot Calculate(IReadOnlyList<decimal> closingPrices);
+
+        decimal? CalculateRsi(IReadOnlyList<decimal> closingPrices, int period = 14);
     }
 }
