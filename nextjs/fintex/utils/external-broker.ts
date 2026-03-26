@@ -16,6 +16,25 @@ const getString = (value: unknown, fallback = "") =>
 const getNullableString = (value: unknown) =>
   value == null ? null : getString(value);
 
+const getExternalBrokerStatus = (value: unknown): ExternalBrokerConnectionStatus => {
+  if (typeof value === "string") {
+    return value as ExternalBrokerConnectionStatus;
+  }
+
+  switch (Number(value)) {
+    case 1:
+      return "Pending";
+    case 2:
+      return "Connected";
+    case 3:
+      return "Failed";
+    case 4:
+      return "Disconnected";
+    default:
+      return "Pending";
+  }
+};
+
 export const normalizeExternalBrokerConnection = (
   value: Record<string, unknown>,
 ): ExternalBrokerConnection => ({
@@ -26,9 +45,7 @@ export const normalizeExternalBrokerConnection = (
   accountLogin: getString(value.accountLogin ?? value.AccountLogin),
   server: getString(value.server ?? value.Server),
   terminalPath: getNullableString(value.terminalPath ?? value.TerminalPath),
-  status: getString(
-    value.status ?? value.Status,
-  ) as ExternalBrokerConnectionStatus,
+  status: getExternalBrokerStatus(value.status ?? value.Status),
   isActive: Boolean(value.isActive ?? value.IsActive),
   brokerAccountName: getString(value.brokerAccountName ?? value.BrokerAccountName),
   brokerAccountCurrency: getString(

@@ -1,11 +1,14 @@
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
+using Abp.Domain.Repositories;
 using Abp.Events.Bus;
 using Abp.Runtime.Session;
 using Abp.UI;
 using Fintex.Investments.Events;
 using Fintex.Investments.Trading.Dto;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Fintex.Investments.Trading
@@ -18,15 +21,18 @@ namespace Fintex.Investments.Trading
     {
         private readonly ITradeRepository _tradeRepository;
         private readonly IMarketDataPointRepository _marketDataPointRepository;
+        private readonly IRepository<TradeExecutionContext, long> _tradeExecutionContextRepository;
         private readonly IEventBus _eventBus;
 
         public TradeAppService(
             ITradeRepository tradeRepository,
             IMarketDataPointRepository marketDataPointRepository,
+            IRepository<TradeExecutionContext, long> tradeExecutionContextRepository,
             IEventBus eventBus)
         {
             _tradeRepository = tradeRepository;
             _marketDataPointRepository = marketDataPointRepository;
+            _tradeExecutionContextRepository = tradeExecutionContextRepository;
             _eventBus = eventBus;
         }
 
@@ -34,7 +40,8 @@ namespace Fintex.Investments.Trading
         {
             var userId = AbpSession.GetUserId();
             var trades = await _tradeRepository.GetUserTradesAsync(userId);
-            return new ListResultDto<TradeDto>(ObjectMapper.Map<System.Collections.Generic.List<TradeDto>>(trades));
+            var contexts = await GetExecutionContextsAsync(trades.Select(x => x.Id));
+            return new ListResultDto<TradeDto>(trades.Select(trade => MapTradeDto(trade, contexts)).ToList());
         }
 
         public async Task<TradeDto> GetAsync(EntityDto<long> input)
@@ -45,7 +52,8 @@ namespace Fintex.Investments.Trading
                 throw new UserFriendlyException("Trade not found.");
             }
 
-            return ObjectMapper.Map<TradeDto>(trade);
+            var contexts = await GetExecutionContextsAsync(new[] { trade.Id });
+            return MapTradeDto(trade, contexts);
         }
 
         public async Task<TradeDto> CreateAsync(CreateTradeInput input)
@@ -82,7 +90,8 @@ namespace Fintex.Investments.Trading
                 OccurredAt = trade.ExecutedAt
             });
 
-            return ObjectMapper.Map<TradeDto>(trade);
+            var contexts = await GetExecutionContextsAsync(new[] { trade.Id });
+            return MapTradeDto(trade, contexts);
         }
 
         public async Task<TradeDto> CloseAsync(CloseTradeInput input)
@@ -108,7 +117,42 @@ namespace Fintex.Investments.Trading
                 OccurredAt = trade.ClosedAt ?? DateTime.UtcNow
             });
 
-            return ObjectMapper.Map<TradeDto>(trade);
+            var contexts = await GetExecutionContextsAsync(new[] { trade.Id });
+            return MapTradeDto(trade, contexts);
+        }
+
+        private async Task<Dictionary<long, TradeExecutionContext>> GetExecutionContextsAsync(IEnumerable<long> tradeIds)
+        {
+            var ids = tradeIds?.Distinct().ToList() ?? new List<long>();
+            if (ids.Count == 0)
+            {
+                return new Dictionary<long, TradeExecutionContext>();
+            }
+
+            var contexts = await _tradeExecutionContextRepository.GetAllListAsync(x => ids.Contains(x.TradeId));
+            return contexts
+                .GroupBy(x => x.TradeId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.OrderByDescending(item => item.CreationTime).First());
+        }
+
+        private TradeDto MapTradeDto(Trade trade, IReadOnlyDictionary<long, TradeExecutionContext> contexts)
+        {
+            var dto = ObjectMapper.Map<TradeDto>(trade);
+            if (dto.StopLoss.HasValue && dto.TakeProfit.HasValue)
+            {
+                return dto;
+            }
+
+            if (!contexts.TryGetValue(trade.Id, out var context) || context == null)
+            {
+                return dto;
+            }
+
+            dto.StopLoss ??= context.StopLoss;
+            dto.TakeProfit ??= context.TakeProfit;
+            return dto;
         }
 
         private async Task<decimal> ResolveLatestPriceAsync(string symbol, MarketDataProvider provider)

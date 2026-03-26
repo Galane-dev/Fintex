@@ -35,5 +35,23 @@ namespace Fintex.Investments
                 .OrderByDescending(x => x.CreationTime)
                 .ToListAsync();
         }
+
+        public async Task<List<Trade>> GetUserOpenTradesAsync(long userId)
+        {
+            return await GetAll()
+                .Where(x => x.UserId == userId && x.Status == TradeStatus.Open)
+                .OrderByDescending(x => x.CreationTime)
+                .ToListAsync();
+        }
+
+        public async Task<Trade> GetByExternalOrderIdAsync(long userId, string externalOrderId)
+        {
+            var normalized = externalOrderId == null ? string.Empty : externalOrderId.Trim();
+
+            return await GetAll()
+                .Where(x => x.UserId == userId && x.ExternalOrderId == normalized)
+                .OrderByDescending(x => x.CreationTime)
+                .FirstOrDefaultAsync();
+        }
     }
 }

@@ -15,6 +15,18 @@ namespace Fintex.Investments
         {
         }
 
+        public async Task<List<ExternalBrokerConnection>> GetActiveConnectionsAsync(ExternalBrokerProvider provider)
+        {
+            return await GetAll()
+                .Where(x =>
+                    x.IsActive &&
+                    x.Status == ExternalBrokerConnectionStatus.Connected &&
+                    x.Provider == provider)
+                .OrderByDescending(x => x.LastValidatedAt)
+                .ThenByDescending(x => x.CreationTime)
+                .ToListAsync();
+        }
+
         public async Task<List<ExternalBrokerConnection>> GetForUserAsync(long userId)
         {
             return await GetAll()

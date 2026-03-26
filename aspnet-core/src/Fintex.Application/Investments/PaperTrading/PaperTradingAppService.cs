@@ -260,7 +260,7 @@ namespace Fintex.Investments.PaperTrading
             var realizedProfitLoss = 0m;
             long? positionId;
 
-            if (position == null)
+            if (position == null || position.Direction == input.Direction)
             {
                 position = new PaperPosition(
                     AbpSession.TenantId,
@@ -278,12 +278,6 @@ namespace Fintex.Investments.PaperTrading
 
                 await _paperPositionRepository.InsertAsync(position);
                 await CurrentUnitOfWork.SaveChangesAsync();
-                positionId = position.Id;
-            }
-            else if (position.Direction == input.Direction)
-            {
-                position.Add(input.Quantity, fillPrice, occurredAt);
-                position.ApplyTradePlan(effectiveStopLoss, effectiveTakeProfit, occurredAt);
                 positionId = position.Id;
             }
             else
@@ -939,13 +933,24 @@ namespace Fintex.Investments.PaperTrading
         private async Task<MarketDataPoint> GetLatestPointAsync(string symbol, MarketDataProvider provider)
         {
             MarketDataPoint latestPoint;
+            var alternateSymbol = GetAlternateMarketSymbol(symbol, provider);
 
             using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
             {
                 latestPoint = await _marketDataPointRepository.GetLatestAsync(symbol, provider);
+                if (latestPoint == null && !string.IsNullOrWhiteSpace(alternateSymbol))
+                {
+                    latestPoint = await _marketDataPointRepository.GetLatestAsync(alternateSymbol, provider);
+                }
+
                 if (latestPoint == null)
                 {
                     latestPoint = await _marketDataPointRepository.GetLatestBySymbolAsync(symbol);
+                }
+
+                if (latestPoint == null && !string.IsNullOrWhiteSpace(alternateSymbol))
+                {
+                    latestPoint = await _marketDataPointRepository.GetLatestBySymbolAsync(alternateSymbol);
                 }
             }
 
@@ -977,6 +982,23 @@ namespace Fintex.Investments.PaperTrading
             }
 
             return value;
+        }
+
+        private static string GetAlternateMarketSymbol(string symbol, MarketDataProvider provider)
+        {
+            if (provider != MarketDataProvider.Binance || string.IsNullOrWhiteSpace(symbol))
+            {
+                return null;
+            }
+
+            var normalized = symbol.Trim().ToUpperInvariant().Replace("/", string.Empty, StringComparison.Ordinal);
+            if (normalized.EndsWith("USD", StringComparison.Ordinal) &&
+                !normalized.EndsWith("USDT", StringComparison.Ordinal))
+            {
+                return normalized.Substring(0, normalized.Length - 3) + "USDT";
+            }
+
+            return null;
         }
 
         private sealed class PaperTradeMarketContext

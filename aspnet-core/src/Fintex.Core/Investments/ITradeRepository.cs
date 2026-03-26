@@ -12,5 +12,9 @@ namespace Fintex.Investments
         Task<List<Trade>> GetOpenTradesBySymbolAsync(string symbol);
 
         Task<List<Trade>> GetUserTradesAsync(long userId);
+
+        Task<List<Trade>> GetUserOpenTradesAsync(long userId);
+
+        Task<Trade> GetByExternalOrderIdAsync(long userId, string externalOrderId);
     }
 }

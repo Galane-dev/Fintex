@@ -38,6 +38,16 @@ namespace Fintex.EntityFrameworkCore
         public DbSet<ExternalBrokerConnection> ExternalBrokerConnections { get; set; }
 
         /// <summary>
+        /// Stores rich execution-time context for live broker trades.
+        /// </summary>
+        public DbSet<TradeExecutionContext> TradeExecutionContexts { get; set; }
+
+        /// <summary>
+        /// Stores raw broker websocket execution events for later analytics and reconciliation.
+        /// </summary>
+        public DbSet<ExternalBrokerExecutionEvent> ExternalBrokerExecutionEvents { get; set; }
+
+        /// <summary>
         /// Stores user paper trading accounts.
         /// </summary>
         public DbSet<PaperTradingAccount> PaperTradingAccounts { get; set; }
@@ -72,6 +82,8 @@ namespace Fintex.EntityFrameworkCore
             base.OnModelCreating(modelBuilder);
 
             ConfigureTrade(modelBuilder);
+            ConfigureTradeExecutionContext(modelBuilder);
+            ConfigureExternalBrokerExecutionEvent(modelBuilder);
             ConfigureExternalBrokerConnection(modelBuilder);
             ConfigurePaperTradingAccount(modelBuilder);
             ConfigurePaperOrder(modelBuilder);
@@ -150,6 +162,64 @@ namespace Fintex.EntityFrameworkCore
             });
         }
 
+        private static void ConfigureTradeExecutionContext(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<TradeExecutionContext>(entity =>
+            {
+                entity.ToTable("AppTradeExecutionContexts");
+                entity.HasIndex(x => new { x.TradeId, x.UserId });
+                entity.HasIndex(x => new { x.UserId, x.ExternalBrokerConnectionId, x.CreationTime });
+
+                entity.Property(x => x.BrokerEnvironment).IsRequired().HasMaxLength(TradeExecutionContext.MaxEnvironmentLength);
+                entity.Property(x => x.BrokerSymbol).IsRequired().HasMaxLength(TradeExecutionContext.MaxBrokerSymbolLength);
+                entity.Property(x => x.MarketVerdict).HasMaxLength(TradeExecutionContext.MaxVerdictLength);
+                entity.Property(x => x.StructureLabel).HasMaxLength(TradeExecutionContext.MaxStructureLabelLength);
+                entity.Property(x => x.BrokerOrderId).HasMaxLength(TradeExecutionContext.MaxOrderIdLength);
+                entity.Property(x => x.BrokerClientOrderId).HasMaxLength(TradeExecutionContext.MaxClientOrderIdLength);
+                entity.Property(x => x.BrokerOrderStatus).HasMaxLength(TradeExecutionContext.MaxStatusLength);
+                entity.Property(x => x.Notes).HasMaxLength(TradeExecutionContext.MaxSummaryLength);
+                entity.Property(x => x.DecisionSummary).HasMaxLength(TradeExecutionContext.MaxSummaryLength);
+                entity.Property(x => x.RequestPayloadJson).HasMaxLength(TradeExecutionContext.MaxSummaryLength);
+                entity.Property(x => x.BrokerResponseJson).HasMaxLength(TradeExecutionContext.MaxSummaryLength);
+                entity.Property(x => x.UserBehavioralSummary).HasMaxLength(TradeExecutionContext.MaxSummaryLength);
+
+                entity.Property(x => x.BrokerProvider).HasConversion<string>().HasMaxLength(32);
+                entity.Property(x => x.BrokerPlatform).HasConversion<string>().HasMaxLength(32);
+                entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.AssetClass).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.MarketDataProvider).HasConversion<string>().HasMaxLength(16);
+
+                entity.Property(x => x.Quantity).HasPrecision(18, 8);
+                entity.Property(x => x.ReferencePrice).HasPrecision(18, 8);
+                entity.Property(x => x.Bid).HasPrecision(18, 8);
+                entity.Property(x => x.Ask).HasPrecision(18, 8);
+                entity.Property(x => x.Spread).HasPrecision(18, 8);
+                entity.Property(x => x.SpreadPercent).HasPrecision(18, 8);
+                entity.Property(x => x.StopLoss).HasPrecision(18, 8);
+                entity.Property(x => x.TakeProfit).HasPrecision(18, 8);
+                entity.Property(x => x.TrendScore).HasPrecision(10, 4);
+                entity.Property(x => x.ConfidenceScore).HasPrecision(10, 4);
+                entity.Property(x => x.TimeframeAlignmentScore).HasPrecision(10, 4);
+                entity.Property(x => x.StructureScore).HasPrecision(10, 4);
+                entity.Property(x => x.Sma).HasPrecision(18, 8);
+                entity.Property(x => x.Ema).HasPrecision(18, 8);
+                entity.Property(x => x.Rsi).HasPrecision(18, 8);
+                entity.Property(x => x.Macd).HasPrecision(18, 8);
+                entity.Property(x => x.MacdSignal).HasPrecision(18, 8);
+                entity.Property(x => x.MacdHistogram).HasPrecision(18, 8);
+                entity.Property(x => x.Momentum).HasPrecision(18, 8);
+                entity.Property(x => x.RateOfChange).HasPrecision(18, 8);
+                entity.Property(x => x.Atr).HasPrecision(18, 8);
+                entity.Property(x => x.AtrPercent).HasPrecision(18, 8);
+                entity.Property(x => x.Adx).HasPrecision(18, 8);
+                entity.Property(x => x.UserRiskTolerance).HasPrecision(10, 4);
+                entity.Property(x => x.UserBehavioralRiskScore).HasPrecision(10, 4);
+                entity.Property(x => x.BrokerSubmittedQuantity).HasPrecision(18, 8);
+                entity.Property(x => x.BrokerFilledQuantity).HasPrecision(18, 8);
+                entity.Property(x => x.BrokerFilledAveragePrice).HasPrecision(18, 8);
+            });
+        }
+
         private static void ConfigureExternalBrokerConnection(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ExternalBrokerConnection>(entity =>
@@ -174,6 +244,39 @@ namespace Fintex.EntityFrameworkCore
 
                 entity.Property(x => x.LastKnownBalance).HasPrecision(18, 8);
                 entity.Property(x => x.LastKnownEquity).HasPrecision(18, 8);
+            });
+        }
+
+        private static void ConfigureExternalBrokerExecutionEvent(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ExternalBrokerExecutionEvent>(entity =>
+            {
+                entity.ToTable("AppExternalBrokerExecutionEvents");
+                entity.HasIndex(x => new { x.UserId, x.ExternalBrokerConnectionId, x.CreationTime });
+                entity.HasIndex(x => new { x.ExternalBrokerConnectionId, x.BrokerOrderId, x.EventType });
+                entity.HasIndex(x => new { x.ExternalBrokerConnectionId, x.ExecutionId });
+
+                entity.Property(x => x.BrokerEnvironment).IsRequired().HasMaxLength(ExternalBrokerConnection.MaxServerLength);
+                entity.Property(x => x.EventType).IsRequired().HasMaxLength(ExternalBrokerExecutionEvent.MaxEventTypeLength);
+                entity.Property(x => x.ExecutionId).HasMaxLength(ExternalBrokerExecutionEvent.MaxExecutionIdLength);
+                entity.Property(x => x.BrokerOrderId).HasMaxLength(ExternalBrokerExecutionEvent.MaxOrderIdLength);
+                entity.Property(x => x.BrokerClientOrderId).HasMaxLength(ExternalBrokerExecutionEvent.MaxClientOrderIdLength);
+                entity.Property(x => x.BrokerSymbol).HasMaxLength(ExternalBrokerExecutionEvent.MaxSymbolLength);
+                entity.Property(x => x.NormalizedSymbol).HasMaxLength(ExternalBrokerExecutionEvent.MaxSymbolLength);
+                entity.Property(x => x.BrokerOrderStatus).HasMaxLength(ExternalBrokerExecutionEvent.MaxStatusLength);
+                entity.Property(x => x.RawPayloadJson).HasMaxLength(ExternalBrokerExecutionEvent.MaxPayloadLength);
+
+                entity.Property(x => x.BrokerProvider).HasConversion<string>().HasMaxLength(32);
+                entity.Property(x => x.BrokerPlatform).HasConversion<string>().HasMaxLength(32);
+                entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.AssetClass).HasConversion<string>().HasMaxLength(16);
+
+                entity.Property(x => x.Quantity).HasPrecision(18, 8);
+                entity.Property(x => x.FilledQuantity).HasPrecision(18, 8);
+                entity.Property(x => x.EventQuantity).HasPrecision(18, 8);
+                entity.Property(x => x.Price).HasPrecision(18, 8);
+                entity.Property(x => x.FilledAveragePrice).HasPrecision(18, 8);
+                entity.Property(x => x.PositionQuantity).HasPrecision(18, 8);
             });
         }
 

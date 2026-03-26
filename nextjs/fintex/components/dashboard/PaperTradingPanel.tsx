@@ -18,6 +18,7 @@ import {
   message,
 } from "antd";
 import { useExternalBrokerAccounts } from "@/hooks/useExternalBrokerAccounts";
+import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
 import {
   EXTERNAL_BROKER_PLATFORM_DIRECT_API,
@@ -43,6 +44,20 @@ export interface DashboardPaperTradingActions {
   openRecommendation: () => void;
   openTrade: (direction: "Buy" | "Sell") => void;
 }
+
+const PAPER_EXECUTION_TARGET = "paper";
+
+const isPaperExecutionTarget = (value: string | undefined) =>
+  !value || value === PAPER_EXECUTION_TARGET;
+
+const getExternalConnectionIdFromTarget = (value: string | undefined) => {
+  if (!value || !value.startsWith("alpaca:")) {
+    return null;
+  }
+
+  const parsed = Number(value.slice("alpaca:".length));
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 export function PaperTradingPanel({
   currentPrice,
@@ -73,6 +88,13 @@ export function PaperTradingPanel({
     disconnectAccount,
     clearError: clearExternalBrokerError,
   } = useExternalBrokerAccounts();
+  const {
+    trades: liveTrades,
+    isSubmitting: isLiveSubmitting,
+    error: liveTradingError,
+    placeOrder: placeLiveOrder,
+    clearError: clearLiveTradingError,
+  } = useLiveTrading();
   const [accountForm] = Form.useForm();
   const [tradeForm] = Form.useForm();
   const [externalBrokerForm] = Form.useForm();
@@ -100,6 +122,37 @@ export function PaperTradingPanel({
       }),
     [connections],
   );
+  const connectedExternalConnections = useMemo(
+    () =>
+      sortedConnections.filter(
+        (item) =>
+          item.isActive &&
+          item.provider === EXTERNAL_BROKER_PROVIDER_ALPACA &&
+          item.status !== "Failed" &&
+          item.status !== "Disconnected",
+      ),
+    [sortedConnections],
+  );
+  const availableExecutionTargets = useMemo(() => {
+    const items: Array<{ label: string; value: string }> = [];
+
+    if (account) {
+      items.push({
+        label: "Paper academy",
+        value: PAPER_EXECUTION_TARGET,
+      });
+    }
+
+    connectedExternalConnections.forEach((connection) => {
+      items.push({
+        label: `${connection.displayName} (${getExternalBrokerEnvironmentLabel(connection)})`,
+        value: `alpaca:${connection.id}`,
+      });
+    });
+
+    return items;
+  }, [account, connectedExternalConnections]);
+  const isBusy = isSubmitting || isLiveSubmitting;
 
   const feedbackTone = useMemo(() => {
     if (!activeFeedback) {
@@ -194,15 +247,21 @@ export function PaperTradingPanel({
     (direction: "Buy" | "Sell") => {
       setTradeDirection(direction);
 
-      if (!account) {
+      if (!account && connectedExternalConnections.length === 0) {
         setIsAccountsOpen(true);
-        message.info("Create your paper account before placing simulated trades.");
+        message.info("Create your paper account or connect Alpaca before placing trades.");
         return;
       }
 
+      tradeForm.setFieldsValue({
+        executionTarget:
+          tradeForm.getFieldValue("executionTarget") ??
+          availableExecutionTargets[0]?.value ??
+          PAPER_EXECUTION_TARGET,
+      });
       setIsTradeOpen(true);
     },
-    [account],
+    [account, availableExecutionTargets, connectedExternalConnections.length, tradeForm],
   );
 
   const openRecommendationModal = useCallback(async () => {
@@ -215,7 +274,7 @@ export function PaperTradingPanel({
     }
 
     registerDashboardActions({
-      hasAccount: account != null,
+      hasAccount: account != null || connectedExternalConnections.length > 0,
       openAccounts: openAccountsModal,
       openRecommendation: () => {
         void openRecommendationModal();
@@ -224,6 +283,7 @@ export function PaperTradingPanel({
     });
   }, [
     account,
+    connectedExternalConnections.length,
     openAccountsModal,
     openRecommendationModal,
     openTradeModal,
@@ -272,8 +332,44 @@ export function PaperTradingPanel({
   const submitTrade = async (direction: "Buy" | "Sell") => {
     setTradeDirection(direction);
     const values = await tradeForm.validateFields();
+    const executionTarget = values.executionTarget as string | undefined;
 
-    const result = await placeOrder({
+    if (isPaperExecutionTarget(executionTarget)) {
+      const result = await placeOrder({
+        symbol: "BTCUSDT",
+        assetClass: 1,
+        provider: 1,
+        direction,
+        quantity: values.quantity,
+        stopLoss: values.stopLoss ?? null,
+        takeProfit: values.takeProfit ?? null,
+        notes: values.notes ?? "",
+      });
+
+      if (!result) {
+        return;
+      }
+
+      if (result.wasExecuted) {
+        tradeForm.resetFields(["quantity", "stopLoss", "takeProfit", "notes"]);
+        setIsTradeOpen(false);
+        setIsAssessmentOpen(false);
+        message.success(`${direction} paper trade placed.`);
+        return;
+      }
+
+      setIsAssessmentOpen(true);
+      return;
+    }
+
+    const connectionId = getExternalConnectionIdFromTarget(executionTarget);
+    if (!connectionId) {
+      message.warning("Select a valid execution destination.");
+      return;
+    }
+
+    const liveResult = await placeLiveOrder({
+      connectionId,
       symbol: "BTCUSDT",
       assetClass: 1,
       provider: 1,
@@ -284,19 +380,14 @@ export function PaperTradingPanel({
       notes: values.notes ?? "",
     });
 
-    if (!result) {
+    if (!liveResult) {
       return;
     }
 
-    if (result.wasExecuted) {
-      tradeForm.resetFields(["quantity", "stopLoss", "takeProfit", "notes"]);
-      setIsTradeOpen(false);
-      setIsAssessmentOpen(false);
-      message.success(`${direction} paper trade placed.`);
-      return;
-    }
-
-    setIsAssessmentOpen(true);
+    tradeForm.resetFields(["quantity", "stopLoss", "takeProfit", "notes"]);
+    setIsTradeOpen(false);
+    setIsAssessmentOpen(false);
+    message.success(`${direction} live Alpaca order routed successfully.`);
   };
 
   const handleApplyAssessmentSuggestions = async () => {
@@ -350,25 +441,65 @@ export function PaperTradingPanel({
       return;
     }
 
-    if (!account) {
-      setIsRecommendationOpen(false);
-      setIsAccountsOpen(true);
-      message.info("Create your paper account before placing the suggested trade.");
-      return;
-    }
-
     const values = tradeForm.getFieldsValue();
     const quantity = values.quantity ?? 0.01;
     const direction = recommendation.recommendedAction as "Buy" | "Sell";
+    const executionTarget =
+      (values.executionTarget as string | undefined) ??
+      availableExecutionTargets[0]?.value ??
+      PAPER_EXECUTION_TARGET;
     setTradeDirection(direction);
 
     tradeForm.setFieldsValue({
       quantity,
+      executionTarget,
       stopLoss: recommendation.suggestedStopLoss ?? values.stopLoss ?? undefined,
       takeProfit: recommendation.suggestedTakeProfit ?? values.takeProfit ?? undefined,
     });
 
-    const result = await placeOrder({
+    if (isPaperExecutionTarget(executionTarget)) {
+      if (!account) {
+        setIsRecommendationOpen(false);
+        setIsAccountsOpen(true);
+        message.info("Create your paper account before placing the suggested trade.");
+        return;
+      }
+
+      const result = await placeOrder({
+        symbol: "BTCUSDT",
+        assetClass: 1,
+        provider: 1,
+        direction,
+        quantity,
+        stopLoss: recommendation.suggestedStopLoss ?? values.stopLoss ?? null,
+        takeProfit: recommendation.suggestedTakeProfit ?? values.takeProfit ?? null,
+        notes: values.notes ?? `Suggested ${direction} setup`,
+      });
+
+      if (!result) {
+        return;
+      }
+
+      if (result.wasExecuted) {
+        setIsRecommendationOpen(false);
+        setIsTradeOpen(false);
+        tradeForm.resetFields(["quantity", "stopLoss", "takeProfit", "notes"]);
+        message.success("Suggested trade placed.");
+        return;
+      }
+
+      message.warning(result.assessment.headline);
+      return;
+    }
+
+    const connectionId = getExternalConnectionIdFromTarget(executionTarget);
+    if (!connectionId) {
+      message.warning("Choose a valid execution destination first.");
+      return;
+    }
+
+    const liveResult = await placeLiveOrder({
+      connectionId,
       symbol: "BTCUSDT",
       assetClass: 1,
       provider: 1,
@@ -379,34 +510,36 @@ export function PaperTradingPanel({
       notes: values.notes ?? `Suggested ${direction} setup`,
     });
 
-    if (!result) {
+    if (!liveResult) {
       return;
     }
 
-    if (result.wasExecuted) {
-      setIsRecommendationOpen(false);
-      setIsTradeOpen(false);
-      tradeForm.resetFields(["quantity", "stopLoss", "takeProfit", "notes"]);
-      message.success("Suggested trade placed.");
-      return;
-    }
-
-    message.warning(result.assessment.headline);
+    setIsRecommendationOpen(false);
+    setIsTradeOpen(false);
+    tradeForm.resetFields(["quantity", "stopLoss", "takeProfit", "notes"]);
+    message.success("Suggested live trade routed to Alpaca.");
   };
 
   if (isLoading && !snapshot) {
     return <Skeleton active paragraph={{ rows: 8 }} />;
   }
 
+  const combinedError = error ?? externalBrokerError ?? liveTradingError;
+  const handleClearAnyError = () => {
+    clearError();
+    clearExternalBrokerError();
+    clearLiveTradingError();
+  };
+
   return (
     <div className={styles.wrapper}>
-      {error ? (
+      {combinedError ? (
         <Alert
           type="warning"
           showIcon
-          title={error}
+          title={combinedError}
           closable
-          onClose={clearError}
+          onClose={handleClearAnyError}
         />
       ) : null}
 
@@ -505,7 +638,7 @@ export function PaperTradingPanel({
             key="apply"
             type="primary"
             className={styles.actionButton}
-            loading={isSubmitting}
+            loading={isBusy}
             onClick={() => void handleApplyAssessmentSuggestions()}
           >
             Apply suggested setup
@@ -924,7 +1057,7 @@ export function PaperTradingPanel({
             key="submit"
             type="primary"
             danger={tradeDirection === "Sell"}
-            loading={isSubmitting}
+            loading={isBusy}
             className={styles.actionButton}
             onClick={() => void submitTrade(tradeDirection)}
           >
@@ -940,6 +1073,18 @@ export function PaperTradingPanel({
           <Form form={tradeForm} layout="vertical">
             <div className={styles.formGrid}>
               <Form.Item
+                name="executionTarget"
+                label="Execution destination"
+                initialValue={availableExecutionTargets[0]?.value ?? PAPER_EXECUTION_TARGET}
+                rules={[{ required: true, message: "Choose where this trade should be sent." }]}
+              >
+                <Select
+                  options={availableExecutionTargets}
+                  placeholder="Select destination"
+                />
+              </Form.Item>
+
+              <Form.Item
                 name="quantity"
                 label="Quantity"
                 rules={[{ required: true, message: "Enter a quantity." }]}
@@ -951,11 +1096,11 @@ export function PaperTradingPanel({
                   placeholder="0.010"
                 />
               </Form.Item>
-
-              <Form.Item label="Symbol">
-                <Input value="BTCUSDT / Binance" readOnly />
-              </Form.Item>
             </div>
+
+            <Form.Item label="Symbol">
+              <Input value="BTCUSDT / Binance" readOnly />
+            </Form.Item>
 
             <div className={styles.formGrid}>
               <Form.Item name="stopLoss" label="Stop loss">
@@ -1002,7 +1147,7 @@ export function PaperTradingPanel({
             type="primary"
             danger={recommendation?.riskLevel === "High"}
             disabled={recommendation?.recommendedAction === "Hold"}
-            loading={isSubmitting}
+            loading={isBusy}
             className={styles.actionButton}
             onClick={() => void handlePlaceSuggestedTrade()}
           >
@@ -1137,7 +1282,7 @@ export function PaperTradingPanel({
       {displayMode === "support" ? null : !account ? (
         <div className={styles.section}>
           <Typography.Paragraph className={styles.helper}>
-            Create your internal paper account to unlock simulator trading. Buy, sell, recommendation, and account actions now live in the chart header so the workspace stays focused.
+            Create your internal paper account or connect Alpaca to unlock trading. Buy, sell, recommendation, and account actions now live in the chart header so the workspace stays focused.
           </Typography.Paragraph>
           <Button
             type="primary"
@@ -1166,6 +1311,7 @@ export function PaperTradingPanel({
               </Button>
               <Button
                 className={styles.actionButton}
+                loading={isBusy}
                 onClick={() => {
                   void openRecommendationModal();
                 }}
@@ -1189,6 +1335,12 @@ export function PaperTradingPanel({
                   </div>
                 </div>
               ))}
+              <div className={styles.metricCard}>
+                <div className={styles.metricLabel}>Live trades</div>
+                <div className={styles.metricValue}>
+                  {liveTrades.filter((trade) => trade.status === "Open").length}
+                </div>
+              </div>
             </div>
           </div>
 

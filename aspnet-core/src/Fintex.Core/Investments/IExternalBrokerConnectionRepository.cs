@@ -6,6 +6,8 @@ namespace Fintex.Investments
 {
     public interface IExternalBrokerConnectionRepository : IRepository<ExternalBrokerConnection, long>
     {
+        Task<List<ExternalBrokerConnection>> GetActiveConnectionsAsync(ExternalBrokerProvider provider);
+
         Task<List<ExternalBrokerConnection>> GetForUserAsync(long userId);
 
         Task<ExternalBrokerConnection> GetByUserAndLoginAsync(

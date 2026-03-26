@@ -20,7 +20,10 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { DashboardChart } from "@/components/dashboard/DashboardChart";
+import {
+  type ChartTradeOverlay,
+  DashboardChart,
+} from "@/components/dashboard/DashboardChart";
 import {
   type DashboardPaperTradingActions,
   PaperTradingPanel,
@@ -28,9 +31,11 @@ import {
 import { ROUTES } from "@/constants/routes";
 import { withAuth } from "@/hoc/withAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { useMarketData } from "@/hooks/useMarketData";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
 import { ExternalBrokerProvider } from "@/providers/external-broker-provider";
+import { LiveTradingProvider } from "@/providers/live-trading-provider";
 import { MarketDataProvider } from "@/providers/market-data-provider";
 import { PaperTradingProvider } from "@/providers/paper-trading-provider";
 import type { UserProfile } from "@/types/user-profile";
@@ -62,6 +67,11 @@ function DashboardContent() {
     isSubmitting: isPaperSubmitting,
     snapshot,
   } = usePaperTrading();
+  const {
+    trades: liveTrades,
+    isLoading: isLiveTradesLoading,
+    refreshTrades,
+  } = useLiveTrading();
   const [dashboardActions, setDashboardActions] =
     useState<DashboardPaperTradingActions>(defaultDashboardActions);
   const [isBehaviorOpen, setIsBehaviorOpen] = useState(false);
@@ -97,8 +107,35 @@ function DashboardContent() {
   const effectiveMomentum = verdict?.momentum ?? latest?.momentum ?? null;
   const effectiveAtrPercent = verdict?.atrPercent ?? null;
   const effectiveAdx = verdict?.adx ?? null;
-  const openPositions = snapshot?.positions ?? [];
-  const closedFills = snapshot?.recentFills ?? [];
+  const openPositions = useMemo(() => snapshot?.positions ?? [], [snapshot?.positions]);
+  const closedFills = useMemo(() => snapshot?.recentFills ?? [], [snapshot?.recentFills]);
+  const openLiveTrades = useMemo(
+    () => liveTrades.filter((trade) => trade.status === "Open"),
+    [liveTrades],
+  );
+  const closedLiveTrades = useMemo(
+    () => liveTrades.filter((trade) => trade.status !== "Open"),
+    [liveTrades],
+  );
+  const tradeOverlays = useMemo<ChartTradeOverlay[]>(
+    () => [
+      ...openPositions.map((position) => ({
+        id: `paper-${position.id}`,
+        direction: position.direction,
+        entryPrice: position.averageEntryPrice,
+        stopLoss: position.stopLoss,
+        takeProfit: position.takeProfit,
+      })),
+      ...openLiveTrades.map((trade) => ({
+        id: `live-${trade.id}`,
+        direction: trade.direction,
+        entryPrice: trade.entryPrice,
+        stopLoss: trade.stopLoss,
+        takeProfit: trade.takeProfit,
+      })),
+    ],
+    [openLiveTrades, openPositions],
+  );
 
   const calculations = useMemo(
     () => [
@@ -510,11 +547,11 @@ function DashboardContent() {
 
   const openPositionsTabContent = (
     <div className={styles.tabStack}>
-      {openPositions.length === 0 ? (
+      {openPositions.length === 0 && openLiveTrades.length === 0 ? (
         <div className={styles.emptyState}>
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No paper positions are open yet."
+            description="No open trades are active yet."
           />
         </div>
       ) : (
@@ -532,6 +569,7 @@ function DashboardContent() {
                 </div>
 
                 <Space wrap>
+                  <Tag color="default">Paper academy</Tag>
                   <Tag color={position.direction === "Buy" ? "green" : "red"}>
                     {position.quantity.toFixed(4)}
                   </Tag>
@@ -588,6 +626,66 @@ function DashboardContent() {
               </div>
             </div>
           ))}
+
+          {openLiveTrades.map((trade) => (
+            <div key={`live-${trade.id}`} className={styles.positionCard}>
+              <div className={styles.positionHeader}>
+                <div>
+                  <div className={styles.positionTitle}>
+                    {trade.symbol} {trade.direction}
+                  </div>
+                  <div className={styles.positionSubtle}>
+                    Opened {formatTime(trade.executedAt)}
+                  </div>
+                </div>
+
+                <Space wrap>
+                  <Tag color="blue">Alpaca</Tag>
+                  <Tag color={trade.direction === "Buy" ? "green" : "red"}>
+                    {trade.quantity.toFixed(4)}
+                  </Tag>
+                </Space>
+              </div>
+
+              <div className={styles.positionMetrics}>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Entry</span>
+                  <span className={styles.positionMetricValue}>
+                    {formatPrice(trade.entryPrice)}
+                  </span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Mark</span>
+                  <span className={styles.positionMetricValue}>
+                    {formatPrice(trade.lastMarketPrice)}
+                  </span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Stop loss</span>
+                  <span className={styles.positionMetricValue}>
+                    {formatPrice(trade.stopLoss)}
+                  </span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Take profit</span>
+                  <span className={styles.positionMetricValue}>
+                    {formatPrice(trade.takeProfit)}
+                  </span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Unrealized P/L</span>
+                  <span
+                    className={cx(
+                      styles.positionMetricValue,
+                      trade.unrealizedProfitLoss >= 0 ? styles.positive : styles.negative,
+                    )}
+                  >
+                    {formatPrice(trade.unrealizedProfitLoss)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -595,11 +693,11 @@ function DashboardContent() {
 
   const closedPositionsTabContent = (
     <div className={styles.tabStack}>
-      {closedFills.length === 0 ? (
+      {closedFills.length === 0 && closedLiveTrades.length === 0 ? (
         <div className={styles.emptyState}>
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="Closed paper trades will appear here once positions are exited."
+            description="Closed trades will appear here once positions are exited or synced."
           />
         </div>
       ) : (
@@ -619,6 +717,7 @@ function DashboardContent() {
                 <Tag color={fill.realizedProfitLoss >= 0 ? "green" : "red"}>
                   {formatPrice(fill.realizedProfitLoss)}
                 </Tag>
+                <Tag color="default">Paper academy</Tag>
               </div>
 
               <div className={styles.positionMetrics}>
@@ -639,6 +738,56 @@ function DashboardContent() {
                     )}
                   >
                     {formatPrice(fill.realizedProfitLoss)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {closedLiveTrades.map((trade) => (
+            <div key={`closed-live-${trade.id}`} className={styles.positionCard}>
+              <div className={styles.positionHeader}>
+                <div>
+                  <div className={styles.positionTitle}>
+                    {trade.symbol} {trade.direction}
+                  </div>
+                  <div className={styles.positionSubtle}>
+                    Closed {trade.closedAt ? formatTime(trade.closedAt) : formatTime(trade.executedAt)}
+                  </div>
+                </div>
+
+                <Tag color={trade.realizedProfitLoss >= 0 ? "green" : "red"}>
+                  {formatPrice(trade.realizedProfitLoss)}
+                </Tag>
+                <Tag color="blue">Alpaca</Tag>
+              </div>
+
+              <div className={styles.positionMetrics}>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Venue</span>
+                  <span className={styles.positionMetricValue}>Alpaca</span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Quantity</span>
+                  <span className={styles.positionMetricValue}>{trade.quantity.toFixed(4)}</span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Entry</span>
+                  <span className={styles.positionMetricValue}>{formatPrice(trade.entryPrice)}</span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Exit</span>
+                  <span className={styles.positionMetricValue}>{formatPrice(trade.exitPrice)}</span>
+                </div>
+                <div className={styles.positionMetric}>
+                  <span className={styles.positionMetricLabel}>Realized P/L</span>
+                  <span
+                    className={cx(
+                      styles.positionMetricValue,
+                      trade.realizedProfitLoss >= 0 ? styles.positive : styles.negative,
+                    )}
+                  >
+                    {formatPrice(trade.realizedProfitLoss)}
                   </span>
                 </div>
               </div>
@@ -727,7 +876,13 @@ function DashboardContent() {
       <div className={styles.shell}>
         <div className={styles.header}>
           <Space wrap>
-            <Button onClick={() => void refreshSnapshot()} loading={isLoading}>
+            <Button
+              onClick={() => {
+                void refreshSnapshot();
+                void refreshTrades();
+              }}
+              loading={isLoading || isLiveTradesLoading}
+            >
               Refresh snapshot
             </Button>
             <Link href={ROUTES.home}>
@@ -744,7 +899,7 @@ function DashboardContent() {
             <DashboardChart
               symbol="BTCUSDT"
               venue="Binance"
-              activePositions={openPositions}
+              tradeOverlays={tradeOverlays}
               bid={latest?.bid ?? null}
               ask={latest?.ask ?? null}
               onOpenAccounts={dashboardActions.openAccounts}
@@ -774,12 +929,12 @@ function DashboardContent() {
                   },
                   {
                     key: "open-positions",
-                    label: `Open trade (${openPositions.length})`,
+                    label: `Open trade (${openPositions.length + openLiveTrades.length})`,
                     children: openPositionsTabContent,
                   },
                   {
                     key: "closed-positions",
-                    label: `Closed trade (${closedFills.length})`,
+                    label: `Closed trade (${closedFills.length + closedLiveTrades.length})`,
                     children: closedPositionsTabContent,
                   },
                 ]}
@@ -807,7 +962,9 @@ function DashboardView() {
     <MarketDataProvider>
       <ExternalBrokerProvider>
         <PaperTradingProvider>
-          <DashboardContent />
+          <LiveTradingProvider>
+            <DashboardContent />
+          </LiveTradingProvider>
         </PaperTradingProvider>
       </ExternalBrokerProvider>
     </MarketDataProvider>

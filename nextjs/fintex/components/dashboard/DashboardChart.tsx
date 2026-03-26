@@ -9,14 +9,21 @@ import {
 import { Alert, Button, Segmented, Space, Tag, Typography } from "antd";
 import type { BinanceCandle, BinanceInterval } from "@/hooks/useBinanceChartData";
 import { useBinanceChartData } from "@/hooks/useBinanceChartData";
-import type { PaperPosition } from "@/types/paper-trading";
 import { formatPrice, formatSigned, formatTime } from "@/utils/market-data";
 import { useStyles } from "./style";
+
+export interface ChartTradeOverlay {
+  id: string;
+  direction: "Buy" | "Sell";
+  entryPrice: number;
+  stopLoss: number | null;
+  takeProfit: number | null;
+}
 
 interface DashboardChartProps {
   symbol: string;
   venue: string;
-  activePositions: PaperPosition[];
+  tradeOverlays: ChartTradeOverlay[];
   bid: number | null;
   ask: number | null;
   onOpenAccounts: () => void;
@@ -67,7 +74,7 @@ const buildAverageSeries = (candles: BinanceCandle[], period: number) =>
 export function DashboardChart({
   symbol,
   venue,
-  activePositions,
+  tradeOverlays,
   bid,
   ask,
   onOpenAccounts,
@@ -118,12 +125,12 @@ export function DashboardChart({
 
   const overlayLevels = useMemo<OverlayLevel[]>(
     () =>
-      activePositions.flatMap((position) => {
+      tradeOverlays.flatMap((position) => {
         const baseLevels: OverlayLevel[] = [
           {
             key: `${position.id}-entry`,
             label: `${position.direction} entry`,
-            price: position.averageEntryPrice,
+            price: position.entryPrice,
             color: "#60a5fa",
             dash: [],
           },
@@ -157,7 +164,7 @@ export function DashboardChart({
 
         return [...baseLevels, ...stopLossLevel, ...takeProfitLevel];
       }),
-    [activePositions],
+    [tradeOverlays],
   );
 
   const visualSpreadBand = useMemo(() => {

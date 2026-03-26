@@ -7,6 +7,7 @@ using Fintex.Configuration;
 using Fintex.Identity;
 using Fintex.Investments;
 using Fintex.Investments.Analytics;
+using Fintex.Investments.Brokers;
 using Fintex.Investments.MarketData;
 using Fintex.Web.Host.BackgroundWorkers;
 using Fintex.Web.Host.Brokers;
@@ -63,8 +64,10 @@ namespace Fintex.Web.Host.Startup
             services.AddTransient<IMarketDataIngestionService, MarketDataIngestionService>();
             services.AddTransient<IMarketDataStreamClient, BinanceMarketDataStreamClient>();
             services.AddTransient<IAlpacaBrokerService, AlpacaBrokerService>();
+            services.AddTransient<IAlpacaTradeUpdateIngestionService, AlpacaTradeUpdateIngestionService>();
             services.AddTransient<IMetaTraderBridgeService, MetaTraderPythonBridgeService>();
             services.AddHostedService<MarketDataStreamingBackgroundService>();
+            services.AddHostedService<AlpacaTradeUpdatesBackgroundService>();
 
             // Configure CORS for angular2 UI
             services.AddCors(
