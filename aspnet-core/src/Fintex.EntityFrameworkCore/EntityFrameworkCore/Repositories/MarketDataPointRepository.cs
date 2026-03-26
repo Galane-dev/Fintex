@@ -29,6 +29,16 @@ namespace Fintex.Investments
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<MarketDataPoint> GetLatestBySymbolAsync(string symbol)
+        {
+            var normalized = symbol == null ? string.Empty : symbol.Trim().ToUpperInvariant();
+
+            return await GetAll()
+                .Where(x => x.Symbol == normalized)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<List<MarketDataPoint>> GetRecentAsync(string symbol, MarketDataProvider provider, int take)
         {
             var normalized = symbol == null ? string.Empty : symbol.Trim().ToUpperInvariant();

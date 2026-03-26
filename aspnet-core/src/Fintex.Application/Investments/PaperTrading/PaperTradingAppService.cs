@@ -1,5 +1,6 @@
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
+using Abp.Domain.Uow;
 using Abp.Runtime.Session;
 using Abp.UI;
 using Fintex.Investments.PaperTrading.Dto;
@@ -61,7 +62,12 @@ namespace Fintex.Investments.PaperTrading
         public async Task<PaperTradingSnapshotDto> GetMySnapshotAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await GetMyAccountOrThrowAsync(userId);
+            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            if (account == null)
+            {
+                return new PaperTradingSnapshotDto();
+            }
+
             var positions = await _paperPositionRepository.GetOpenPositionsAsync(account.Id);
 
             await MarkAccountToMarketAsync(account, positions, DateTime.UtcNow);
@@ -82,7 +88,12 @@ namespace Fintex.Investments.PaperTrading
         public async Task<ListResultDto<PaperOrderDto>> GetMyOrdersAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await GetMyAccountOrThrowAsync(userId);
+            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            if (account == null)
+            {
+                return new ListResultDto<PaperOrderDto>(new List<PaperOrderDto>());
+            }
+
             var orders = await _paperOrderRepository.GetUserOrdersAsync(userId, account.Id);
             return new ListResultDto<PaperOrderDto>(ObjectMapper.Map<List<PaperOrderDto>>(orders));
         }
@@ -90,7 +101,12 @@ namespace Fintex.Investments.PaperTrading
         public async Task<ListResultDto<PaperPositionDto>> GetMyPositionsAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await GetMyAccountOrThrowAsync(userId);
+            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            if (account == null)
+            {
+                return new ListResultDto<PaperPositionDto>(new List<PaperPositionDto>());
+            }
+
             var positions = await _paperPositionRepository.GetOpenPositionsAsync(account.Id);
 
             await MarkAccountToMarketAsync(account, positions, DateTime.UtcNow);
@@ -102,7 +118,12 @@ namespace Fintex.Investments.PaperTrading
         public async Task<ListResultDto<PaperTradeFillDto>> GetMyFillsAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await GetMyAccountOrThrowAsync(userId);
+            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            if (account == null)
+            {
+                return new ListResultDto<PaperTradeFillDto>(new List<PaperTradeFillDto>());
+            }
+
             var fills = await _paperTradeFillRepository.GetAccountFillsAsync(account.Id);
             return new ListResultDto<PaperTradeFillDto>(ObjectMapper.Map<List<PaperTradeFillDto>>(fills));
         }
@@ -318,10 +339,21 @@ namespace Fintex.Investments.PaperTrading
 
         private async Task<decimal> ResolveLatestPriceAsync(string symbol, MarketDataProvider provider)
         {
-            var latestPoint = await _marketDataPointRepository.GetLatestAsync(symbol, provider);
+            MarketDataPoint latestPoint;
+
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
+            {
+                latestPoint = await _marketDataPointRepository.GetLatestAsync(symbol, provider);
+                if (latestPoint == null)
+                {
+                    latestPoint = await _marketDataPointRepository.GetLatestBySymbolAsync(symbol);
+                }
+            }
+
             if (latestPoint == null)
             {
-                throw new UserFriendlyException("No live market price is available yet for the requested symbol.");
+                throw new UserFriendlyException(
+                    $"No live market price is available yet for {symbol?.Trim()?.ToUpperInvariant()} from {provider}.");
             }
 
             return latestPoint.Price;

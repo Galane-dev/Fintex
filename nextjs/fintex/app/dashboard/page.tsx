@@ -5,11 +5,13 @@ import { useMemo } from "react";
 import { HomeOutlined, LogoutOutlined, ThunderboltFilled } from "@ant-design/icons";
 import { Alert, Button, Card, Progress, Space, Tag, Typography } from "antd";
 import { DashboardChart } from "@/components/dashboard/DashboardChart";
+import { PaperTradingPanel } from "@/components/dashboard/PaperTradingPanel";
 import { ROUTES } from "@/constants/routes";
 import { withAuth } from "@/hoc/withAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarketData } from "@/hooks/useMarketData";
 import { MarketDataProvider } from "@/providers/market-data-provider";
+import { PaperTradingProvider } from "@/providers/paper-trading-provider";
 import {
   buildMarketInsights,
   formatCompact,
@@ -259,6 +261,10 @@ function DashboardContent() {
               </div>
             </Card>
 
+            <Card className={styles.panelCard} title="Paper trading desk">
+              <PaperTradingPanel currentPrice={latest?.price ?? null} />
+            </Card>
+
             <Card className={styles.panelCard} title="RSI by timeframe">
               <div className={styles.metricList}>
                 {["1m", "5m", "15m", "1h", "4h"].map((timeframeKey) => {
@@ -409,7 +415,9 @@ function DashboardContent() {
 function DashboardView() {
   return (
     <MarketDataProvider>
-      <DashboardContent />
+      <PaperTradingProvider>
+        <DashboardContent />
+      </PaperTradingProvider>
     </MarketDataProvider>
   );
 }
