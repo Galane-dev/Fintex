@@ -5,9 +5,11 @@ using Abp.Castle.Logging.Log4Net;
 using Abp.Extensions;
 using Fintex.Configuration;
 using Fintex.Identity;
+using Fintex.Investments;
 using Fintex.Investments.Analytics;
 using Fintex.Investments.MarketData;
 using Fintex.Web.Host.BackgroundWorkers;
+using Fintex.Web.Host.Brokers;
 using Fintex.Web.Host.Hubs;
 using Fintex.Web.Host.MarketData.Configuration;
 using Fintex.Web.Host.MarketData.Streaming;
@@ -60,6 +62,8 @@ namespace Fintex.Web.Host.Startup
             services.AddTransient<TradeAnalysisService>();
             services.AddTransient<IMarketDataIngestionService, MarketDataIngestionService>();
             services.AddTransient<IMarketDataStreamClient, BinanceMarketDataStreamClient>();
+            services.AddTransient<IAlpacaBrokerService, AlpacaBrokerService>();
+            services.AddTransient<IMetaTraderBridgeService, MetaTraderPythonBridgeService>();
             services.AddHostedService<MarketDataStreamingBackgroundService>();
 
             // Configure CORS for angular2 UI

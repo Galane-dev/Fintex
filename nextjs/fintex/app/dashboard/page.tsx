@@ -30,6 +30,7 @@ import { withAuth } from "@/hoc/withAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarketData } from "@/hooks/useMarketData";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
+import { ExternalBrokerProvider } from "@/providers/external-broker-provider";
 import { MarketDataProvider } from "@/providers/market-data-provider";
 import { PaperTradingProvider } from "@/providers/paper-trading-provider";
 import type { UserProfile } from "@/types/user-profile";
@@ -804,9 +805,11 @@ function DashboardContent() {
 function DashboardView() {
   return (
     <MarketDataProvider>
-      <PaperTradingProvider>
-        <DashboardContent />
-      </PaperTradingProvider>
+      <ExternalBrokerProvider>
+        <PaperTradingProvider>
+          <DashboardContent />
+        </PaperTradingProvider>
+      </ExternalBrokerProvider>
     </MarketDataProvider>
   );
 }

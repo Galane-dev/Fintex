@@ -33,6 +33,11 @@ namespace Fintex.EntityFrameworkCore
         public DbSet<Trade> Trades { get; set; }
 
         /// <summary>
+        /// Stores user-linked external broker connections.
+        /// </summary>
+        public DbSet<ExternalBrokerConnection> ExternalBrokerConnections { get; set; }
+
+        /// <summary>
         /// Stores user paper trading accounts.
         /// </summary>
         public DbSet<PaperTradingAccount> PaperTradingAccounts { get; set; }
@@ -67,6 +72,7 @@ namespace Fintex.EntityFrameworkCore
             base.OnModelCreating(modelBuilder);
 
             ConfigureTrade(modelBuilder);
+            ConfigureExternalBrokerConnection(modelBuilder);
             ConfigurePaperTradingAccount(modelBuilder);
             ConfigurePaperOrder(modelBuilder);
             ConfigurePaperPosition(modelBuilder);
@@ -141,6 +147,33 @@ namespace Fintex.EntityFrameworkCore
                 entity.Property(x => x.TrendScore).HasPrecision(10, 4);
                 entity.Property(x => x.ConfidenceScore).HasPrecision(10, 4);
                 entity.Property(x => x.Verdict).HasConversion<string>().HasMaxLength(16);
+            });
+        }
+
+        private static void ConfigureExternalBrokerConnection(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ExternalBrokerConnection>(entity =>
+            {
+                entity.ToTable("AppExternalBrokerConnections");
+                entity.HasIndex(x => new { x.TenantId, x.UserId, x.IsActive });
+                entity.HasIndex(x => new { x.UserId, x.Provider, x.AccountLogin, x.Server });
+
+                entity.Property(x => x.DisplayName).IsRequired().HasMaxLength(ExternalBrokerConnection.MaxDisplayNameLength);
+                entity.Property(x => x.AccountLogin).IsRequired().HasMaxLength(ExternalBrokerConnection.MaxLoginLength);
+                entity.Property(x => x.Server).IsRequired().HasMaxLength(ExternalBrokerConnection.MaxServerLength);
+                entity.Property(x => x.EncryptedPassword).IsRequired();
+                entity.Property(x => x.TerminalPath).HasMaxLength(ExternalBrokerConnection.MaxTerminalPathLength);
+                entity.Property(x => x.LastError).HasMaxLength(ExternalBrokerConnection.MaxErrorLength);
+                entity.Property(x => x.BrokerAccountName).HasMaxLength(ExternalBrokerConnection.MaxAccountNameLength);
+                entity.Property(x => x.BrokerAccountCurrency).HasMaxLength(ExternalBrokerConnection.MaxCurrencyLength);
+                entity.Property(x => x.BrokerCompany).HasMaxLength(ExternalBrokerConnection.MaxCompanyLength);
+
+                entity.Property(x => x.Provider).HasConversion<string>().HasMaxLength(32);
+                entity.Property(x => x.Platform).HasConversion<string>().HasMaxLength(32);
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+
+                entity.Property(x => x.LastKnownBalance).HasPrecision(18, 8);
+                entity.Property(x => x.LastKnownEquity).HasPrecision(18, 8);
             });
         }
 

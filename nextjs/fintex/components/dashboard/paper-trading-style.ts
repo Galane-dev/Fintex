@@ -7,11 +7,30 @@ export const usePaperTradingStyles = createStyles(({ css, token }) => ({
     display: grid;
     gap: 16px;
   `,
+  accountTabs: css`
+    .ant-tabs-nav {
+      margin-bottom: 20px !important;
+    }
+
+    .ant-tabs-tab {
+      border-radius: 8px !important;
+    }
+  `,
   actionButton: css`
     min-width: 136px;
     height: 40px;
     border-radius: 8px !important;
     box-shadow: none;
+  `,
+  brokerHero: css`
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
   `,
   helper: css`
     margin: 0 !important;
