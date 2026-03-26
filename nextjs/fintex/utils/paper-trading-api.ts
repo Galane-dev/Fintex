@@ -3,18 +3,24 @@ import type {
   CreatePaperTradingAccountInput,
   PaperOrder,
   PaperPosition,
+  PaperTradeExecutionResult,
+  PaperTradeRecommendation,
   PaperTradeFill,
   PaperTradingSnapshot,
+  GetPaperTradeRecommendationInput,
   PlacePaperOrderInput,
 } from "@/types/paper-trading";
 import { apiClient } from "./api-client";
 import { unwrapAbpResponse } from "./abp-response";
 import {
   buildClosePaperPositionInput,
+  buildPaperTradeRecommendationInput,
   buildPaperTradingAccountInput,
   buildPlacePaperOrderInput,
   normalizePaperOrder,
   normalizePaperPosition,
+  normalizePaperTradeExecutionResult,
+  normalizePaperTradeRecommendation,
   normalizePaperTradeFill,
   normalizePaperTradingSnapshot,
 } from "./paper-trading";
@@ -46,7 +52,7 @@ export const createPaperTradingAccount = async (
 
 export const placePaperTradingOrder = async (
   input: PlacePaperOrderInput,
-): Promise<PaperOrder> => {
+): Promise<PaperTradeExecutionResult> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
     apiClient.post(
       "/api/services/app/PaperTrading/PlaceMarketOrder",
@@ -55,7 +61,7 @@ export const placePaperTradingOrder = async (
     "We could not place the paper trade.",
   );
 
-  return normalizePaperOrder(result);
+  return normalizePaperTradeExecutionResult(result);
 };
 
 export const closePaperTradingPosition = async (
@@ -97,4 +103,20 @@ export const getPaperTradingFills = async (): Promise<PaperTradeFill[]> => {
   );
 
   return Array.isArray(result?.items) ? result.items.map(normalizePaperTradeFill) : [];
+};
+
+export const getPaperTradeRecommendation = async (
+  input: GetPaperTradeRecommendationInput,
+): Promise<PaperTradeRecommendation> => {
+  const result = await unwrapAbpResponse<Record<string, unknown>>(
+    apiClient.get(
+      "/api/services/app/PaperTrading/GetRecommendation",
+      {
+        params: buildPaperTradeRecommendationInput(input),
+      },
+    ),
+    "We could not load a paper-trading recommendation.",
+  );
+
+  return normalizePaperTradeRecommendation(result);
 };

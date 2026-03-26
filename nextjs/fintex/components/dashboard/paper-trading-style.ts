@@ -7,6 +7,12 @@ export const usePaperTradingStyles = createStyles(({ css, token }) => ({
     display: grid;
     gap: 16px;
   `,
+  actionButton: css`
+    min-width: 136px;
+    height: 40px;
+    border-radius: 8px !important;
+    box-shadow: none;
+  `,
   helper: css`
     margin: 0 !important;
     color: ${token.colorTextSecondary} !important;
@@ -55,12 +61,21 @@ export const usePaperTradingStyles = createStyles(({ css, token }) => ({
   `,
   formActions: css`
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
   `,
   section: css`
     display: grid;
     gap: 12px;
+  `,
+  inlineActions: css`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   `,
   sectionHeader: css`
     display: flex;
@@ -103,5 +118,61 @@ export const usePaperTradingStyles = createStyles(({ css, token }) => ({
   `,
   empty: css`
     padding: 20px 0 8px;
+  `,
+  feedbackBody: css`
+    display: grid;
+    gap: 12px;
+  `,
+  feedbackMeta: css`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  `,
+  feedbackList: css`
+    margin: 0;
+    padding-left: 18px;
+    color: ${token.colorTextSecondary};
+  `,
+  feedbackBlock: css`
+    display: grid;
+    gap: 6px;
+  `,
+  feedbackLabel: css`
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: ${token.colorTextSecondary};
+    font-weight: 600;
+  `,
+  summaryGrid: css`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  `,
+  summaryCard: css`
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: grid;
+    gap: 8px;
+  `,
+  summaryLabel: css`
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: ${token.colorTextSecondary};
+  `,
+  summaryValue: css`
+    color: ${token.colorText};
+    font-size: 16px;
+    font-weight: 600;
+  `,
+  fullWidthInput: css`
+    width: 100%;
   `,
 }));

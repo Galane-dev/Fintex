@@ -20,7 +20,7 @@ const appTheme = {
     colorTextSecondary: "#9ca89c",
     colorTextTertiary: "#6f7d70",
     colorLink: "#d7fbe0",
-    borderRadius: 20,
+    borderRadius: 8,
     wireframe: false,
     fontFamily: "var(--font-inter), Inter, sans-serif",
     boxShadowSecondary: "0 28px 72px rgba(0, 0, 0, 0.42)",
@@ -36,13 +36,20 @@ const appTheme = {
     },
     Button: {
       controlHeight: 48,
-      borderRadius: 999,
+      borderRadius: 8,
       fontWeight: 600,
     },
     Input: {
       controlHeight: 48,
+      borderRadius: 8,
+      borderRadiusLG: 8,
       activeBorderColor: "#9bf2b1",
       hoverBorderColor: "#9bf2b1",
+    },
+    InputNumber: {
+      controlHeight: 48,
+      borderRadius: 8,
+      borderRadiusLG: 8,
     },
     Menu: {
       darkItemBg: "transparent",

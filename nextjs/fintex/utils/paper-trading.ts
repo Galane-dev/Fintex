@@ -2,11 +2,15 @@ import type {
   ClosePaperPositionInput,
   CreatePaperTradingAccountInput,
   PaperOrder,
+  PaperTradeAssessment,
+  PaperTradeExecutionResult,
+  PaperTradeRecommendation,
   PaperTradeFill,
   PaperTradingAccount,
   PaperTradingSnapshot,
   PaperPosition,
   PlacePaperOrderInput,
+  GetPaperTradeRecommendationInput,
 } from "@/types/paper-trading";
 
 const getNumber = (value: unknown, fallback = 0) =>
@@ -100,6 +104,77 @@ export const normalizePaperTradeFill = (
   executedAt: getString(value.executedAt ?? value.ExecutedAt),
 });
 
+export const normalizePaperTradeAssessment = (
+  value: Record<string, unknown>,
+): PaperTradeAssessment => ({
+  direction: getString(value.direction ?? value.Direction) as PaperTradeAssessment["direction"],
+  riskScore: getNumber(value.riskScore ?? value.RiskScore),
+  riskLevel: getString(value.riskLevel ?? value.RiskLevel) as PaperTradeAssessment["riskLevel"],
+  shouldBlock: Boolean(value.shouldBlock ?? value.ShouldBlock),
+  headline: getString(value.headline ?? value.Headline),
+  summary: getString(value.summary ?? value.Summary),
+  referencePrice: getNumber(value.referencePrice ?? value.ReferencePrice),
+  spread: getNullableNumber(value.spread ?? value.Spread),
+  spreadPercent: getNullableNumber(value.spreadPercent ?? value.SpreadPercent),
+  suggestedStopLoss: getNullableNumber(value.suggestedStopLoss ?? value.SuggestedStopLoss),
+  suggestedTakeProfit: getNullableNumber(value.suggestedTakeProfit ?? value.SuggestedTakeProfit),
+  suggestedRewardRiskRatio: getNullableNumber(
+    value.suggestedRewardRiskRatio ?? value.SuggestedRewardRiskRatio,
+  ),
+  confidenceScore: getNullableNumber(value.confidenceScore ?? value.ConfidenceScore),
+  trendScore: getNullableNumber(value.trendScore ?? value.TrendScore),
+  timeframeAlignmentScore: getNullableNumber(
+    value.timeframeAlignmentScore ?? value.TimeframeAlignmentScore,
+  ),
+  structureLabel: getString(value.structureLabel ?? value.StructureLabel),
+  marketVerdict: getString(value.marketVerdict ?? value.MarketVerdict) as PaperTradeAssessment["marketVerdict"],
+  reasons: Array.isArray(value.reasons ?? value.Reasons)
+    ? ((value.reasons ?? value.Reasons) as unknown[]).map((item) => getString(item))
+    : [],
+  suggestions: Array.isArray(value.suggestions ?? value.Suggestions)
+    ? ((value.suggestions ?? value.Suggestions) as unknown[]).map((item) => getString(item))
+    : [],
+});
+
+export const normalizePaperTradeExecutionResult = (
+  value: Record<string, unknown>,
+): PaperTradeExecutionResult => ({
+  wasExecuted: Boolean(value.wasExecuted ?? value.WasExecuted),
+  assessment:
+    value.assessment && typeof value.assessment === "object"
+      ? normalizePaperTradeAssessment(value.assessment as Record<string, unknown>)
+      : normalizePaperTradeAssessment({}),
+  order:
+    value.order && typeof value.order === "object"
+      ? normalizePaperOrder(value.order as Record<string, unknown>)
+      : null,
+});
+
+export const normalizePaperTradeRecommendation = (
+  value: Record<string, unknown>,
+): PaperTradeRecommendation => ({
+  recommendedAction: getString(
+    value.recommendedAction ?? value.RecommendedAction,
+  ) as PaperTradeRecommendation["recommendedAction"],
+  riskScore: getNumber(value.riskScore ?? value.RiskScore),
+  riskLevel: getString(value.riskLevel ?? value.RiskLevel) as PaperTradeRecommendation["riskLevel"],
+  headline: getString(value.headline ?? value.Headline),
+  summary: getString(value.summary ?? value.Summary),
+  referencePrice: getNumber(value.referencePrice ?? value.ReferencePrice),
+  spread: getNullableNumber(value.spread ?? value.Spread),
+  spreadPercent: getNullableNumber(value.spreadPercent ?? value.SpreadPercent),
+  suggestedStopLoss: getNullableNumber(value.suggestedStopLoss ?? value.SuggestedStopLoss),
+  suggestedTakeProfit: getNullableNumber(value.suggestedTakeProfit ?? value.SuggestedTakeProfit),
+  confidenceScore: getNullableNumber(value.confidenceScore ?? value.ConfidenceScore),
+  trendScore: getNullableNumber(value.trendScore ?? value.TrendScore),
+  reasons: Array.isArray(value.reasons ?? value.Reasons)
+    ? ((value.reasons ?? value.Reasons) as unknown[]).map((item) => getString(item))
+    : [],
+  suggestions: Array.isArray(value.suggestions ?? value.Suggestions)
+    ? ((value.suggestions ?? value.Suggestions) as unknown[]).map((item) => getString(item))
+    : [],
+});
+
 export const normalizePaperTradingSnapshot = (
   value: Record<string, unknown>,
 ): PaperTradingSnapshot => ({
@@ -151,4 +226,15 @@ export const buildClosePaperPositionInput = (
   positionId: input.positionId,
   quantity: input.quantity ?? null,
   exitPrice: input.exitPrice ?? null,
+});
+
+export const buildPaperTradeRecommendationInput = (
+  input: GetPaperTradeRecommendationInput,
+): Record<string, unknown> => ({
+  symbol: input.symbol,
+  assetClass: input.assetClass,
+  provider: input.provider,
+  quantity: input.quantity ?? null,
+  stopLoss: input.stopLoss ?? null,
+  takeProfit: input.takeProfit ?? null,
 });

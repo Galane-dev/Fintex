@@ -11,6 +11,7 @@ import type { PaperTradingProviderActions } from "@/types/paper-trading";
 import {
   closePaperTradingPosition,
   createPaperTradingAccount,
+  getPaperTradeRecommendation,
   getPaperTradingSnapshot,
   placePaperTradingOrder,
 } from "@/utils/paper-trading-api";
@@ -97,15 +98,42 @@ export function PaperTradingProvider({ children }: PropsWithChildren) {
       dispatch(paperTradingActions.submitStart());
 
       try {
-        await placePaperTradingOrder(input);
-        const snapshot = await getPaperTradingSnapshot();
-        dispatch(paperTradingActions.submitSuccess(snapshot));
+        const result = await placePaperTradingOrder(input);
+        dispatch(paperTradingActions.assessmentUpdated(result));
+
+        if (result.wasExecuted) {
+          const snapshot = await getPaperTradingSnapshot();
+          dispatch(paperTradingActions.submitSuccess(snapshot));
+        }
+
+        return result;
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
             : "We could not place the paper trade.";
         dispatch(paperTradingActions.loadFailure(message));
+        return null;
+      }
+    },
+    [],
+  );
+
+  const getRecommendation = useCallback(
+    async (input: Parameters<typeof getPaperTradeRecommendation>[0]) => {
+      dispatch(paperTradingActions.submitStart());
+
+      try {
+        const recommendation = await getPaperTradeRecommendation(input);
+        dispatch(paperTradingActions.recommendationUpdated(recommendation));
+        return recommendation;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "We could not load a recommendation.";
+        dispatch(paperTradingActions.loadFailure(message));
+        return null;
       }
     },
     [],
@@ -134,15 +162,29 @@ export function PaperTradingProvider({ children }: PropsWithChildren) {
     dispatch(paperTradingActions.clearError());
   }, []);
 
+  const clearFeedback = useCallback(() => {
+    dispatch(paperTradingActions.clearFeedback());
+  }, []);
+
   const actionValues = useMemo<PaperTradingProviderActions>(
     () => ({
       refreshSnapshot,
       createAccount,
       placeOrder,
+      getRecommendation,
       closePosition,
       clearError,
+      clearFeedback,
     }),
-    [clearError, closePosition, createAccount, placeOrder, refreshSnapshot],
+    [
+      clearError,
+      clearFeedback,
+      closePosition,
+      createAccount,
+      getRecommendation,
+      placeOrder,
+      refreshSnapshot,
+    ],
   );
 
   return (

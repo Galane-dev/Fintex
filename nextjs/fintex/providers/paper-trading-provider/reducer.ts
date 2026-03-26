@@ -49,10 +49,30 @@ export const paperTradingReducer = (
         snapshot: action.payload,
         lastHydratedAt: new Date().toISOString(),
       };
+    case "ASSESSMENT_UPDATED":
+      return {
+        ...state,
+        isSubmitting: false,
+        latestAssessment: action.payload.assessment,
+        recommendation: null,
+      };
+    case "RECOMMENDATION_UPDATED":
+      return {
+        ...state,
+        isSubmitting: false,
+        recommendation: action.payload,
+        latestAssessment: null,
+      };
     case "CLEAR_ERROR":
       return {
         ...state,
         error: null,
+      };
+    case "CLEAR_FEEDBACK":
+      return {
+        ...state,
+        latestAssessment: null,
+        recommendation: null,
       };
     default:
       return state;

@@ -2,6 +2,8 @@ export type PaperOrderStatus = "Pending" | "Filled" | "Cancelled" | "Rejected";
 export type PaperOrderType = "Market" | "Limit" | "Stop";
 export type PaperPositionStatus = "Open" | "Closed";
 export type TradeDirection = "Buy" | "Sell";
+export type PaperTradeRiskLevel = "Low" | "Medium" | "High";
+export type RecommendationAction = "Buy" | "Sell" | "Hold";
 
 export interface PaperTradingAccount {
   id: number;
@@ -78,6 +80,51 @@ export interface PaperTradingSnapshot {
   recentFills: PaperTradeFill[];
 }
 
+export interface PaperTradeAssessment {
+  direction: TradeDirection;
+  riskScore: number;
+  riskLevel: PaperTradeRiskLevel;
+  shouldBlock: boolean;
+  headline: string;
+  summary: string;
+  referencePrice: number;
+  spread: number | null;
+  spreadPercent: number | null;
+  suggestedStopLoss: number | null;
+  suggestedTakeProfit: number | null;
+  suggestedRewardRiskRatio: number | null;
+  confidenceScore: number | null;
+  trendScore: number | null;
+  timeframeAlignmentScore: number | null;
+  structureLabel: string;
+  marketVerdict: RecommendationAction;
+  reasons: string[];
+  suggestions: string[];
+}
+
+export interface PaperTradeExecutionResult {
+  wasExecuted: boolean;
+  assessment: PaperTradeAssessment;
+  order: PaperOrder | null;
+}
+
+export interface PaperTradeRecommendation {
+  recommendedAction: RecommendationAction;
+  riskScore: number;
+  riskLevel: PaperTradeRiskLevel;
+  headline: string;
+  summary: string;
+  referencePrice: number;
+  spread: number | null;
+  spreadPercent: number | null;
+  suggestedStopLoss: number | null;
+  suggestedTakeProfit: number | null;
+  confidenceScore: number | null;
+  trendScore: number | null;
+  reasons: string[];
+  suggestions: string[];
+}
+
 export interface CreatePaperTradingAccountInput {
   name: string;
   baseCurrency: string;
@@ -101,18 +148,33 @@ export interface ClosePaperPositionInput {
   exitPrice?: number | null;
 }
 
+export interface GetPaperTradeRecommendationInput {
+  symbol: string;
+  assetClass: number;
+  provider: number;
+  quantity?: number | null;
+  stopLoss?: number | null;
+  takeProfit?: number | null;
+}
+
 export interface PaperTradingState {
   isLoading: boolean;
   isSubmitting: boolean;
   error: string | null;
   snapshot: PaperTradingSnapshot | null;
+  latestAssessment: PaperTradeAssessment | null;
+  recommendation: PaperTradeRecommendation | null;
   lastHydratedAt: string | null;
 }
 
 export interface PaperTradingProviderActions {
   refreshSnapshot: () => Promise<void>;
   createAccount: (input: CreatePaperTradingAccountInput) => Promise<void>;
-  placeOrder: (input: PlacePaperOrderInput) => Promise<void>;
+  placeOrder: (input: PlacePaperOrderInput) => Promise<PaperTradeExecutionResult | null>;
+  getRecommendation: (
+    input: GetPaperTradeRecommendationInput,
+  ) => Promise<PaperTradeRecommendation | null>;
   closePosition: (input: ClosePaperPositionInput) => Promise<void>;
   clearError: () => void;
+  clearFeedback: () => void;
 }

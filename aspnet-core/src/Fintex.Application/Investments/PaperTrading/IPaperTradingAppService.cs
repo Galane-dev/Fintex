@@ -20,7 +20,9 @@ namespace Fintex.Investments.PaperTrading
 
         Task<ListResultDto<PaperTradeFillDto>> GetMyFillsAsync();
 
-        Task<PaperOrderDto> PlaceMarketOrderAsync(PlacePaperOrderInput input);
+        Task<PaperTradeExecutionResultDto> PlaceMarketOrderAsync(PlacePaperOrderInput input);
+
+        Task<PaperTradeRecommendationDto> GetRecommendationAsync(GetPaperTradeRecommendationInput input);
 
         Task<PaperOrderDto> ClosePositionAsync(ClosePaperPositionInput input);
     }

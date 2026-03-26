@@ -146,6 +146,14 @@ namespace Fintex.Investments
             LastUpdatedAt = occurredAt;
         }
 
+        public void ApplyTradePlan(decimal? stopLoss, decimal? takeProfit, DateTime occurredAt)
+        {
+            EnsureOpen();
+            StopLoss = stopLoss;
+            TakeProfit = takeProfit;
+            LastUpdatedAt = occurredAt;
+        }
+
         private void EnsureOpen()
         {
             if (Status != PaperPositionStatus.Open)
