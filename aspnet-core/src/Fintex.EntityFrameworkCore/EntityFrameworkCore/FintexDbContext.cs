@@ -48,6 +48,26 @@ namespace Fintex.EntityFrameworkCore
         public DbSet<ExternalBrokerExecutionEvent> ExternalBrokerExecutionEvents { get; set; }
 
         /// <summary>
+        /// Stores configured upstream financial and economic news feeds.
+        /// </summary>
+        public DbSet<NewsSource> NewsSources { get; set; }
+
+        /// <summary>
+        /// Stores normalized news articles used for recommendation overlays.
+        /// </summary>
+        public DbSet<NewsArticle> NewsArticles { get; set; }
+
+        /// <summary>
+        /// Stores refresh attempts for cached news ingestion.
+        /// </summary>
+        public DbSet<NewsRefreshRun> NewsRefreshRuns { get; set; }
+
+        /// <summary>
+        /// Stores cached AI summaries of recent BTC/USD news.
+        /// </summary>
+        public DbSet<NewsAnalysisSnapshot> NewsAnalysisSnapshots { get; set; }
+
+        /// <summary>
         /// Stores user paper trading accounts.
         /// </summary>
         public DbSet<PaperTradingAccount> PaperTradingAccounts { get; set; }
@@ -85,6 +105,10 @@ namespace Fintex.EntityFrameworkCore
             ConfigureTradeExecutionContext(modelBuilder);
             ConfigureExternalBrokerExecutionEvent(modelBuilder);
             ConfigureExternalBrokerConnection(modelBuilder);
+            ConfigureNewsSource(modelBuilder);
+            ConfigureNewsArticle(modelBuilder);
+            ConfigureNewsRefreshRun(modelBuilder);
+            ConfigureNewsAnalysisSnapshot(modelBuilder);
             ConfigurePaperTradingAccount(modelBuilder);
             ConfigurePaperOrder(modelBuilder);
             ConfigurePaperPosition(modelBuilder);
@@ -277,6 +301,81 @@ namespace Fintex.EntityFrameworkCore
                 entity.Property(x => x.Price).HasPrecision(18, 8);
                 entity.Property(x => x.FilledAveragePrice).HasPrecision(18, 8);
                 entity.Property(x => x.PositionQuantity).HasPrecision(18, 8);
+            });
+        }
+
+        private static void ConfigureNewsSource(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<NewsSource>(entity =>
+            {
+                entity.ToTable("AppNewsSources");
+                entity.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+                entity.HasIndex(x => new { x.IsActive, x.Category });
+
+                entity.Property(x => x.Name).IsRequired().HasMaxLength(NewsSource.MaxNameLength);
+                entity.Property(x => x.SiteUrl).IsRequired().HasMaxLength(NewsSource.MaxUrlLength);
+                entity.Property(x => x.FeedUrl).IsRequired().HasMaxLength(NewsSource.MaxUrlLength);
+                entity.Property(x => x.Category).HasMaxLength(NewsSource.MaxCategoryLength);
+                entity.Property(x => x.FocusTags).HasMaxLength(NewsSource.MaxFocusTagsLength);
+                entity.Property(x => x.LastError).HasMaxLength(NewsSource.MaxErrorLength);
+
+                entity.Property(x => x.SourceKind).HasConversion<string>().HasMaxLength(16);
+            });
+        }
+
+        private static void ConfigureNewsArticle(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<NewsArticle>(entity =>
+            {
+                entity.ToTable("AppNewsArticles");
+                entity.HasIndex(x => new { x.SourceId, x.Url }).IsUnique();
+                entity.HasIndex(x => new { x.IsBitcoinRelevant, x.IsUsdRelevant, x.PublishedAt });
+                entity.HasIndex(x => new { x.RelevanceScore, x.PublishedAt });
+
+                entity.Property(x => x.Url).IsRequired().HasMaxLength(NewsArticle.MaxUrlLength);
+                entity.Property(x => x.Title).IsRequired().HasMaxLength(NewsArticle.MaxTitleLength);
+                entity.Property(x => x.Summary).HasMaxLength(NewsArticle.MaxSummaryLength);
+                entity.Property(x => x.Author).HasMaxLength(NewsArticle.MaxAuthorLength);
+                entity.Property(x => x.Category).HasMaxLength(NewsArticle.MaxCategoryLength);
+                entity.Property(x => x.Tags).HasMaxLength(NewsArticle.MaxTagsLength);
+                entity.Property(x => x.ContentHash).IsRequired().HasMaxLength(NewsArticle.MaxHashLength);
+                entity.Property(x => x.RawPayloadJson).HasMaxLength(NewsArticle.MaxRawPayloadLength);
+            });
+        }
+
+        private static void ConfigureNewsRefreshRun(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<NewsRefreshRun>(entity =>
+            {
+                entity.ToTable("AppNewsRefreshRuns");
+                entity.HasIndex(x => new { x.FocusKey, x.Status, x.CreationTime });
+
+                entity.Property(x => x.FocusKey).IsRequired().HasMaxLength(NewsRefreshRun.MaxFocusKeyLength);
+                entity.Property(x => x.Trigger).IsRequired().HasMaxLength(NewsRefreshRun.MaxTriggerLength);
+                entity.Property(x => x.Summary).HasMaxLength(NewsRefreshRun.MaxSummaryLength);
+
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            });
+        }
+
+        private static void ConfigureNewsAnalysisSnapshot(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<NewsAnalysisSnapshot>(entity =>
+            {
+                entity.ToTable("AppNewsAnalysisSnapshots");
+                entity.HasIndex(x => new { x.FocusKey, x.GeneratedAt });
+                entity.HasIndex(x => new { x.FocusKey, x.LatestArticlePublishedAt });
+
+                entity.Property(x => x.FocusKey).IsRequired().HasMaxLength(NewsAnalysisSnapshot.MaxFocusKeyLength);
+                entity.Property(x => x.Summary).HasMaxLength(NewsAnalysisSnapshot.MaxSummaryLength);
+                entity.Property(x => x.KeyHeadlines).HasMaxLength(NewsAnalysisSnapshot.MaxHeadlinesLength);
+                entity.Property(x => x.Provider).HasMaxLength(NewsAnalysisSnapshot.MaxProviderLength);
+                entity.Property(x => x.Model).HasMaxLength(NewsAnalysisSnapshot.MaxModelLength);
+                entity.Property(x => x.RawPayloadJson).HasMaxLength(NewsAnalysisSnapshot.MaxRawPayloadLength);
+
+                entity.Property(x => x.Sentiment).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.RecommendedAction).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.ImpactScore).HasPrecision(10, 4);
             });
         }
 

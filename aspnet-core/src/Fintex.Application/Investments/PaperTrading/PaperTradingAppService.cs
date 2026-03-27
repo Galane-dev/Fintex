@@ -1,14 +1,17 @@
 using Abp.Application.Services.Dto;
 using Abp.Authorization;
+using Abp.Dependency;
 using Abp.Domain.Uow;
 using Abp.Runtime.Session;
 using Abp.UI;
 using Fintex.Investments.MarketData;
 using Fintex.Investments.MarketData.Dto;
+using Fintex.Investments.News;
 using Fintex.Investments.PaperTrading.Dto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Fintex.Investments.PaperTrading
@@ -25,6 +28,7 @@ namespace Fintex.Investments.PaperTrading
         private readonly IPaperTradeFillRepository _paperTradeFillRepository;
         private readonly IMarketDataPointRepository _marketDataPointRepository;
         private readonly IMarketDataAppService _marketDataAppService;
+        private readonly INewsRecommendationService _newsRecommendationService;
 
         public PaperTradingAppService(
             IPaperTradingAccountRepository paperTradingAccountRepository,
@@ -32,7 +36,8 @@ namespace Fintex.Investments.PaperTrading
             IPaperPositionRepository paperPositionRepository,
             IPaperTradeFillRepository paperTradeFillRepository,
             IMarketDataPointRepository marketDataPointRepository,
-            IMarketDataAppService marketDataAppService)
+            IMarketDataAppService marketDataAppService,
+            INewsRecommendationService newsRecommendationService)
         {
             _paperTradingAccountRepository = paperTradingAccountRepository;
             _paperOrderRepository = paperOrderRepository;
@@ -40,6 +45,7 @@ namespace Fintex.Investments.PaperTrading
             _paperTradeFillRepository = paperTradeFillRepository;
             _marketDataPointRepository = marketDataPointRepository;
             _marketDataAppService = marketDataAppService;
+            _newsRecommendationService = newsRecommendationService;
         }
 
         public async Task<PaperTradingAccountDto> CreateMyAccountAsync(CreatePaperTradingAccountInput input)
@@ -138,6 +144,9 @@ namespace Fintex.Investments.PaperTrading
             var userId = AbpSession.GetUserId();
             var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
             var marketContext = await GetMarketContextAsync(input.Symbol, input.Provider);
+            var newsInsight = await _newsRecommendationService.GetBitcoinUsdInsightAsync(
+                marketContext.RealtimeVerdict,
+                CancellationToken.None);
             var suggestedPlan = BuildSuggestedTradePlan(
                 marketContext.LatestPoint.Price,
                 marketContext.RealtimeVerdict?.Atr,
@@ -150,7 +159,7 @@ namespace Fintex.Investments.PaperTrading
                 !marketContext.RealtimeVerdict.TrendScore.HasValue ||
                 Math.Abs(marketContext.RealtimeVerdict.TrendScore.Value) < 15m)
             {
-                return new PaperTradeRecommendationDto
+                var holdRecommendation = new PaperTradeRecommendationDto
                 {
                     RecommendedAction = MarketVerdict.Hold,
                     RiskScore = 82m,
@@ -172,6 +181,9 @@ namespace Fintex.Investments.PaperTrading
                         "Only size in once stop loss and take profit levels are defined before the click."
                     }
                 };
+
+                ApplyNewsOverlay(holdRecommendation, newsInsight);
+                return holdRecommendation;
             }
 
             var recommendedDirection = marketContext.RealtimeVerdict.Verdict == MarketVerdict.Buy
@@ -186,7 +198,7 @@ namespace Fintex.Investments.PaperTrading
                 input.StopLoss,
                 input.TakeProfit);
 
-            return new PaperTradeRecommendationDto
+            var recommendation = new PaperTradeRecommendationDto
             {
                 RecommendedAction = marketContext.RealtimeVerdict.Verdict,
                 RiskScore = assessment.RiskScore,
@@ -207,6 +219,9 @@ namespace Fintex.Investments.PaperTrading
                 Reasons = assessment.Reasons,
                 Suggestions = assessment.Suggestions
             };
+
+            ApplyNewsOverlay(recommendation, newsInsight);
+            return recommendation;
         }
 
         public async Task<PaperTradeExecutionResultDto> PlaceMarketOrderAsync(PlacePaperOrderInput input)
@@ -920,6 +935,57 @@ namespace Fintex.Investments.PaperTrading
             return reasons;
         }
 
+        private static void ApplyNewsOverlay(
+            PaperTradeRecommendationDto recommendation,
+            NewsRecommendationInsight newsInsight)
+        {
+            if (recommendation == null || newsInsight == null)
+            {
+                return;
+            }
+
+            recommendation.NewsSummary = newsInsight.Summary;
+            recommendation.NewsImpactScore = newsInsight.ImpactScore;
+            recommendation.NewsSentiment = newsInsight.Sentiment.ToString();
+            recommendation.NewsRecommendedAction = newsInsight.RecommendedAction;
+            recommendation.NewsLastUpdatedAt = newsInsight.GeneratedAt;
+            recommendation.NewsHeadlines = newsInsight.KeyHeadlines ?? new List<string>();
+
+            if (newsInsight.ImpactScore >= 55m)
+            {
+                AddUnique(recommendation.Reasons, "Recent Bitcoin and US Dollar headlines are active enough to matter for the current setup.");
+            }
+
+            if (newsInsight.ImpactScore >= 75m &&
+                recommendation.RecommendedAction != MarketVerdict.Hold &&
+                newsInsight.RecommendedAction != MarketVerdict.Hold &&
+                newsInsight.RecommendedAction != recommendation.RecommendedAction)
+            {
+                recommendation.RiskScore = decimal.Round(Clamp(recommendation.RiskScore + 10m, 0m, 100m), 2, MidpointRounding.AwayFromZero);
+                recommendation.RiskLevel = GetRiskLevel(recommendation.RiskScore);
+                recommendation.RecommendedAction = MarketVerdict.Hold;
+                recommendation.Headline = "News and technicals are conflicting, so patience is safer right now.";
+                recommendation.Summary = "The technical setup has an edge, but the latest Bitcoin or US Dollar headlines lean the other way strongly enough that the cleaner move is to wait.";
+                AddUnique(recommendation.Reasons, $"News flow currently leans {newsInsight.RecommendedAction.ToString().ToLowerInvariant()}, which conflicts with the technical read.");
+                AddUnique(recommendation.Suggestions, "Wait for price structure and the headline backdrop to align before committing.");
+                return;
+            }
+
+            if (newsInsight.ImpactScore >= 55m &&
+                recommendation.RecommendedAction != MarketVerdict.Hold &&
+                newsInsight.RecommendedAction == recommendation.RecommendedAction)
+            {
+                recommendation.RiskScore = decimal.Round(Clamp(recommendation.RiskScore - 4m, 0m, 100m), 2, MidpointRounding.AwayFromZero);
+                recommendation.RiskLevel = GetRiskLevel(recommendation.RiskScore);
+                AddUnique(recommendation.Reasons, $"Headline flow also leans {recommendation.RecommendedAction.ToString().ToLowerInvariant()}, which supports the trade direction.");
+            }
+
+            if (newsInsight.ImpactScore >= 65m)
+            {
+                AddUnique(recommendation.Suggestions, "Size more carefully around high-impact headlines, even when the setup looks good.");
+            }
+        }
+
         private static void AddUnique(ICollection<string> collection, string value)
         {
             if (string.IsNullOrWhiteSpace(value) || collection.Contains(value))
@@ -982,6 +1048,15 @@ namespace Fintex.Investments.PaperTrading
             }
 
             return value;
+        }
+
+        private static PaperTradeRiskLevel GetRiskLevel(decimal riskScore)
+        {
+            return riskScore >= 72m
+                ? PaperTradeRiskLevel.High
+                : riskScore >= 45m
+                    ? PaperTradeRiskLevel.Medium
+                    : PaperTradeRiskLevel.Low;
         }
 
         private static string GetAlternateMarketSymbol(string symbol, MarketDataProvider provider)

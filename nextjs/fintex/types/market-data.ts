@@ -56,6 +56,16 @@ export interface MarketVerdictTimeframeSignal {
   signal: string;
 }
 
+export interface MarketPriceProjection {
+  horizon: string;
+  minutesAhead: number;
+  targetTimestamp: string;
+  consensusPrice: number | null;
+  smaPrice: number | null;
+  emaPrice: number | null;
+  smmaPrice: number | null;
+}
+
 export interface MarketTimeframeRsi {
   timeframe: string;
   value: number | null;
@@ -85,6 +95,8 @@ export interface MarketVerdictSnapshot {
   structureScore: number | null;
   structureLabel: string;
   timeframeAlignmentScore: number | null;
+  nextOneMinuteProjection: MarketPriceProjection | null;
+  nextFiveMinuteProjection: MarketPriceProjection | null;
   indicatorScores: IndicatorScore[];
   timeframeSignals: MarketVerdictTimeframeSignal[];
 }

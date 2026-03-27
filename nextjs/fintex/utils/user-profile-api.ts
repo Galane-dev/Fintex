@@ -11,3 +11,12 @@ export const getMyUserProfile = async (): Promise<UserProfile> => {
 
   return normalizeUserProfile(result);
 };
+
+export const refreshMyBehavioralProfile = async (): Promise<UserProfile> => {
+  const result = await unwrapAbpResponse<Record<string, unknown>>(
+    apiClient.post("/api/services/app/AiAnalysis/RefreshMyBehavioralProfile"),
+    "We could not refresh your behavior analysis.",
+  );
+
+  return normalizeUserProfile(result);
+};

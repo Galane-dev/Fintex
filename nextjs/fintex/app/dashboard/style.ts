@@ -280,6 +280,56 @@ export const useStyles = createStyles(({ css, token }) => ({
     letter-spacing: -0.04em;
     color: ${token.colorText};
   `,
+  predictionGrid: css`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  `,
+  predictionCard: css`
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  `,
+  predictionHeader: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  `,
+  predictionLabel: css`
+    color: ${token.colorTextSecondary};
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  `,
+  predictionDelta: css`
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  `,
+  predictionValue: css`
+    color: ${token.colorText};
+    font-size: 22px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  `,
+  predictionMeta: css`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    color: ${token.colorTextSecondary};
+    font-size: 12px;
+    line-height: 1.6;
+  `,
   metricList: css`
     display: grid;
     gap: 0;

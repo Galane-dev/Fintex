@@ -52,6 +52,10 @@ namespace Fintex.Investments.MarketData.Dto
 
         public decimal? TimeframeAlignmentScore { get; set; }
 
+        public MarketPriceProjectionDto NextOneMinuteProjection { get; set; }
+
+        public MarketPriceProjectionDto NextFiveMinuteProjection { get; set; }
+
         public IReadOnlyList<IndicatorScoreDto> IndicatorScores { get; set; }
 
         public IReadOnlyList<MarketVerdictTimeframeDto> TimeframeSignals { get; set; }

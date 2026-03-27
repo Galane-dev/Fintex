@@ -103,6 +103,10 @@ export function PaperTradingPanel({
   const [isTradeOpen, setIsTradeOpen] = useState(false);
   const [isRecommendationOpen, setIsRecommendationOpen] = useState(false);
   const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);
+  const [isRecommendationLoading, setIsRecommendationLoading] = useState(false);
+  const [recommendationRequestError, setRecommendationRequestError] = useState<string | null>(
+    null,
+  );
 
   const account = snapshot?.account ?? null;
   const positions = snapshot?.positions ?? [];
@@ -216,6 +220,8 @@ export function PaperTradingPanel({
   );
 
   const requestRecommendation = useCallback(async () => {
+    setRecommendationRequestError(null);
+    setIsRecommendationLoading(true);
     const values = tradeForm.getFieldsValue();
 
     const result = await getRecommendation({
@@ -227,16 +233,20 @@ export function PaperTradingPanel({
       takeProfit: values.takeProfit ?? null,
     });
 
-    if (!result) {
-      return;
+    if (result) {
+      tradeForm.setFieldsValue({
+        stopLoss: values.stopLoss ?? result.suggestedStopLoss ?? undefined,
+        takeProfit: values.takeProfit ?? result.suggestedTakeProfit ?? undefined,
+      });
+      setTradeDirection(result.recommendedAction === "Sell" ? "Sell" : "Buy");
+    } else {
+      setRecommendationRequestError(
+        "We could not load a recommendation right now. Please try again.",
+      );
     }
 
-    tradeForm.setFieldsValue({
-      stopLoss: values.stopLoss ?? result.suggestedStopLoss ?? undefined,
-      takeProfit: values.takeProfit ?? result.suggestedTakeProfit ?? undefined,
-    });
-    setTradeDirection(result.recommendedAction === "Sell" ? "Sell" : "Buy");
-    setIsRecommendationOpen(true);
+    setIsRecommendationLoading(false);
+    return result;
   }, [getRecommendation, tradeForm]);
 
   const openAccountsModal = useCallback(() => {
@@ -265,6 +275,7 @@ export function PaperTradingPanel({
   );
 
   const openRecommendationModal = useCallback(async () => {
+    setIsRecommendationOpen(true);
     await requestRecommendation();
   }, [requestRecommendation]);
 
@@ -1130,15 +1141,21 @@ export function PaperTradingPanel({
       </Modal>
 
       <Modal
-        open={isRecommendationOpen && recommendation != null}
-        onCancel={() => setIsRecommendationOpen(false)}
+        open={isRecommendationOpen}
+        onCancel={() => {
+          setIsRecommendationOpen(false);
+          setRecommendationRequestError(null);
+        }}
         title="Trade recommendation"
         width={680}
         footer={[
           <Button
             key="close"
             className={styles.actionButton}
-            onClick={() => setIsRecommendationOpen(false)}
+            onClick={() => {
+              setIsRecommendationOpen(false);
+              setRecommendationRequestError(null);
+            }}
           >
             Close
           </Button>,
@@ -1146,8 +1163,12 @@ export function PaperTradingPanel({
             key="place"
             type="primary"
             danger={recommendation?.riskLevel === "High"}
-            disabled={recommendation?.recommendedAction === "Hold"}
-            loading={isBusy}
+            disabled={
+              isRecommendationLoading ||
+              !recommendation ||
+              recommendation.recommendedAction === "Hold"
+            }
+            loading={isBusy || isRecommendationLoading}
             className={styles.actionButton}
             onClick={() => void handlePlaceSuggestedTrade()}
           >
@@ -1155,7 +1176,19 @@ export function PaperTradingPanel({
           </Button>,
         ]}
       >
-        {recommendation && recommendationTone ? (
+        {isRecommendationLoading ? (
+          <div className={styles.feedbackBody}>
+            <Alert
+              type="info"
+              showIcon
+              title="Building your recommendation"
+              description="Fintex is checking the technical setup, refreshing cached headlines if needed, and blending the market read with the latest Bitcoin and US Dollar news."
+            />
+            <Skeleton active paragraph={{ rows: 8 }} />
+          </div>
+        ) : recommendationRequestError ? (
+          <Alert type="warning" showIcon title={recommendationRequestError} />
+        ) : recommendation && recommendationTone ? (
           <div className={styles.feedbackBody}>
             <Alert
               type={recommendationTone}
@@ -1250,6 +1283,51 @@ export function PaperTradingPanel({
             </div>
 
             <div className={styles.feedbackBlock}>
+              <span className={styles.feedbackLabel}>News context</span>
+              <Typography.Paragraph className={styles.helper}>
+                {recommendation.newsSummary ||
+                  "No material cached Bitcoin or US Dollar headlines were added to this recommendation yet."}
+              </Typography.Paragraph>
+
+              <div className={styles.feedbackMeta}>
+                <Tag color="blue">
+                  Sentiment {recommendation.newsSentiment || "Neutral"}
+                </Tag>
+                {recommendation.newsImpactScore != null ? (
+                  <Tag color="gold">
+                    Impact {recommendation.newsImpactScore.toFixed(1)}
+                  </Tag>
+                ) : null}
+                {recommendation.newsRecommendedAction ? (
+                  <Tag
+                    color={
+                      recommendation.newsRecommendedAction === "Buy"
+                        ? "green"
+                        : recommendation.newsRecommendedAction === "Sell"
+                          ? "red"
+                          : "default"
+                    }
+                  >
+                    News bias {recommendation.newsRecommendedAction}
+                  </Tag>
+                ) : null}
+                {recommendation.newsLastUpdatedAt ? (
+                  <Tag color="default">
+                    Updated {formatTime(recommendation.newsLastUpdatedAt)}
+                  </Tag>
+                ) : null}
+              </div>
+
+              {recommendation.newsHeadlines.length > 0 ? (
+                <ul className={styles.feedbackList}>
+                  {recommendation.newsHeadlines.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
+            <div className={styles.feedbackBlock}>
               <span className={styles.feedbackLabel}>Suggested improvements</span>
               <ul className={styles.feedbackList}>
                 {recommendation.suggestions.map((item) => (
@@ -1274,9 +1352,21 @@ export function PaperTradingPanel({
                   Confidence {recommendation.confidenceScore.toFixed(1)}
                 </Tag>
               ) : null}
+              {recommendation.newsImpactScore != null ? (
+                <Tag color="gold">
+                  News impact {recommendation.newsImpactScore.toFixed(1)}
+                </Tag>
+              ) : null}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            title="No recommendation is ready yet."
+            description="Try requesting a recommendation again once live market data is flowing."
+          />
+        )}
       </Modal>
 
       {displayMode === "support" ? null : !account ? (

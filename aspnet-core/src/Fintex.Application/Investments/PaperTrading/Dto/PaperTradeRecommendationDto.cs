@@ -1,4 +1,5 @@
 using Fintex.Investments.MarketData.Dto;
+using System;
 using System.Collections.Generic;
 
 namespace Fintex.Investments.PaperTrading.Dto
@@ -31,6 +32,18 @@ namespace Fintex.Investments.PaperTrading.Dto
         public decimal? ConfidenceScore { get; set; }
 
         public decimal? TrendScore { get; set; }
+
+        public string NewsSummary { get; set; }
+
+        public decimal? NewsImpactScore { get; set; }
+
+        public string NewsSentiment { get; set; }
+
+        public MarketVerdict? NewsRecommendedAction { get; set; }
+
+        public DateTime? NewsLastUpdatedAt { get; set; }
+
+        public List<string> NewsHeadlines { get; set; } = new List<string>();
 
         public List<string> Reasons { get; set; } = new List<string>();
 

@@ -121,6 +121,12 @@ export interface PaperTradeRecommendation {
   suggestedTakeProfit: number | null;
   confidenceScore: number | null;
   trendScore: number | null;
+  newsSummary: string;
+  newsImpactScore: number | null;
+  newsSentiment: string;
+  newsRecommendedAction: RecommendationAction | null;
+  newsLastUpdatedAt: string | null;
+  newsHeadlines: string[];
   reasons: string[];
   suggestions: string[];
 }

@@ -40,6 +40,7 @@ import { MarketDataProvider } from "@/providers/market-data-provider";
 import { PaperTradingProvider } from "@/providers/paper-trading-provider";
 import type { UserProfile } from "@/types/user-profile";
 import {
+  buildFallbackProjectionFromHistory,
   buildMarketInsights,
   formatCompact,
   formatPercent,
@@ -49,7 +50,7 @@ import {
   formatTime,
   getConnectionTone,
 } from "@/utils/market-data";
-import { getMyUserProfile } from "@/utils/user-profile-api";
+import { refreshMyBehavioralProfile } from "@/utils/user-profile-api";
 import { useStyles } from "./style";
 
 const defaultDashboardActions: DashboardPaperTradingActions = {
@@ -86,8 +87,17 @@ function DashboardContent() {
     latest,
     refreshSnapshot,
     timeframeRsi,
-    verdict,
+      verdict,
   } = useMarketData();
+
+  const fallbackOneMinuteProjection = useMemo(
+    () => buildFallbackProjectionFromHistory(history, latest?.price, 1),
+    [history, latest?.price],
+  );
+  const fallbackFiveMinuteProjection = useMemo(
+    () => buildFallbackProjectionFromHistory(history, latest?.price, 5),
+    [history, latest?.price],
+  );
 
   const timeframeRsiMap = useMemo(
     () =>
@@ -99,6 +109,14 @@ function DashboardContent() {
   );
 
   const oneMinuteRsi = timeframeRsiMap["1m"] ?? latest?.rsi ?? null;
+  const nextOneMinuteProjection =
+    verdict?.nextOneMinuteProjection?.consensusPrice != null
+      ? verdict.nextOneMinuteProjection
+      : fallbackOneMinuteProjection;
+  const nextFiveMinuteProjection =
+    verdict?.nextFiveMinuteProjection?.consensusPrice != null
+      ? verdict.nextFiveMinuteProjection
+      : fallbackFiveMinuteProjection;
   const effectiveSma = verdict?.sma ?? latest?.sma ?? null;
   const effectiveEma = verdict?.ema ?? latest?.ema ?? null;
   const effectiveMacd = verdict?.macd ?? latest?.macd ?? null;
@@ -253,7 +271,7 @@ function DashboardContent() {
     setBehaviorError(null);
 
     try {
-      const profile = await getMyUserProfile();
+      const profile = await refreshMyBehavioralProfile();
       setBehaviorProfile(profile);
     } catch (profileError) {
       setBehaviorError(
@@ -314,6 +332,53 @@ function DashboardContent() {
     </div>
   );
 
+  const renderProjectionCard = (
+    title: string,
+    projection:
+      | {
+          consensusPrice: number | null;
+          smaPrice: number | null;
+          emaPrice: number | null;
+          smmaPrice: number | null;
+        }
+      | null,
+  ) => {
+    const consensusDelta =
+      projection?.consensusPrice != null && latest?.price != null
+        ? projection.consensusPrice - latest.price
+        : null;
+
+    return (
+      <div className={styles.predictionCard}>
+        <div className={styles.predictionHeader}>
+          <span className={styles.predictionLabel}>{title}</span>
+          <span
+            className={cx(
+              styles.predictionDelta,
+              consensusDelta == null
+                ? styles.neutral
+                : consensusDelta >= 0
+                  ? styles.positive
+                  : styles.negative,
+            )}
+          >
+            {formatSignedPoints(consensusDelta)}
+          </span>
+        </div>
+
+        <div className={styles.predictionValue}>
+          {projection?.consensusPrice != null ? formatPrice(projection.consensusPrice) : "-"}
+        </div>
+
+        <div className={styles.predictionMeta}>
+          <span>SMA {formatPrice(projection?.smaPrice ?? null)}</span>
+          <span>EMA {formatPrice(projection?.emaPrice ?? null)}</span>
+          <span>SMMA {formatPrice(projection?.smmaPrice ?? null)}</span>
+        </div>
+      </div>
+    );
+  };
+
   const analysisTabContent = (
     <div className={styles.tabStack}>
       <div className={styles.subPanel}>
@@ -344,8 +409,13 @@ function DashboardContent() {
             />
           </div>
 
+          <div className={styles.predictionGrid}>
+            {renderProjectionCard("Estimated next 1 minute", nextOneMinuteProjection)}
+            {renderProjectionCard("Estimated next 5 minutes", nextFiveMinuteProjection)}
+          </div>
+
           <Typography.Paragraph className={styles.verdictCopy}>
-            Multi-timeframe EMA, RSI, MACD, ATR, ADX, structure, and alignment checks surface actionable direction beside the chart without forcing the trader to hunt for context.
+            Multi-timeframe EMA, RSI, MACD, ATR, ADX, structure, and alignment checks now sit beside short-horizon price estimates built from SMA, EMA, and SMMA drift, so the verdict stays actionable without becoming noisy.
           </Typography.Paragraph>
 
           <Space wrap>

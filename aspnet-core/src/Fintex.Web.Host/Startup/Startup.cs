@@ -9,6 +9,7 @@ using Fintex.Investments;
 using Fintex.Investments.Analytics;
 using Fintex.Investments.Brokers;
 using Fintex.Investments.MarketData;
+using Fintex.Investments.News;
 using Fintex.Web.Host.BackgroundWorkers;
 using Fintex.Web.Host.Brokers;
 using Fintex.Web.Host.Hubs;
@@ -60,6 +61,9 @@ namespace Fintex.Web.Host.Startup
             services.Configure<MarketDataStreamingOptions>(_appConfiguration.GetSection("MarketData"));
             services.AddTransient<IIndicatorCalculator, IndicatorCalculator>();
             services.AddTransient<IBehavioralAnalysisClient, OpenAiBehavioralAnalysisClient>();
+            services.AddTransient<INewsAnalysisClient, OpenAiNewsAnalysisClient>();
+            services.AddTransient<INewsIngestionService, NewsIngestionService>();
+            services.AddTransient<INewsRecommendationService, NewsRecommendationService>();
             services.AddTransient<TradeAnalysisService>();
             services.AddTransient<IMarketDataIngestionService, MarketDataIngestionService>();
             services.AddTransient<IMarketDataStreamClient, BinanceMarketDataStreamClient>();

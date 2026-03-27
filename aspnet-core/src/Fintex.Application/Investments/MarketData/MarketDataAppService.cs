@@ -19,6 +19,9 @@ namespace Fintex.Investments.MarketData
         private const int RsiPeriod = 14;
         private const int RsiWarmupCandles = 30;
         private const int VerdictBarTake = 120;
+        private const int ProjectionSmaPeriod = 20;
+        private const int ProjectionEmaPeriod = 9;
+        private const int ProjectionSmmaPeriod = 14;
         private readonly IMarketDataPointRepository _marketDataPointRepository;
         private readonly IMarketDataTimeframeCandleRepository _marketDataTimeframeCandleRepository;
         private readonly IIndicatorCalculator _indicatorCalculator;
@@ -285,6 +288,16 @@ namespace Fintex.Investments.MarketData
                 adx,
                 structureScore,
                 timeframeAlignmentScore);
+            var nextOneMinuteProjection = BuildPriceProjection(
+                primaryCloses,
+                latest.Price,
+                latest.Timestamp,
+                1);
+            var nextFiveMinuteProjection = BuildPriceProjection(
+                primaryCloses,
+                latest.Price,
+                latest.Timestamp,
+                5);
 
             return new MarketVerdictDto
             {
@@ -310,6 +323,8 @@ namespace Fintex.Investments.MarketData
                 StructureScore = decimal.Round(structureTrend, 4, MidpointRounding.AwayFromZero),
                 StructureLabel = DescribeStructure(structureScore),
                 TimeframeAlignmentScore = timeframeAlignmentScore,
+                NextOneMinuteProjection = nextOneMinuteProjection,
+                NextFiveMinuteProjection = nextFiveMinuteProjection,
                 IndicatorScores = indicatorScores,
                 TimeframeSignals = timeframeSignals
                     .Select(x => new MarketVerdictTimeframeDto
@@ -320,6 +335,134 @@ namespace Fintex.Investments.MarketData
                     })
                     .ToList()
             };
+        }
+
+        private static MarketPriceProjectionDto BuildPriceProjection(
+            IReadOnlyList<decimal> closes,
+            decimal currentPrice,
+            DateTime referenceTimestamp,
+            int minutesAhead)
+        {
+            var smaProjection = ProjectFromMovingAverage(
+                closes,
+                ProjectionSmaPeriod,
+                minutesAhead,
+                currentPrice,
+                CalculateSimpleMovingAverage);
+            var emaProjection = ProjectFromMovingAverage(
+                closes,
+                ProjectionEmaPeriod,
+                minutesAhead,
+                currentPrice,
+                CalculateExponentialMovingAverage);
+            var smmaProjection = ProjectFromMovingAverage(
+                closes,
+                ProjectionSmmaPeriod,
+                minutesAhead,
+                currentPrice,
+                CalculateSmoothedMovingAverage);
+
+            var estimates = new[]
+            {
+                smaProjection,
+                emaProjection,
+                smmaProjection
+            }
+                .Where(x => x.HasValue)
+                .Select(x => x.Value)
+                .ToList();
+
+            return new MarketPriceProjectionDto
+            {
+                Horizon = minutesAhead == 1 ? "1m" : string.Format("{0}m", minutesAhead),
+                MinutesAhead = minutesAhead,
+                TargetTimestamp = referenceTimestamp.AddMinutes(minutesAhead),
+                ConsensusPrice = estimates.Count == 0
+                    ? (decimal?)null
+                    : decimal.Round(estimates.Average(), 8, MidpointRounding.AwayFromZero),
+                SmaPrice = smaProjection,
+                EmaPrice = emaProjection,
+                SmmaPrice = smmaProjection
+            };
+        }
+
+        private static decimal? ProjectFromMovingAverage(
+            IReadOnlyList<decimal> closes,
+            int configuredPeriod,
+            int stepsAhead,
+            decimal currentPrice,
+            Func<IReadOnlyList<decimal>, int, decimal?> calculator)
+        {
+            if (closes == null || closes.Count < 4)
+            {
+                return null;
+            }
+
+            var period = Math.Min(configuredPeriod, closes.Count - 1);
+            if (period < 3)
+            {
+                return null;
+            }
+
+            var currentAverage = calculator(closes, period);
+            var previousAverage = calculator(closes.Take(closes.Count - 1).ToList(), period);
+
+            if (!currentAverage.HasValue || !previousAverage.HasValue)
+            {
+                return null;
+            }
+
+            var slope = currentAverage.Value - previousAverage.Value;
+            var driftProjection = currentPrice + (slope * stepsAhead);
+            var anchorProjection = currentAverage.Value + (slope * stepsAhead);
+            var blendedProjection = driftProjection + ((anchorProjection - currentPrice) * 0.35m);
+
+            return decimal.Round(blendedProjection, 8, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal? CalculateSimpleMovingAverage(IReadOnlyList<decimal> values, int period)
+        {
+            if (values == null || values.Count < period)
+            {
+                return null;
+            }
+
+            return decimal.Round(values.Skip(values.Count - period).Average(), 8, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal? CalculateExponentialMovingAverage(IReadOnlyList<decimal> values, int period)
+        {
+            if (values == null || values.Count < period)
+            {
+                return null;
+            }
+
+            var multiplier = 2m / (period + 1m);
+            var average = values.Take(period).Average();
+
+            for (var index = period; index < values.Count; index++)
+            {
+                average = ((values[index] - average) * multiplier) + average;
+            }
+
+            return decimal.Round(average, 8, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal? CalculateSmoothedMovingAverage(IReadOnlyList<decimal> values, int period)
+        {
+            if (values == null || values.Count < period)
+            {
+                return null;
+            }
+
+            var average = values.Take(period).Average();
+
+            for (var index = period; index < values.Count; index++)
+            {
+                average = ((average * (period - 1m)) + values[index]) / period;
+            }
+
+            return decimal.Round(average, 8, MidpointRounding.AwayFromZero);
         }
 
         private static readonly MarketDataTimeframe[] SupportedRsiTimeframes =

@@ -104,6 +104,8 @@ export const marketDataReducer = (
               structureScore: 0,
               structureLabel: "Waiting",
               timeframeAlignmentScore: 0,
+              nextOneMinuteProjection: null,
+              nextFiveMinuteProjection: null,
               trendScore: action.payload.trendScore,
               confidenceScore: action.payload.confidenceScore,
               verdict: action.payload.verdict,

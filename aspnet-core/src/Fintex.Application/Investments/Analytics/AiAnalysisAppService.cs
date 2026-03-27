@@ -69,13 +69,29 @@ namespace Fintex.Investments.Analytics
                 .ToListAsync();
 
             var insight = await _behavioralAnalysisClient.AnalyzeAsync(profile, recentTrades, CancellationToken.None);
-            if (insight.WasGenerated)
+            if (ShouldPersistInsight(insight))
             {
-                profile.ApplyBehavioralInsight(insight.RiskScore, insight.Summary, insight.Provider, insight.Model, DateTime.UtcNow);
+                profile.ApplyBehavioralInsight(
+                    insight.RiskScore,
+                    insight.Summary,
+                    insight.Provider,
+                    insight.Model,
+                    DateTime.UtcNow);
                 await _userProfileRepository.UpdateAsync(profile);
             }
 
             return ObjectMapper.Map<UserProfileDto>(profile);
+        }
+
+        private static bool ShouldPersistInsight(UserBehaviorInsight insight)
+        {
+            return insight != null &&
+                (
+                    insight.WasGenerated ||
+                    !string.IsNullOrWhiteSpace(insight.Provider) ||
+                    !string.IsNullOrWhiteSpace(insight.Model) ||
+                    !string.IsNullOrWhiteSpace(insight.Summary)
+                );
         }
     }
 }

@@ -167,6 +167,24 @@ export const normalizePaperTradeRecommendation = (
   suggestedTakeProfit: getNullableNumber(value.suggestedTakeProfit ?? value.SuggestedTakeProfit),
   confidenceScore: getNullableNumber(value.confidenceScore ?? value.ConfidenceScore),
   trendScore: getNullableNumber(value.trendScore ?? value.TrendScore),
+  newsSummary: getString(value.newsSummary ?? value.NewsSummary),
+  newsImpactScore: getNullableNumber(value.newsImpactScore ?? value.NewsImpactScore),
+  newsSentiment: getString(value.newsSentiment ?? value.NewsSentiment),
+  newsRecommendedAction:
+    value.newsRecommendedAction == null && value.NewsRecommendedAction == null
+      ? null
+      : (getString(
+          value.newsRecommendedAction ?? value.NewsRecommendedAction,
+        ) as PaperTradeRecommendation["newsRecommendedAction"]),
+  newsLastUpdatedAt:
+    value.newsLastUpdatedAt == null && value.NewsLastUpdatedAt == null
+      ? null
+      : getString(value.newsLastUpdatedAt ?? value.NewsLastUpdatedAt),
+  newsHeadlines: Array.isArray(value.newsHeadlines ?? value.NewsHeadlines)
+    ? ((value.newsHeadlines ?? value.NewsHeadlines) as unknown[]).map((item) =>
+        getString(item),
+      )
+    : [],
   reasons: Array.isArray(value.reasons ?? value.Reasons)
     ? ((value.reasons ?? value.Reasons) as unknown[]).map((item) => getString(item))
     : [],
