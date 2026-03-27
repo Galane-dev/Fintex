@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { BellOutlined, HomeOutlined, LogoutOutlined } from "@ant-design/icons";
+import {
+  BellOutlined,
+  HomeOutlined,
+  LogoutOutlined,
+  MessageOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { Badge, Button, Card, Space, Tabs } from "antd";
+import { AssistantDrawer } from "@/components/dashboard/assistant-drawer";
 import { DashboardChart, type ChartTradeOverlay } from "@/components/dashboard/DashboardChart";
 import { PaperTradingPanel, type DashboardPaperTradingActions } from "@/components/dashboard/PaperTradingPanel";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardAssistant } from "@/hooks/use-dashboard-assistant";
 import { useDashboardBehaviorAnalysis } from "@/hooks/use-dashboard-behavior-analysis";
 import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { useMarketData } from "@/hooks/useMarketData";
@@ -44,6 +52,15 @@ export function DashboardContent() {
   const { connectionStatus, error, history, isLoading, latest, refreshSnapshot, timeframeRsi, verdict } = useMarketData();
   const behaviorAnalysis = useDashboardBehaviorAnalysis();
   const notifications = useNotifications();
+  const assistant = useDashboardAssistant({
+    onActionRefresh: async () => {
+      await Promise.all([
+        refreshSnapshot(),
+        refreshTrades(),
+        notifications.refreshInbox(),
+      ]);
+    },
+  });
   const [dashboardActions, setDashboardActions] = useState<DashboardPaperTradingActions>(defaultDashboardActions);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -105,14 +122,41 @@ export function DashboardContent() {
       <div className={styles.shell}>
         <div className={styles.header}>
           <Space wrap>
-            <Button onClick={() => { void refreshSnapshot(); void refreshTrades(); }} loading={isLoading || isLiveTradesLoading}>Refresh snapshot</Button>
+            <Button
+              aria-label="Refresh snapshot"
+              title="Refresh snapshot"
+              icon={<ReloadOutlined />}
+              onClick={() => { void refreshSnapshot(); void refreshTrades(); }}
+              loading={isLoading || isLiveTradesLoading}
+            />
             <Badge count={notifications.unreadCount} size="small">
-              <Button icon={<BellOutlined />} onClick={() => setIsNotificationsOpen(true)}>
-                Notifications
-              </Button>
+              <Button
+                aria-label="Notifications"
+                title="Notifications"
+                icon={<BellOutlined />}
+                onClick={() => setIsNotificationsOpen(true)}
+              />
             </Badge>
-            <Link href={ROUTES.home}><Button icon={<HomeOutlined />}>Landing page</Button></Link>
-            <Button type="primary" icon={<LogoutOutlined />} onClick={signOut}>Sign out</Button>
+            <Button
+              aria-label="Assistant"
+              title="Assistant"
+              icon={<MessageOutlined />}
+              onClick={assistant.open}
+            />
+            <Link href={ROUTES.home}>
+              <Button
+                aria-label="Landing page"
+                title="Landing page"
+                icon={<HomeOutlined />}
+              />
+            </Link>
+            <Button
+              type="primary"
+              aria-label="Sign out"
+              title="Sign out"
+              icon={<LogoutOutlined />}
+              onClick={signOut}
+            />
           </Space>
         </div>
 
@@ -211,6 +255,23 @@ export function DashboardContent() {
           });
         }}
         onSendTestAlert={() => notifications.sendTestAlert()}
+      />
+      <AssistantDrawer
+        isOpen={assistant.isOpen}
+        isSending={assistant.isSending}
+        isListening={assistant.isListening}
+        error={assistant.error}
+        draft={assistant.draft}
+        transcript={assistant.transcript}
+        speakReplies={assistant.speakReplies}
+        messages={assistant.messages}
+        suggestedPrompts={assistant.suggestedPrompts}
+        onClose={assistant.close}
+        onDraftChange={assistant.setDraft}
+        onSubmit={assistant.submitMessage}
+        onStartListening={assistant.startListening}
+        onStopListening={assistant.stopListening}
+        onToggleSpeakReplies={assistant.setSpeakReplies}
       />
     </div>
   );
