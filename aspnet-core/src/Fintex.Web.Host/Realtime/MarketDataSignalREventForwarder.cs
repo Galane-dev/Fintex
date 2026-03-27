@@ -3,9 +3,11 @@ using Abp.Events.Bus.Handlers;
 using Fintex.Investments.Events;
 using Fintex.Investments.MarketData;
 using Fintex.Investments.MarketData.Dto;
+using Fintex.Investments.Notifications;
 using Fintex.Web.Host.Hubs;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Fintex.Web.Host.Realtime
@@ -21,15 +23,18 @@ namespace Fintex.Web.Host.Realtime
     {
         private readonly IHubContext<MarketDataHub> _hubContext;
         private readonly IMarketDataAppService _marketDataAppService;
+        private readonly INotificationEvaluationService _notificationEvaluationService;
         private readonly ILogger<MarketDataSignalREventForwarder> _logger;
 
         public MarketDataSignalREventForwarder(
             IHubContext<MarketDataHub> hubContext,
             IMarketDataAppService marketDataAppService,
+            INotificationEvaluationService notificationEvaluationService,
             ILogger<MarketDataSignalREventForwarder> logger)
         {
             _hubContext = hubContext;
             _marketDataAppService = marketDataAppService;
+            _notificationEvaluationService = notificationEvaluationService;
             _logger = logger;
         }
 
@@ -65,6 +70,18 @@ namespace Fintex.Web.Host.Realtime
             await _hubContext.Clients.All.SendAsync("marketDataUpdated", payload);
             await _hubContext.Clients.Group(MarketDataHub.BuildSymbolGroup(eventData.Symbol)).SendAsync("marketDataUpdated", payload);
 
+            var notificationSnapshot = new NotificationMarketSnapshot
+            {
+                Symbol = eventData.Symbol,
+                Provider = eventData.Provider,
+                Price = eventData.Price,
+                Bid = eventData.Bid,
+                Ask = eventData.Ask,
+                Verdict = eventData.Verdict,
+                ConfidenceScore = eventData.ConfidenceScore,
+                TrendScore = eventData.TrendScore
+            };
+
             try
             {
                 var input = new GetMarketDataHistoryInput
@@ -84,12 +101,29 @@ namespace Fintex.Web.Host.Realtime
 
                 await _hubContext.Clients.All.SendAsync("marketVerdictUpdated", verdictPayload);
                 await _hubContext.Clients.Group(MarketDataHub.BuildSymbolGroup(eventData.Symbol)).SendAsync("marketVerdictUpdated", verdictPayload);
+
+                notificationSnapshot.Verdict = verdict.Verdict;
+                notificationSnapshot.ConfidenceScore = verdict.ConfidenceScore;
+                notificationSnapshot.TrendScore = verdict.TrendScore;
             }
             catch (System.Exception exception)
             {
                 _logger.LogWarning(
                     exception,
                     "Failed to broadcast enriched market verdict update for {Symbol} from {Provider}.",
+                    eventData.Symbol,
+                    eventData.Provider);
+            }
+
+            try
+            {
+                await _notificationEvaluationService.EvaluateAsync(notificationSnapshot, CancellationToken.None);
+            }
+            catch (System.Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Failed to evaluate notifications for {Symbol} from {Provider}.",
                     eventData.Symbol,
                     eventData.Provider);
             }

@@ -3,6 +3,7 @@ using System;
 using Fintex.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Fintex.Migrations
 {
     [DbContext(typeof(FintexDbContext))]
-    partial class FintexDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327105411_AddNotificationsFeature")]
+    partial class AddNotificationsFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2343,10 +2346,6 @@ namespace Fintex.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<decimal?>("CreatedPrice")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("numeric(18,8)");
-
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp with time zone");
 
@@ -2378,10 +2377,6 @@ namespace Fintex.Migrations
 
                     b.Property<long?>("LastNotificationId")
                         .HasColumnType("bigint");
-
-                    b.Property<decimal?>("LastObservedPrice")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("numeric(18,8)");
 
                     b.Property<DateTime?>("LastTriggeredAt")
                         .HasColumnType("timestamp with time zone");
@@ -2425,7 +2420,7 @@ namespace Fintex.Migrations
 
                     b.HasIndex("TenantId", "UserId", "IsActive");
 
-                    b.HasIndex("UserId", "Symbol", "Provider", "TargetPrice", "CreatedPrice");
+                    b.HasIndex("UserId", "Symbol", "Provider", "Direction", "TargetPrice");
 
                     b.ToTable("AppNotificationAlertRules", (string)null);
                 });

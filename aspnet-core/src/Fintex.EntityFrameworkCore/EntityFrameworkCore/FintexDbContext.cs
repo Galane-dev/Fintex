@@ -10,7 +10,7 @@ namespace Fintex.EntityFrameworkCore
     /// <summary>
     /// Main EF Core DbContext for ABP tables and investment domain data.
     /// </summary>
-    public class FintexDbContext : AbpZeroDbContext<Tenant, Role, User, FintexDbContext>
+    public partial class FintexDbContext : AbpZeroDbContext<Tenant, Role, User, FintexDbContext>
     {
         public FintexDbContext(DbContextOptions<FintexDbContext> options)
             : base(options)
@@ -105,6 +105,8 @@ namespace Fintex.EntityFrameworkCore
             ConfigureTradeExecutionContext(modelBuilder);
             ConfigureExternalBrokerExecutionEvent(modelBuilder);
             ConfigureExternalBrokerConnection(modelBuilder);
+            ConfigureNotificationAlertRule(modelBuilder);
+            ConfigureNotificationItem(modelBuilder);
             ConfigureNewsSource(modelBuilder);
             ConfigureNewsArticle(modelBuilder);
             ConfigureNewsRefreshRun(modelBuilder);

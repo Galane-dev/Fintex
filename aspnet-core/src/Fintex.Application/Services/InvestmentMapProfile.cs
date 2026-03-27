@@ -2,6 +2,8 @@ using AutoMapper;
 using Fintex.Investments.Brokers.Dto;
 using Fintex.Investments.Analytics.Dto;
 using Fintex.Investments.MarketData.Dto;
+using Fintex.Investments.Notifications;
+using Fintex.Investments.Notifications.Dto;
 using Fintex.Investments.PaperTrading.Dto;
 using Fintex.Investments.Profiles.Dto;
 using Fintex.Investments.Trading.Dto;
@@ -24,6 +26,8 @@ namespace Fintex.Investments
             CreateMap<PaperOrder, PaperOrderDto>();
             CreateMap<PaperPosition, PaperPositionDto>();
             CreateMap<PaperTradeFill, PaperTradeFillDto>();
+            CreateMap<NotificationItem, NotificationItemDto>();
+            CreateMap<NotificationAlertRule, NotificationAlertRuleDto>();
         }
     }
 }

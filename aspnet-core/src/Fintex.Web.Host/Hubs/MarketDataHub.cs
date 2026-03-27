@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace Fintex.Web.Host.Hubs
@@ -12,9 +15,9 @@ namespace Fintex.Web.Host.Hubs
     {
         public override async Task OnConnectedAsync()
         {
-            if (!string.IsNullOrWhiteSpace(Context.UserIdentifier))
+            foreach (var userId in ResolveUserGroupIds())
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, BuildUserGroup(Context.UserIdentifier));
+                await Groups.AddToGroupAsync(Context.ConnectionId, BuildUserGroup(userId));
             }
 
             await base.OnConnectedAsync();
@@ -53,6 +56,21 @@ namespace Fintex.Web.Host.Hubs
         public static string BuildUserGroup(string userId)
         {
             return "user:" + userId;
+        }
+
+        private IEnumerable<string> ResolveUserGroupIds()
+        {
+            var candidateIds = new[]
+            {
+                Context.UserIdentifier,
+                Context.User?.FindFirstValue(ClaimTypes.NameIdentifier),
+                Context.User?.FindFirstValue("sub"),
+            };
+
+            return candidateIds
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .Distinct();
         }
     }
 }
