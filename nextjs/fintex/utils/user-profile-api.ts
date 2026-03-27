@@ -1,11 +1,11 @@
 import type { UserProfile } from "@/types/user-profile";
-import { apiClient } from "./api-client";
+import { getAxiosInstance } from "./axios-instance";
 import { unwrapAbpResponse } from "./abp-response";
 import { normalizeUserProfile } from "./user-profile";
 
 export const getMyUserProfile = async (): Promise<UserProfile> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.get("/api/services/app/UserProfile/GetMyProfile"),
+    getAxiosInstance().get("/api/services/app/UserProfile/GetMyProfile"),
     "We could not load your behavior profile.",
   );
 
@@ -14,7 +14,7 @@ export const getMyUserProfile = async (): Promise<UserProfile> => {
 
 export const refreshMyBehavioralProfile = async (): Promise<UserProfile> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post("/api/services/app/AiAnalysis/RefreshMyBehavioralProfile"),
+    getAxiosInstance().post("/api/services/app/AiAnalysis/RefreshMyBehavioralProfile"),
     "We could not refresh your behavior analysis.",
   );
 

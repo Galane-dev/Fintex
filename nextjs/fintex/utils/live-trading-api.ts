@@ -1,5 +1,5 @@
 import type { LiveTrade, LiveTradeExecution, PlaceLiveOrderInput } from "@/types/live-trading";
-import { apiClient } from "./api-client";
+import { getAxiosInstance } from "./axios-instance";
 import { unwrapAbpResponse } from "./abp-response";
 import {
   buildPlaceLiveOrderInput,
@@ -13,7 +13,7 @@ interface ListResult<T> {
 
 export const getMyLiveTrades = async (): Promise<LiveTrade[]> => {
   const result = await unwrapAbpResponse<ListResult<Record<string, unknown>>>(
-    apiClient.get("/api/services/app/Trade/GetMyTrades"),
+    getAxiosInstance().get("/api/services/app/Trade/GetMyTrades"),
     "We could not load your live trades.",
   );
 
@@ -22,7 +22,7 @@ export const getMyLiveTrades = async (): Promise<LiveTrade[]> => {
 
 export const syncExternalBrokerTrades = async (): Promise<void> => {
   await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post("/api/services/app/ExternalBrokerTrading/SyncMyConnections", {}),
+    getAxiosInstance().post("/api/services/app/ExternalBrokerTrading/SyncMyConnections", {}),
     "We could not sync your external broker trades.",
   );
 };
@@ -31,7 +31,7 @@ export const placeLiveOrder = async (
   input: PlaceLiveOrderInput,
 ): Promise<LiveTradeExecution> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post(
+    getAxiosInstance().post(
       "/api/services/app/ExternalBrokerTrading/PlaceMarketOrder",
       buildPlaceLiveOrderInput(input),
     ),

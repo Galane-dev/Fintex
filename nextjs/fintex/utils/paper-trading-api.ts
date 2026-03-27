@@ -10,7 +10,7 @@ import type {
   GetPaperTradeRecommendationInput,
   PlacePaperOrderInput,
 } from "@/types/paper-trading";
-import { apiClient } from "./api-client";
+import { getAxiosInstance } from "./axios-instance";
 import { unwrapAbpResponse } from "./abp-response";
 import {
   buildClosePaperPositionInput,
@@ -31,7 +31,7 @@ interface ListResult<T> {
 
 export const getPaperTradingSnapshot = async (): Promise<PaperTradingSnapshot> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.get("/api/services/app/PaperTrading/GetMySnapshot"),
+    getAxiosInstance().get("/api/services/app/PaperTrading/GetMySnapshot"),
     "We could not load your paper trading snapshot.",
   );
 
@@ -42,7 +42,7 @@ export const createPaperTradingAccount = async (
   input: CreatePaperTradingAccountInput,
 ): Promise<void> => {
   await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post(
+    getAxiosInstance().post(
       "/api/services/app/PaperTrading/CreateMyAccount",
       buildPaperTradingAccountInput(input),
     ),
@@ -54,7 +54,7 @@ export const placePaperTradingOrder = async (
   input: PlacePaperOrderInput,
 ): Promise<PaperTradeExecutionResult> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post(
+    getAxiosInstance().post(
       "/api/services/app/PaperTrading/PlaceMarketOrder",
       buildPlacePaperOrderInput(input),
     ),
@@ -68,7 +68,7 @@ export const closePaperTradingPosition = async (
   input: ClosePaperPositionInput,
 ): Promise<PaperOrder> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post(
+    getAxiosInstance().post(
       "/api/services/app/PaperTrading/ClosePosition",
       buildClosePaperPositionInput(input),
     ),
@@ -80,7 +80,7 @@ export const closePaperTradingPosition = async (
 
 export const getPaperTradingOrders = async (): Promise<PaperOrder[]> => {
   const result = await unwrapAbpResponse<ListResult<Record<string, unknown>>>(
-    apiClient.get("/api/services/app/PaperTrading/GetMyOrders"),
+    getAxiosInstance().get("/api/services/app/PaperTrading/GetMyOrders"),
     "We could not load your paper orders.",
   );
 
@@ -89,7 +89,7 @@ export const getPaperTradingOrders = async (): Promise<PaperOrder[]> => {
 
 export const getPaperTradingPositions = async (): Promise<PaperPosition[]> => {
   const result = await unwrapAbpResponse<ListResult<Record<string, unknown>>>(
-    apiClient.get("/api/services/app/PaperTrading/GetMyPositions"),
+    getAxiosInstance().get("/api/services/app/PaperTrading/GetMyPositions"),
     "We could not load your paper positions.",
   );
 
@@ -98,7 +98,7 @@ export const getPaperTradingPositions = async (): Promise<PaperPosition[]> => {
 
 export const getPaperTradingFills = async (): Promise<PaperTradeFill[]> => {
   const result = await unwrapAbpResponse<ListResult<Record<string, unknown>>>(
-    apiClient.get("/api/services/app/PaperTrading/GetMyFills"),
+    getAxiosInstance().get("/api/services/app/PaperTrading/GetMyFills"),
     "We could not load your paper fills.",
   );
 
@@ -109,7 +109,7 @@ export const getPaperTradeRecommendation = async (
   input: GetPaperTradeRecommendationInput,
 ): Promise<PaperTradeRecommendation> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.get(
+    getAxiosInstance().get(
       "/api/services/app/PaperTrading/GetRecommendation",
       {
         params: buildPaperTradeRecommendationInput(input),

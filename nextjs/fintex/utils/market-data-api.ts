@@ -4,7 +4,7 @@ import type {
   MarketTimeframeRsi,
   MarketVerdictSnapshot,
 } from "@/types/market-data";
-import { apiClient } from "./api-client";
+import { getAxiosInstance } from "./axios-instance";
 import { unwrapAbpResponse } from "./abp-response";
 import {
   normalizeMarketDataPoint,
@@ -28,7 +28,7 @@ export const getMarketHistory = async (
   take = 80,
 ): Promise<MarketDataPoint[]> => {
   const result = await unwrapAbpResponse<ListResult<Record<string, unknown>>>(
-    apiClient.get("/api/services/app/MarketData/GetHistory", {
+    getAxiosInstance().get("/api/services/app/MarketData/GetHistory", {
       params: buildInput(selection, take),
     }),
     "We could not load the market history.",
@@ -42,7 +42,7 @@ export const getRealtimeVerdict = async (
   selection: MarketSelection,
 ): Promise<MarketVerdictSnapshot | null> => {
   const result = await unwrapAbpResponse<Record<string, unknown> | null>(
-    apiClient.get("/api/services/app/MarketData/GetRealtimeVerdict", {
+    getAxiosInstance().get("/api/services/app/MarketData/GetRealtimeVerdict", {
       params: buildInput(selection),
     }),
     "We could not load the realtime verdict.",
@@ -55,7 +55,7 @@ export const getRelativeStrengthIndexTimeframes = async (
   selection: MarketSelection,
 ): Promise<MarketTimeframeRsi[]> => {
   const result = await unwrapAbpResponse<ListResult<Record<string, unknown>>>(
-    apiClient.get("/api/services/app/MarketData/GetRelativeStrengthIndexTimeframes", {
+    getAxiosInstance().get("/api/services/app/MarketData/GetRelativeStrengthIndexTimeframes", {
       params: buildInput(selection),
     }),
     "We could not load timeframe RSI values.",

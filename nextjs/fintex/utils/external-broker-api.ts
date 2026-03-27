@@ -2,7 +2,7 @@ import type {
   ConnectExternalBrokerAccountInput,
   ExternalBrokerConnection,
 } from "@/types/external-broker";
-import { apiClient } from "./api-client";
+import { getAxiosInstance } from "./axios-instance";
 import { unwrapAbpResponse } from "./abp-response";
 import {
   buildConnectExternalBrokerAccountInput,
@@ -17,7 +17,7 @@ export const getExternalBrokerConnections = async (): Promise<
   ExternalBrokerConnection[]
 > => {
   const result = await unwrapAbpResponse<ListResult<Record<string, unknown>>>(
-    apiClient.get("/api/services/app/ExternalBroker/GetMyConnections"),
+    getAxiosInstance().get("/api/services/app/ExternalBroker/GetMyConnections"),
     "We could not load your external broker connections.",
   );
 
@@ -30,7 +30,7 @@ export const connectExternalBrokerAccount = async (
   input: ConnectExternalBrokerAccountInput,
 ): Promise<ExternalBrokerConnection> => {
   const result = await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post(
+    getAxiosInstance().post(
       "/api/services/app/ExternalBroker/ConnectAlpacaAccount",
       buildConnectExternalBrokerAccountInput(input),
     ),
@@ -44,7 +44,7 @@ export const disconnectExternalBrokerAccount = async (
   id: number,
 ): Promise<void> => {
   await unwrapAbpResponse<Record<string, unknown>>(
-    apiClient.post("/api/services/app/ExternalBroker/Disconnect", { id }),
+    getAxiosInstance().post("/api/services/app/ExternalBroker/Disconnect", { id }),
     "We could not disconnect the external broker account.",
   );
 };

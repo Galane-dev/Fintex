@@ -1,0 +1,57 @@
+"use client";
+
+import { BulbOutlined, RadarChartOutlined, WalletOutlined } from "@ant-design/icons";
+import { Button, Segmented, Space, Tag, Typography } from "antd";
+import { formatPrice, formatSigned, formatTime } from "@/utils/market-data";
+import { intervals } from "./types";
+import type { DashboardChartController, DashboardChartProps } from "./types";
+import { useStyles } from "../style";
+
+interface ChartHeaderProps extends Pick<DashboardChartProps, "onOpenAccounts" | "onOpenBehaviorAnalysis" | "onOpenRecommendation" | "onOpenTrade" | "symbol" | "venue"> {
+  controller: DashboardChartController;
+}
+
+export const ChartHeader = ({
+  controller,
+  onOpenAccounts,
+  onOpenBehaviorAnalysis,
+  onOpenRecommendation,
+  onOpenTrade,
+  symbol,
+  venue,
+}: ChartHeaderProps) => {
+  const { styles, cx } = useStyles();
+
+  return (
+    <div className={styles.header}>
+      <div className={styles.symbolRow}>
+        <div className={styles.symbolWrap}>
+          <Typography.Text className={styles.symbol}>{symbol}</Typography.Text>
+          <Typography.Text className={styles.price}>{formatPrice(controller.lastVisibleCandle?.close)}</Typography.Text>
+          <Tag color={controller.isPositive ? "green" : "red"}>{formatSigned(controller.priceChange)}%</Tag>
+          <Tag>{venue}</Tag>
+          <Tag color={controller.status === "live" ? "green" : controller.status === "reconnecting" || controller.status === "loading" ? "gold" : "red"}>{controller.status}</Tag>
+          {controller.visualSpreadBand ? <Tag color="purple">Spread {formatPrice(controller.visualSpreadBand.width)}{controller.visualSpreadBand.isSimulated ? " visual" : ""}</Tag> : null}
+        </div>
+        <Segmented options={intervals} value={controller.interval} onChange={(value) => controller.setInterval(value as typeof controller.interval)} />
+      </div>
+
+      <div className={styles.actionBar}>
+        <Space wrap size={10}>
+          <Button type="primary" className={cx(styles.actionButton, styles.buyButton)} onClick={() => onOpenTrade("Buy")}>Buy</Button>
+          <Button danger className={cx(styles.actionButton, styles.sellButton)} onClick={() => onOpenTrade("Sell")}>Sell</Button>
+          <Button icon={<WalletOutlined />} className={styles.actionButton} onClick={onOpenAccounts}>Accounts</Button>
+          <Button icon={<BulbOutlined />} className={styles.actionButton} onClick={onOpenRecommendation}>Get recommendation</Button>
+          <Button icon={<RadarChartOutlined />} className={styles.actionButton} onClick={onOpenBehaviorAnalysis}>My behavior analysis</Button>
+        </Space>
+      </div>
+
+      {controller.lastVisibleCandle ? (
+        <div className={styles.liveMetaRow}>
+          <Typography.Text type="secondary">Last candle close: {formatTime(new Date(controller.lastVisibleCandle.closeTime).toISOString())}</Typography.Text>
+          <Typography.Text type="secondary">Interval: {controller.interval}</Typography.Text>
+        </div>
+      ) : null}
+    </div>
+  );
+};

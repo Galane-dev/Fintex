@@ -1,5 +1,5 @@
 import type { AuthSession, AuthUser, SignInValues, SignUpValues } from "@/types/auth";
-import { apiClient } from "./api-client";
+import { getAxiosInstance, setAxiosAuthorizationHeader } from "./axios-instance";
 import { unwrapAbpResponse } from "./abp-response";
 
 interface AuthenticateResponse {
@@ -43,7 +43,7 @@ const mapAuthUser = (payload: CurrentLoginInformationsResponse["user"]): AuthUse
 
 const getCurrentLoginInformations = async (token: string) =>
   unwrapAbpResponse<CurrentLoginInformationsResponse>(
-    apiClient.get("/api/services/app/Session/GetCurrentLoginInformations", {
+    getAxiosInstance().get("/api/services/app/Session/GetCurrentLoginInformations", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -73,7 +73,7 @@ const buildSession = async (authenticateResponse: AuthenticateResponse): Promise
 
 export const signInRequest = async (values: SignInValues) => {
   const response = await unwrapAbpResponse<AuthenticateResponse>(
-    apiClient.post("/api/TokenAuth/Authenticate", {
+    getAxiosInstance().post("/api/TokenAuth/Authenticate", {
       userNameOrEmailAddress: values.email,
       password: values.password,
       rememberClient: true,
@@ -81,14 +81,14 @@ export const signInRequest = async (values: SignInValues) => {
     "We could not sign you in.",
   );
 
-  apiClient.defaults.headers.common.Authorization = `Bearer ${response.accessToken ?? response.AccessToken}`;
+  setAxiosAuthorizationHeader(response.accessToken ?? response.AccessToken ?? null);
 
   return buildSession(response);
 };
 
 export const signUpRequest = async (values: SignUpValues) => {
   const registerResponse = await unwrapAbpResponse<RegisterResponse>(
-    apiClient.post("/api/services/app/Account/Register", {
+    getAxiosInstance().post("/api/services/app/Account/Register", {
       name: values.firstName,
       surname: values.lastName,
       userName: values.email,
