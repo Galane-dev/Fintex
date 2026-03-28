@@ -1,4 +1,5 @@
 using Abp.Application.Services.Dto;
+using Abp.Domain.Uow;
 using Abp.Runtime.Session;
 using Abp.UI;
 using Fintex.Investments.PaperTrading.Dto;
@@ -14,7 +15,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<PaperTradingAccountDto> CreateMyAccountAsync(CreatePaperTradingAccountInput input)
         {
             var userId = AbpSession.GetUserId();
-            var existing = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            var existing = await GetActiveAccountAsync(userId);
             if (existing != null)
             {
                 throw new UserFriendlyException("You already have an active paper trading account.");
@@ -36,7 +37,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<PaperTradingSnapshotDto> GetMySnapshotAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            var account = await GetActiveAccountAsync(userId);
             if (account == null)
             {
                 return new PaperTradingSnapshotDto();
@@ -61,7 +62,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<ListResultDto<PaperOrderDto>> GetMyOrdersAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            var account = await GetActiveAccountAsync(userId);
             if (account == null)
             {
                 return new ListResultDto<PaperOrderDto>(new List<PaperOrderDto>());
@@ -74,7 +75,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<ListResultDto<PaperPositionDto>> GetMyPositionsAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            var account = await GetActiveAccountAsync(userId);
             if (account == null)
             {
                 return new ListResultDto<PaperPositionDto>(new List<PaperPositionDto>());
@@ -90,7 +91,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<ListResultDto<PaperTradeFillDto>> GetMyFillsAsync()
         {
             var userId = AbpSession.GetUserId();
-            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            var account = await GetActiveAccountAsync(userId);
             if (account == null)
             {
                 return new ListResultDto<PaperTradeFillDto>(new List<PaperTradeFillDto>());
@@ -102,13 +103,29 @@ namespace Fintex.Investments.PaperTrading
 
         private async Task<PaperTradingAccount> GetMyAccountOrThrowAsync(long userId)
         {
-            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            var account = await GetActiveAccountAsync(userId);
             if (account == null)
             {
                 throw new UserFriendlyException("Create a paper trading account before placing simulated trades.");
             }
 
             return account;
+        }
+
+        private async Task<PaperTradingAccount> GetActiveAccountAsync(long userId)
+        {
+            var account = await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            if (account != null)
+            {
+                return account;
+            }
+
+            // Background evaluators can run from a host-scoped market-data pipeline.
+            // Fall back to a tenant-filter-disabled lookup so existing user accounts stay visible.
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
+            {
+                return await _paperTradingAccountRepository.GetActiveForUserAsync(userId);
+            }
         }
 
         private async Task MarkAccountToMarketAsync(

@@ -1,9 +1,12 @@
 "use client";
 
-import { BellOutlined, DeleteOutlined } from "@ant-design/icons";
-import { Alert, Badge, Button, Collapse, Empty, Form, Input, InputNumber, List, Modal, Space, Switch, Tabs, Tag, Typography } from "antd";
-import { useEffect, useState } from "react";
-import { formatPrice } from "@/utils/market-data";
+import { BellOutlined } from "@ant-design/icons";
+import { Alert, Badge, Modal, Space, Tabs } from "antd";
+import type { NotificationAlertRule, NotificationItem } from "@/types/notifications";
+import type { TradeAutomationRule } from "@/types/trade-automation";
+import { NotificationsAlertsTab } from "./notifications-alerts-tab";
+import { NotificationsAutomationTab, type AutomationExecutionTargetOption } from "./notifications-automation-tab";
+import { NotificationsInboxTab } from "./notifications-inbox-tab";
 
 type NotificationsModalProps = {
   isOpen: boolean;
@@ -11,27 +14,10 @@ type NotificationsModalProps = {
   isSaving: boolean;
   error: string | null;
   unreadCount: number;
-  notifications: Array<{
-    id: number;
-    title: string;
-    message: string;
-    symbol: string;
-    severity: string;
-    occurredAt: string;
-    isRead: boolean;
-    confidenceScore: number | null;
-  }>;
-  alertRules: Array<{
-    id: number;
-    name: string;
-    symbol: string;
-    createdPrice: number | null;
-    lastObservedPrice: number | null;
-    targetPrice: number;
-    notifyInApp: boolean;
-    notifyEmail: boolean;
-    isActive: boolean;
-  }>;
+  notifications: NotificationItem[];
+  alertRules: NotificationAlertRule[];
+  automationRules: TradeAutomationRule[];
+  automationExecutionTargets: AutomationExecutionTargetOption[];
   onClose: () => void;
   onClearError: () => void;
   onMarkAsRead: (notificationId: number) => void;
@@ -45,23 +31,25 @@ type NotificationsModalProps = {
     notifyEmail: boolean;
     notes?: string;
   }) => Promise<boolean>;
+  onCreateAutomationRule: (values: {
+    name: string;
+    symbol: string;
+    triggerType: "PriceTarget" | "RelativeStrengthIndex" | "MacdHistogram" | "Momentum" | "TrendScore" | "ConfidenceScore" | "Verdict";
+    triggerValue?: number;
+    targetVerdict?: "Buy" | "Sell";
+    minimumConfidenceScore?: number;
+    executionTarget: string;
+    tradeDirection: "Buy" | "Sell";
+    quantity: number;
+    stopLoss?: number;
+    takeProfit?: number;
+    notifyInApp: boolean;
+    notifyEmail: boolean;
+    notes?: string;
+  }) => Promise<boolean>;
   onSendTestAlert: () => Promise<boolean>;
+  onDeleteAutomationRule: (ruleId: number) => void;
 };
-
-const severityColorMap: Record<string, string> = {
-  Danger: "red",
-  Warning: "orange",
-  Success: "green",
-  Info: "blue",
-};
-
-const formatDateTime = (value: string) =>
-  new Date(value).toLocaleString("en-ZA", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "short",
-  });
 
 export function NotificationsModal({
   isOpen,
@@ -71,53 +59,18 @@ export function NotificationsModal({
   unreadCount,
   notifications,
   alertRules,
+  automationRules,
+  automationExecutionTargets,
   onClose,
   onClearError,
   onMarkAsRead,
   onMarkAllAsRead,
   onDeleteAlertRule,
   onCreatePriceAlert,
+  onCreateAutomationRule,
   onSendTestAlert,
+  onDeleteAutomationRule,
 }: NotificationsModalProps) {
-  const [form] = Form.useForm();
-  const [isCreateAlertExpanded, setIsCreateAlertExpanded] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    form.setFieldsValue({
-      name: "BTC price alert",
-      symbol: "BTCUSDT",
-      notifyInApp: true,
-      notifyEmail: true,
-    });
-  }, [form, isOpen]);
-
-  const handleCreatePriceAlert = async (values: {
-    name: string;
-    symbol: string;
-    targetPrice: number;
-    notifyInApp: boolean;
-    notifyEmail: boolean;
-    notes?: string;
-  }) => {
-    const wasCreated = await onCreatePriceAlert(values);
-    if (!wasCreated) {
-      return;
-    }
-
-    form.resetFields();
-    form.setFieldsValue({
-      name: "BTC price alert",
-      symbol: "BTCUSDT",
-      notifyInApp: true,
-      notifyEmail: true,
-    });
-    setIsCreateAlertExpanded(false);
-  };
-
   return (
     <Modal
       open={isOpen}
@@ -133,153 +86,17 @@ export function NotificationsModal({
           {
             key: "inbox",
             label: `Inbox (${notifications.length})`,
-            children: (
-              <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                <Space style={{ justifyContent: "space-between", width: "100%" }}>
-                  <Typography.Text type="secondary">
-                    High-confidence opportunities and triggered price alerts arrive here.
-                  </Typography.Text>
-                  <Button onClick={() => void onMarkAllAsRead()} disabled={unreadCount === 0}>
-                    Mark all as read
-                  </Button>
-                </Space>
-
-                {notifications.length === 0 ? (
-                  <Empty description="No notifications yet." />
-                ) : (
-                  <List
-                    loading={isLoading}
-                    dataSource={notifications}
-                    renderItem={(item) => (
-                      <List.Item
-                        actions={[
-                          item.isRead ? null : (
-                            <Button key="read" type="link" onClick={() => void onMarkAsRead(item.id)}>
-                              Mark as read
-                            </Button>
-                          ),
-                        ].filter(Boolean)}
-                      >
-                        <List.Item.Meta
-                          title={
-                            <Space wrap>
-                              <Typography.Text strong>{item.title}</Typography.Text>
-                              <Tag color={severityColorMap[item.severity] ?? "blue"}>{item.severity}</Tag>
-                              {!item.isRead ? <Tag color="gold">Unread</Tag> : null}
-                            </Space>
-                          }
-                          description={
-                            <Space direction="vertical" size={4}>
-                              <Typography.Text>{item.message}</Typography.Text>
-                              <Typography.Text type="secondary">
-                                {item.symbol} | {formatDateTime(item.occurredAt)}
-                                {item.confidenceScore != null ? ` | confidence ${item.confidenceScore.toFixed(1)}` : ""}
-                              </Typography.Text>
-                            </Space>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
-                )}
-              </Space>
-            ),
+            children: <NotificationsInboxTab isLoading={isLoading} unreadCount={unreadCount} notifications={notifications} onMarkAsRead={onMarkAsRead} onMarkAllAsRead={onMarkAllAsRead} />,
           },
           {
             key: "alerts",
             label: `Alerts (${alertRules.length})`,
-            children: (
-              <Space direction="vertical" size={18} style={{ width: "100%" }}>
-                <Collapse
-                  activeKey={isCreateAlertExpanded ? ["create-alert"] : []}
-                  onChange={(keys) => setIsCreateAlertExpanded(Array.isArray(keys) ? keys.includes("create-alert") : keys === "create-alert")}
-                  items={[
-                    {
-                      key: "create-alert",
-                      label: "Create price alert",
-                      children: (
-                        <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                          <Alert
-                            type="info"
-                            showIcon
-                            message="Price alerts trigger once the live market moves through your target between one price update and the next."
-                          />
-
-                          <Space style={{ justifyContent: "space-between", width: "100%" }} wrap>
-                            <Typography.Text type="secondary">
-                              Use a test alert to verify in-app notifications and email delivery before debugging market-crossing rules.
-                            </Typography.Text>
-                            <Button loading={isSaving} onClick={() => void onSendTestAlert()}>
-                              Send alert test
-                            </Button>
-                          </Space>
-
-                          <Form form={form} layout="vertical" onFinish={handleCreatePriceAlert}>
-                            <Space align="start" wrap style={{ width: "100%" }}>
-                              <Form.Item name="name" label="Alert name" rules={[{ required: true }]}>
-                                <Input placeholder="BTC breakout alert" style={{ width: 220 }} />
-                              </Form.Item>
-                              <Form.Item name="symbol" label="Symbol" rules={[{ required: true }]}>
-                                <Input style={{ width: 140 }} />
-                              </Form.Item>
-                              <Form.Item name="targetPrice" label="Target price" rules={[{ required: true }]}>
-                                <InputNumber min={0.00000001} style={{ width: 180 }} />
-                              </Form.Item>
-                            </Space>
-
-                            <Space align="center" wrap style={{ marginBottom: 12 }}>
-                              <Form.Item name="notifyInApp" label="In-app alert" valuePropName="checked" style={{ marginBottom: 0 }}>
-                                <Switch />
-                              </Form.Item>
-                              <Form.Item name="notifyEmail" label="Email alert" valuePropName="checked" style={{ marginBottom: 0 }}>
-                                <Switch />
-                              </Form.Item>
-                              <Form.Item name="notes" label="Notes" style={{ marginBottom: 0 }}>
-                                <Input placeholder="Optional context" style={{ width: 220 }} />
-                              </Form.Item>
-                              <Button type="primary" htmlType="submit" loading={isSaving} style={{ marginTop: 30 }}>
-                                Create alert
-                              </Button>
-                            </Space>
-                          </Form>
-                        </Space>
-                      ),
-                    },
-                  ]}
-                />
-
-                {alertRules.length === 0 ? (
-                  <Empty description="No active alerts yet." />
-                ) : (
-                  <List
-                    dataSource={alertRules}
-                    renderItem={(rule) => (
-                      <List.Item
-                        actions={[
-                          <Button key="delete" icon={<DeleteOutlined />} danger type="text" onClick={() => void onDeleteAlertRule(rule.id)} />,
-                        ]}
-                      >
-                        <List.Item.Meta
-                          title={
-                            <Space wrap>
-                              <Typography.Text strong>{rule.name}</Typography.Text>
-                              <Tag>{rule.symbol}</Tag>
-                            </Space>
-                          }
-                          description={
-                            <Typography.Text type="secondary">
-                              {(rule.lastObservedPrice ?? rule.createdPrice) != null
-                                ? `Tracking from ${formatPrice(rule.lastObservedPrice ?? rule.createdPrice ?? 0)}`
-                                : "Legacy alert rule"} | target {formatPrice(rule.targetPrice)} | in-app {rule.notifyInApp ? "on" : "off"} | email {rule.notifyEmail ? "on" : "off"}
-                            </Typography.Text>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
-                )}
-              </Space>
-            ),
+            children: <NotificationsAlertsTab isOpen={isOpen} isSaving={isSaving} alertRules={alertRules} onCreatePriceAlert={onCreatePriceAlert} onSendTestAlert={onSendTestAlert} onDeleteAlertRule={onDeleteAlertRule} />,
+          },
+          {
+            key: "automation",
+            label: `Auto execute (${automationRules.length})`,
+            children: <NotificationsAutomationTab isOpen={isOpen} isSaving={isSaving} rules={automationRules} executionTargets={automationExecutionTargets} onCreateRule={onCreateAutomationRule} onDeleteRule={onDeleteAutomationRule} />,
           },
         ]}
       />

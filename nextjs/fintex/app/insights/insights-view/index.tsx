@@ -6,25 +6,22 @@ import { LiveTradingProvider } from "@/providers/live-trading-provider";
 import { MarketDataProvider } from "@/providers/market-data-provider";
 import { NotificationsProvider } from "@/providers/notifications-provider";
 import { PaperTradingProvider } from "@/providers/paper-trading-provider";
-import { TradeAutomationProvider } from "@/providers/trade-automation-provider";
-import { DashboardContent } from "./dashboard-content";
+import { InsightsContent } from "./insights-content";
 
-function DashboardViewContent() {
+function InsightsViewContent() {
   return (
     <MarketDataProvider>
       <ExternalBrokerProvider>
         <NotificationsProvider>
-          <TradeAutomationProvider>
-            <PaperTradingProvider>
-              <LiveTradingProvider>
-                <DashboardContent />
-              </LiveTradingProvider>
-            </PaperTradingProvider>
-          </TradeAutomationProvider>
+          <PaperTradingProvider>
+            <LiveTradingProvider>
+              <InsightsContent />
+            </LiveTradingProvider>
+          </PaperTradingProvider>
         </NotificationsProvider>
       </ExternalBrokerProvider>
     </MarketDataProvider>
   );
 }
 
-export const DashboardView = withAuth(DashboardViewContent);
+export const InsightsView = withAuth(InsightsViewContent);

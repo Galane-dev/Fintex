@@ -1,5 +1,6 @@
 using Abp.Dependency;
 using Abp.Events.Bus.Handlers;
+using Fintex.Investments.Automation;
 using Fintex.Investments.Events;
 using Fintex.Investments.MarketData;
 using Fintex.Investments.MarketData.Dto;
@@ -24,17 +25,20 @@ namespace Fintex.Web.Host.Realtime
         private readonly IHubContext<MarketDataHub> _hubContext;
         private readonly IMarketDataAppService _marketDataAppService;
         private readonly INotificationEvaluationService _notificationEvaluationService;
+        private readonly ITradeAutomationEvaluationService _tradeAutomationEvaluationService;
         private readonly ILogger<MarketDataSignalREventForwarder> _logger;
 
         public MarketDataSignalREventForwarder(
             IHubContext<MarketDataHub> hubContext,
             IMarketDataAppService marketDataAppService,
             INotificationEvaluationService notificationEvaluationService,
+            ITradeAutomationEvaluationService tradeAutomationEvaluationService,
             ILogger<MarketDataSignalREventForwarder> logger)
         {
             _hubContext = hubContext;
             _marketDataAppService = marketDataAppService;
             _notificationEvaluationService = notificationEvaluationService;
+            _tradeAutomationEvaluationService = tradeAutomationEvaluationService;
             _logger = logger;
         }
 
@@ -77,6 +81,9 @@ namespace Fintex.Web.Host.Realtime
                 Price = eventData.Price,
                 Bid = eventData.Bid,
                 Ask = eventData.Ask,
+                Rsi = eventData.Rsi,
+                MacdHistogram = eventData.MacdHistogram,
+                Momentum = eventData.Momentum,
                 Verdict = eventData.Verdict,
                 ConfidenceScore = eventData.ConfidenceScore,
                 TrendScore = eventData.TrendScore
@@ -124,6 +131,19 @@ namespace Fintex.Web.Host.Realtime
                 _logger.LogWarning(
                     exception,
                     "Failed to evaluate notifications for {Symbol} from {Provider}.",
+                    eventData.Symbol,
+                    eventData.Provider);
+            }
+
+            try
+            {
+                await _tradeAutomationEvaluationService.EvaluateAsync(notificationSnapshot, CancellationToken.None);
+            }
+            catch (System.Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Failed to evaluate trade automations for {Symbol} from {Provider}.",
                     eventData.Symbol,
                     eventData.Provider);
             }

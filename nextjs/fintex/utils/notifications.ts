@@ -30,7 +30,11 @@ const mapSeverity = (value: unknown): NotificationSeverity => {
 };
 
 const mapType = (value: unknown): NotificationType =>
-  value === 2 || value === "PriceTarget" ? "PriceTarget" : "TradeOpportunity";
+  value === 2 || value === "PriceTarget"
+    ? "PriceTarget"
+    : value === 3 || value === "TradeAutomation"
+      ? "TradeAutomation"
+      : "TradeOpportunity";
 
 export const normalizeNotification = (payload: Record<string, unknown>): NotificationItem => ({
   id: Number(payload.id ?? payload.Id ?? 0),

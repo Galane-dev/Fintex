@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import {
   BellOutlined,
+  BarChartOutlined,
   HomeOutlined,
   LogoutOutlined,
   MessageOutlined,
@@ -18,10 +19,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDashboardAssistant } from "@/hooks/use-dashboard-assistant";
 import { useDashboardBehaviorAnalysis } from "@/hooks/use-dashboard-behavior-analysis";
 import { useDashboardStrategyValidation } from "@/hooks/use-dashboard-strategy-validation";
+import { useExternalBrokerAccounts } from "@/hooks/useExternalBrokerAccounts";
 import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
+import { useTradeAutomation } from "@/hooks/useTradeAutomation";
 import {
   buildFallbackProjectionFromHistory,
   buildMarketInsights,
@@ -46,15 +49,71 @@ const defaultDashboardActions: DashboardPaperTradingActions = {
 
 type CalculationTone = "positive" | "negative" | "neutral";
 
+const PAPER_EXECUTION_TARGET = "paper";
+
+const buildAutomationExecutionTargets = (
+  hasPaperAccount: boolean,
+  connections: Array<{ id: number; displayName: string; status: string }>,
+) => {
+  const targets = hasPaperAccount
+    ? [{ label: "Paper academy", value: PAPER_EXECUTION_TARGET }]
+    : [];
+
+  return targets.concat(
+    connections
+      .filter((connection) => connection.status === "Connected")
+      .map((connection) => ({
+        label: connection.displayName,
+        value: `external-${connection.id}`,
+      })),
+  );
+};
+
+const parseAutomationExecutionTarget = (value: string) => {
+  if (value === PAPER_EXECUTION_TARGET) {
+    return { destination: 1, externalConnectionId: null as number | null };
+  }
+
+  if (value.startsWith("external-")) {
+    const externalConnectionId = Number(value.replace("external-", ""));
+    return { destination: 2, externalConnectionId };
+  }
+
+  return { destination: 1, externalConnectionId: null as number | null };
+};
+
+const mapTriggerTypeToCode = (value: string) => {
+  switch (value) {
+    case "RelativeStrengthIndex":
+      return 2;
+    case "MacdHistogram":
+      return 3;
+    case "Momentum":
+      return 4;
+    case "TrendScore":
+      return 5;
+    case "ConfidenceScore":
+      return 6;
+    case "Verdict":
+      return 7;
+    default:
+      return 1;
+  }
+};
+
+const mapVerdictToCode = (value?: "Buy" | "Sell") => (value === "Sell" ? 2 : value === "Buy" ? 1 : null);
+
 export function DashboardContent() {
   const { styles } = useStyles();
   const { signOut } = useAuth();
   const { closePosition, isSubmitting: isPaperSubmitting, snapshot } = usePaperTrading();
+  const externalBrokers = useExternalBrokerAccounts();
   const { trades: liveTrades, isLoading: isLiveTradesLoading, refreshTrades } = useLiveTrading();
   const { connectionStatus, error, history, isLoading, latest, refreshSnapshot, timeframeRsi, verdict } = useMarketData();
   const behaviorAnalysis = useDashboardBehaviorAnalysis();
   const strategyValidation = useDashboardStrategyValidation();
   const notifications = useNotifications();
+  const tradeAutomation = useTradeAutomation();
   const assistant = useDashboardAssistant({
     onActionRefresh: async () => {
       await Promise.all([
@@ -82,6 +141,10 @@ export function DashboardContent() {
   const closedFills = useMemo(() => snapshot?.recentFills ?? [], [snapshot?.recentFills]);
   const openLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status === "Open"), [liveTrades]);
   const closedLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status !== "Open"), [liveTrades]);
+  const automationExecutionTargets = useMemo(
+    () => buildAutomationExecutionTargets(snapshot?.account != null, externalBrokers.connections),
+    [externalBrokers.connections, snapshot?.account],
+  );
 
   const tradeOverlays = useMemo<ChartTradeOverlay[]>(
     () => [
@@ -146,6 +209,13 @@ export function DashboardContent() {
               icon={<MessageOutlined />}
               onClick={assistant.open}
             />
+            <Link href={ROUTES.insights}>
+              <Button
+                aria-label="Insights"
+                title="Insights"
+                icon={<BarChartOutlined />}
+              />
+            </Link>
             <Link href={ROUTES.home}>
               <Button
                 aria-label="Landing page"
@@ -242,6 +312,8 @@ export function DashboardContent() {
         unreadCount={notifications.unreadCount}
         notifications={notifications.notifications}
         alertRules={notifications.alertRules}
+        automationRules={tradeAutomation.rules}
+        automationExecutionTargets={automationExecutionTargets}
         onClose={() => setIsNotificationsOpen(false)}
         onClearError={notifications.clearError}
         onMarkAsRead={(notificationId) => { void notifications.markAsRead(notificationId); }}
@@ -258,7 +330,30 @@ export function DashboardContent() {
             notes: values.notes,
           });
         }}
+        onCreateAutomationRule={(values) => {
+          const executionTarget = parseAutomationExecutionTarget(values.executionTarget);
+
+          return tradeAutomation.createRule({
+            name: values.name,
+            symbol: values.symbol,
+            provider: 1,
+            triggerType: mapTriggerTypeToCode(values.triggerType),
+            triggerValue: values.triggerValue ?? null,
+            targetVerdict: mapVerdictToCode(values.targetVerdict),
+            minimumConfidenceScore: values.minimumConfidenceScore ?? null,
+            destination: executionTarget.destination,
+            externalConnectionId: executionTarget.externalConnectionId,
+            tradeDirection: values.tradeDirection === "Sell" ? 2 : 1,
+            quantity: values.quantity,
+            stopLoss: values.stopLoss ?? null,
+            takeProfit: values.takeProfit ?? null,
+            notifyInApp: values.notifyInApp,
+            notifyEmail: values.notifyEmail,
+            notes: values.notes,
+          });
+        }}
         onSendTestAlert={() => notifications.sendTestAlert()}
+        onDeleteAutomationRule={(ruleId) => { void tradeAutomation.deleteRule(ruleId); }}
       />
       <StrategyValidationModal
         isOpen={strategyValidation.isOpen}

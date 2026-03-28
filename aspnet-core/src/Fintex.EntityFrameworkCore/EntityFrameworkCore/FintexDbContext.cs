@@ -1,6 +1,7 @@
 using Abp.Zero.EntityFrameworkCore;
 using Fintex.Authorization.Roles;
 using Fintex.Authorization.Users;
+using Fintex.Investments.Automation;
 using Fintex.Investments;
 using Fintex.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
@@ -107,6 +108,7 @@ namespace Fintex.EntityFrameworkCore
             ConfigureExternalBrokerConnection(modelBuilder);
             ConfigureNotificationAlertRule(modelBuilder);
             ConfigureNotificationItem(modelBuilder);
+            ConfigureTradeAutomationRule(modelBuilder);
             ConfigureNewsSource(modelBuilder);
             ConfigureNewsArticle(modelBuilder);
             ConfigureNewsRefreshRun(modelBuilder);

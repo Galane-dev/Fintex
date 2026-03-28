@@ -15,6 +15,12 @@ namespace Fintex.Investments.Notifications
 
         public decimal? Ask { get; set; }
 
+        public decimal? Rsi { get; set; }
+
+        public decimal? MacdHistogram { get; set; }
+
+        public decimal? Momentum { get; set; }
+
         public MarketVerdict Verdict { get; set; }
 
         public decimal? ConfidenceScore { get; set; }

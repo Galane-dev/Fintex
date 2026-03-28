@@ -6,6 +6,7 @@ namespace Fintex.Investments.Notifications
     public enum NotificationType
     {
         TradeOpportunity = 1,
-        PriceTarget = 2
+        PriceTarget = 2,
+        TradeAutomation = 3
     }
 }
