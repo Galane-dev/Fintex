@@ -17,6 +17,7 @@ import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardAssistant } from "@/hooks/use-dashboard-assistant";
 import { useDashboardBehaviorAnalysis } from "@/hooks/use-dashboard-behavior-analysis";
+import { useDashboardStrategyValidation } from "@/hooks/use-dashboard-strategy-validation";
 import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -32,6 +33,7 @@ import {
 import { AnalysisTab } from "./analysis-tab";
 import { BehaviorAnalysisModal } from "./behavior-analysis-modal";
 import { NotificationsModal } from "./notifications-modal";
+import { StrategyValidationModal } from "./strategy-validation-modal";
 import { TradeTab } from "./trade-tab";
 import { useStyles } from "../style";
 
@@ -51,6 +53,7 @@ export function DashboardContent() {
   const { trades: liveTrades, isLoading: isLiveTradesLoading, refreshTrades } = useLiveTrading();
   const { connectionStatus, error, history, isLoading, latest, refreshSnapshot, timeframeRsi, verdict } = useMarketData();
   const behaviorAnalysis = useDashboardBehaviorAnalysis();
+  const strategyValidation = useDashboardStrategyValidation();
   const notifications = useNotifications();
   const assistant = useDashboardAssistant({
     onActionRefresh: async () => {
@@ -171,6 +174,7 @@ export function DashboardContent() {
               onOpenAccounts={dashboardActions.openAccounts}
               onOpenRecommendation={dashboardActions.openRecommendation}
               onOpenBehaviorAnalysis={() => { void behaviorAnalysis.open(); }}
+              onOpenStrategyValidation={() => { void strategyValidation.open(); }}
               onOpenTrade={dashboardActions.openTrade}
             />
           </div>
@@ -255,6 +259,16 @@ export function DashboardContent() {
           });
         }}
         onSendTestAlert={() => notifications.sendTestAlert()}
+      />
+      <StrategyValidationModal
+        isOpen={strategyValidation.isOpen}
+        isLoadingHistory={strategyValidation.isLoadingHistory}
+        isSubmitting={strategyValidation.isSubmitting}
+        error={strategyValidation.error}
+        latestResult={strategyValidation.latestResult}
+        history={strategyValidation.history}
+        onClose={strategyValidation.close}
+        onSubmit={strategyValidation.submit}
       />
       <AssistantDrawer
         isOpen={assistant.isOpen}

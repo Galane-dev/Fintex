@@ -115,6 +115,7 @@ namespace Fintex.EntityFrameworkCore
             ConfigurePaperOrder(modelBuilder);
             ConfigurePaperPosition(modelBuilder);
             ConfigurePaperTradeFill(modelBuilder);
+            ConfigureStrategyValidationRun(modelBuilder);
             ConfigureMarketDataPoint(modelBuilder);
             ConfigureMarketDataTimeframeCandle(modelBuilder);
             ConfigureUserProfile(modelBuilder);

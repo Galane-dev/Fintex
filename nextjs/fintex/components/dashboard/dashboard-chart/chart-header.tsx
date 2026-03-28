@@ -1,13 +1,13 @@
 "use client";
 
-import { BulbOutlined, RadarChartOutlined, WalletOutlined } from "@ant-design/icons";
+import { BulbOutlined, FundProjectionScreenOutlined, RadarChartOutlined, WalletOutlined } from "@ant-design/icons";
 import { Button, Segmented, Space, Tag, Typography } from "antd";
 import { formatPrice, formatSigned, formatTime } from "@/utils/market-data";
 import { intervals } from "./types";
 import type { DashboardChartController, DashboardChartProps } from "./types";
 import { useStyles } from "../style";
 
-interface ChartHeaderProps extends Pick<DashboardChartProps, "onOpenAccounts" | "onOpenBehaviorAnalysis" | "onOpenRecommendation" | "onOpenTrade" | "symbol" | "venue"> {
+interface ChartHeaderProps extends Pick<DashboardChartProps, "onOpenAccounts" | "onOpenBehaviorAnalysis" | "onOpenRecommendation" | "onOpenStrategyValidation" | "onOpenTrade" | "symbol" | "venue"> {
   controller: DashboardChartController;
 }
 
@@ -16,6 +16,7 @@ export const ChartHeader = ({
   onOpenAccounts,
   onOpenBehaviorAnalysis,
   onOpenRecommendation,
+  onOpenStrategyValidation,
   onOpenTrade,
   symbol,
   venue,
@@ -42,6 +43,7 @@ export const ChartHeader = ({
           <Button danger className={cx(styles.actionButton, styles.sellButton)} onClick={() => onOpenTrade("Sell")}>Sell</Button>
           <Button icon={<WalletOutlined />} className={styles.actionButton} onClick={onOpenAccounts}>Accounts</Button>
           <Button icon={<BulbOutlined />} className={styles.actionButton} onClick={onOpenRecommendation}>Get recommendation</Button>
+          <Button icon={<FundProjectionScreenOutlined />} className={styles.actionButton} onClick={onOpenStrategyValidation}>Validate strategy</Button>
           <Button icon={<RadarChartOutlined />} className={styles.actionButton} onClick={onOpenBehaviorAnalysis}>My behavior analysis</Button>
         </Space>
       </div>

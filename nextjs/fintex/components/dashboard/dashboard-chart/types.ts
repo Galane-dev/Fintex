@@ -19,6 +19,7 @@ export interface DashboardChartProps {
   onOpenAccounts: () => void;
   onOpenRecommendation: () => void;
   onOpenBehaviorAnalysis: () => void;
+  onOpenStrategyValidation: () => void;
   onOpenTrade: (direction: "Buy" | "Sell") => void;
 }
 
