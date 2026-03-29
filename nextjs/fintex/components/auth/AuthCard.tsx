@@ -22,7 +22,7 @@ export function AuthCard({ mode }: AuthCardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const redirectPath = searchParams.get("redirect") || ROUTES.dashboard;
+  const redirectPath = searchParams.get("redirect") || ROUTES.academy;
   const isSignIn = mode === "sign-in";
 
   useEffect(() => {

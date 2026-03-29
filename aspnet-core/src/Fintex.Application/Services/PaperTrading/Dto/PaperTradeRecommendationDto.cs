@@ -45,6 +45,14 @@ namespace Fintex.Investments.PaperTrading.Dto
 
         public List<string> NewsHeadlines { get; set; } = new List<string>();
 
+        public string EconomicCalendarSummary { get; set; }
+
+        public decimal? EconomicCalendarRiskScore { get; set; }
+
+        public DateTime? EconomicCalendarNextEventAtUtc { get; set; }
+
+        public List<EconomicCalendarEventDto> EconomicCalendarEvents { get; set; } = new List<EconomicCalendarEventDto>();
+
         public List<string> Reasons { get; set; } = new List<string>();
 
         public List<string> Suggestions { get; set; } = new List<string>();

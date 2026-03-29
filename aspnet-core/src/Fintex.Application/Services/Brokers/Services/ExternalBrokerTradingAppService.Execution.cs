@@ -18,6 +18,7 @@ namespace Fintex.Investments.Brokers
         public async Task<ExternalBrokerTradeExecutionDto> PlaceMarketOrderAsync(PlaceExternalBrokerMarketOrderInput input)
         {
             var userId = AbpSession.GetUserId();
+            await _academyProgressService.EnsureExternalBrokerAccessAsync(userId, AbpSession.TenantId);
             var connection = await _externalBrokerConnectionRepository.GetByIdForUserAsync(input.ConnectionId, userId);
             if (connection == null || !connection.IsActive)
             {

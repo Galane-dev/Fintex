@@ -25,18 +25,30 @@ namespace Fintex.Investments.Analytics
             _configuration = configuration;
         }
 
-        public async Task<UserBehaviorInsight> AnalyzeAsync(UserProfile profile, IReadOnlyList<Trade> recentTrades, CancellationToken cancellationToken)
+        public async Task<UserBehaviorInsight> AnalyzeAsync(UserProfile profile, IReadOnlyList<BehaviorTradeActivity> recentTrades, CancellationToken cancellationToken)
         {
             var apiKey = _configuration["OpenAI:ApiKey"];
             var model = _configuration["OpenAI:Model"];
             var endpoint = _configuration["OpenAI:Endpoint"] ?? "https://api.openai.com/v1/responses";
 
-            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model) || recentTrades == null || recentTrades.Count == 0)
+            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model))
             {
                 return new UserBehaviorInsight
                 {
                     RiskScore = profile == null ? 0m : profile.BehavioralRiskScore,
                     Summary = "Behavioral AI analysis is not configured yet.",
+                    Provider = "OpenAI",
+                    Model = model,
+                    WasGenerated = false
+                };
+            }
+
+            if (recentTrades == null || recentTrades.Count == 0)
+            {
+                return new UserBehaviorInsight
+                {
+                    RiskScore = profile == null ? 0m : profile.BehavioralRiskScore,
+                    Summary = "There is not enough trade history yet to profile your behavior. Complete a few paper or live trades first.",
                     Provider = "OpenAI",
                     Model = model,
                     WasGenerated = false
@@ -56,7 +68,8 @@ namespace Fintex.Investments.Analytics
             foreach (var trade in recentTrades.Take(20))
             {
                 promptBuilder.AppendLine(string.Format(
-                    "{0} {1} {2} qty={3} entry={4} exit={5} pnl={6} status={7}",
+                    "{0} {1} {2} {3} qty={4} entry={5} exit={6} pnl={7} status={8}",
+                    trade.Source,
                     trade.Symbol,
                     trade.AssetClass,
                     trade.Direction,

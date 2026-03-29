@@ -1,6 +1,7 @@
 import type {
   ClosePaperPositionInput,
   CreatePaperTradingAccountInput,
+  EconomicCalendarEvent,
   PaperOrder,
   PaperTradeAssessment,
   PaperTradeExecutionResult,
@@ -21,6 +22,15 @@ const getNullableNumber = (value: unknown) =>
 
 const getString = (value: unknown, fallback = "") =>
   typeof value === "string" ? value : fallback;
+
+const normalizeEconomicCalendarEvent = (
+  value: Record<string, unknown>,
+): EconomicCalendarEvent => ({
+  title: getString(value.title ?? value.Title),
+  source: getString(value.source ?? value.Source),
+  occursAtUtc: getString(value.occursAtUtc ?? value.OccursAtUtc),
+  impactScore: getNumber(value.impactScore ?? value.ImpactScore),
+});
 
 export const normalizePaperTradingAccount = (
   value: Record<string, unknown>,
@@ -184,6 +194,28 @@ export const normalizePaperTradeRecommendation = (
     ? ((value.newsHeadlines ?? value.NewsHeadlines) as unknown[]).map((item) =>
         getString(item),
       )
+    : [],
+  economicCalendarSummary: getString(
+    value.economicCalendarSummary ?? value.EconomicCalendarSummary,
+  ),
+  economicCalendarRiskScore: getNullableNumber(
+    value.economicCalendarRiskScore ?? value.EconomicCalendarRiskScore,
+  ),
+  economicCalendarNextEventAtUtc:
+    value.economicCalendarNextEventAtUtc == null &&
+    value.EconomicCalendarNextEventAtUtc == null
+      ? null
+      : getString(
+          value.economicCalendarNextEventAtUtc ??
+            value.EconomicCalendarNextEventAtUtc,
+        ),
+  economicCalendarEvents: Array.isArray(
+    value.economicCalendarEvents ?? value.EconomicCalendarEvents,
+  )
+    ? (
+        (value.economicCalendarEvents ??
+          value.EconomicCalendarEvents) as Record<string, unknown>[]
+      ).map(normalizeEconomicCalendarEvent)
     : [],
   reasons: Array.isArray(value.reasons ?? value.Reasons)
     ? ((value.reasons ?? value.Reasons) as unknown[]).map((item) => getString(item))

@@ -1,9 +1,13 @@
 "use client";
 
-import { Button, Empty, Space, Tag } from "antd";
-import type { LiveTrade } from "@/types/live-trading";
+import { Button, Empty, Space, Tag, Typography } from "antd";
+import type { ClosedTradeReview, LiveTrade } from "@/types/live-trading";
 import type { PaperPosition, PaperTradeFill } from "@/types/paper-trading";
 import { formatPrice, formatTime } from "@/utils/market-data";
+import {
+  buildLiveClosedTradeReview,
+  buildPaperClosedTradeReview,
+} from "./closed-trade-review";
 import { useStyles } from "../style";
 
 interface TradeTabProps {
@@ -97,6 +101,10 @@ export function TradeTab({
                     className={fill.realizedProfitLoss >= 0 ? styles.positive : styles.negative}
                   />
                 </div>
+
+                <ClosedTradeReviewPanel
+                  review={buildPaperClosedTradeReview(fill, closedFills, liveTrades)}
+                />
               </div>
             ))}
 
@@ -127,9 +135,51 @@ export function TradeTab({
                 className={cx(styles.positionMetricValue, (isOpenMode ? trade.unrealizedProfitLoss : trade.realizedProfitLoss) >= 0 ? styles.positive : styles.negative)}
               />
             </div>
+
+            {!isOpenMode ? (
+              <ClosedTradeReviewPanel
+                review={
+                  trade.closedTradeReview ??
+                  buildLiveClosedTradeReview(trade, closedFills, liveTrades)
+                }
+              />
+            ) : null}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ClosedTradeReviewPanel({
+  review,
+}: {
+  review: {
+    good: string;
+    bad: string;
+    repeatedPattern: string;
+  } | ClosedTradeReview;
+}) {
+  const { styles } = useStyles();
+
+  return (
+    <div className={styles.closedTradeReviewPanel}>
+      <ReviewLine label="What was good" copy={review.good} />
+      <ReviewLine label="What was bad" copy={review.bad} />
+      <ReviewLine label="Repeated pattern" copy={review.repeatedPattern} />
+    </div>
+  );
+}
+
+function ReviewLine({ label, copy }: { label: string; copy: string }) {
+  const { styles } = useStyles();
+
+  return (
+    <div className={styles.closedTradeReviewLine}>
+      <div className={styles.closedTradeReviewLabel}>{label}</div>
+      <Typography.Paragraph className={styles.closedTradeReviewCopy}>
+        {copy}
+      </Typography.Paragraph>
     </div>
   );
 }

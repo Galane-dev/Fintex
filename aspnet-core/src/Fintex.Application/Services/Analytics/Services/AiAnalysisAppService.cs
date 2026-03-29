@@ -22,17 +22,20 @@ namespace Fintex.Investments.Analytics
         private readonly ITradeRepository _tradeRepository;
         private readonly IUserProfileRepository _userProfileRepository;
         private readonly IBehavioralAnalysisClient _behavioralAnalysisClient;
+        private readonly IBehaviorTradeActivityService _behaviorTradeActivityService;
 
         public AiAnalysisAppService(
             IRepository<TradeAnalysisSnapshot, long> snapshotRepository,
             ITradeRepository tradeRepository,
             IUserProfileRepository userProfileRepository,
-            IBehavioralAnalysisClient behavioralAnalysisClient)
+            IBehavioralAnalysisClient behavioralAnalysisClient,
+            IBehaviorTradeActivityService behaviorTradeActivityService)
         {
             _snapshotRepository = snapshotRepository;
             _tradeRepository = tradeRepository;
             _userProfileRepository = userProfileRepository;
             _behavioralAnalysisClient = behavioralAnalysisClient;
+            _behaviorTradeActivityService = behaviorTradeActivityService;
         }
 
         public async Task<ListResultDto<Dto.TradeAnalysisSnapshotDto>> GetTradeSnapshotsAsync(EntityDto<long> input)
@@ -62,11 +65,7 @@ namespace Fintex.Investments.Analytics
                 await _userProfileRepository.InsertAsync(profile);
             }
 
-            var recentTrades = await _tradeRepository.GetAll()
-                .Where(x => x.UserId == userId)
-                .OrderByDescending(x => x.CreationTime)
-                .Take(20)
-                .ToListAsync();
+            var recentTrades = await _behaviorTradeActivityService.GetRecentActivityAsync(userId, 20, CancellationToken.None);
 
             var insight = await _behavioralAnalysisClient.AnalyzeAsync(profile, recentTrades, CancellationToken.None);
             if (ShouldPersistInsight(insight))

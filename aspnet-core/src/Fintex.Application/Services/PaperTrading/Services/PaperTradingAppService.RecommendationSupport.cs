@@ -1,4 +1,5 @@
 using Fintex.Investments.MarketData.Dto;
+using Fintex.Investments.EconomicCalendar;
 using Fintex.Investments.News;
 using Fintex.Investments.PaperTrading.Dto;
 using System;
@@ -148,6 +149,50 @@ namespace Fintex.Investments.PaperTrading
             if (newsInsight.ImpactScore >= 65m)
             {
                 AddUnique(recommendation.Suggestions, "Size more carefully around high-impact headlines, even when the setup looks good.");
+            }
+        }
+
+        private static void ApplyEconomicCalendarOverlay(PaperTradeRecommendationDto recommendation, EconomicCalendarInsight economicCalendarInsight)
+        {
+            if (recommendation == null || economicCalendarInsight == null)
+            {
+                return;
+            }
+
+            recommendation.EconomicCalendarSummary = economicCalendarInsight.Summary;
+            recommendation.EconomicCalendarRiskScore = economicCalendarInsight.RiskScore;
+            recommendation.EconomicCalendarNextEventAtUtc = economicCalendarInsight.NextEventAtUtc;
+            recommendation.EconomicCalendarEvents = economicCalendarInsight.UpcomingEvents?
+                .ConvertAll(item => new EconomicCalendarEventDto
+                {
+                    Title = item.Title,
+                    Source = item.Source,
+                    OccursAtUtc = item.OccursAtUtc,
+                    ImpactScore = item.ImpactScore
+                }) ?? new List<EconomicCalendarEventDto>();
+
+            if (economicCalendarInsight.RiskScore <= 0m)
+            {
+                return;
+            }
+
+            AddUnique(recommendation.Reasons, "Upcoming macro-event risk is active enough to matter for this setup.");
+
+            if (economicCalendarInsight.RiskScore >= 55m)
+            {
+                recommendation.RiskScore = decimal.Round(Clamp(recommendation.RiskScore + 8m, 0m, 100m), 2, MidpointRounding.AwayFromZero);
+                recommendation.RiskLevel = GetRiskLevel(recommendation.RiskScore);
+                AddUnique(recommendation.Suggestions, "Reduce size or wait for the macro release window to pass before committing.");
+            }
+
+            if (economicCalendarInsight.RiskScore >= 75m && recommendation.RecommendedAction != MarketVerdict.Hold)
+            {
+                recommendation.RiskScore = decimal.Round(Clamp(recommendation.RiskScore + 10m, 0m, 100m), 2, MidpointRounding.AwayFromZero);
+                recommendation.RiskLevel = GetRiskLevel(recommendation.RiskScore);
+                recommendation.RecommendedAction = MarketVerdict.Hold;
+                recommendation.Headline = "Macro-event risk is too close, so patience is safer right now.";
+                recommendation.Summary = "A high-impact CPI, NFP, or FOMC release is too close to justify forcing a fresh trade before the event clears.";
+                AddUnique(recommendation.Reasons, economicCalendarInsight.Summary);
             }
         }
 

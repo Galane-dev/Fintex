@@ -49,5 +49,7 @@ namespace Fintex.Investments.Trading.Dto
         public DateTime ExecutedAt { get; set; }
 
         public DateTime? ClosedAt { get; set; }
+
+        public ClosedTradeReviewDto ClosedTradeReview { get; set; }
     }
 }

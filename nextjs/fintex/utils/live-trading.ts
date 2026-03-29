@@ -1,4 +1,5 @@
 import type {
+  ClosedTradeReview,
   LiveTrade,
   LiveTradeExecution,
   PlaceLiveOrderInput,
@@ -15,6 +16,30 @@ const getString = (value: unknown, fallback = "") =>
 
 const getNullableString = (value: unknown) =>
   value == null ? null : getString(value);
+
+const normalizeClosedTradeReview = (
+  value: unknown,
+): ClosedTradeReview | null => {
+  if (value == null || typeof value !== "object") {
+    return null;
+  }
+
+  const payload = value as Record<string, unknown>;
+
+  return {
+    good: getString(payload.good ?? payload.Good),
+    bad: getString(payload.bad ?? payload.Bad),
+    repeatedPattern: getString(
+      payload.repeatedPattern ?? payload.RepeatedPattern,
+    ),
+    provider: getString(payload.provider ?? payload.Provider),
+    model: getString(payload.model ?? payload.Model),
+    wasGenerated:
+      typeof (payload.wasGenerated ?? payload.WasGenerated) === "boolean"
+        ? Boolean(payload.wasGenerated ?? payload.WasGenerated)
+        : false,
+  };
+};
 
 const normalizeAssetClass = (value: unknown): LiveTrade["assetClass"] => {
   const raw = getNumber(value, 1);
@@ -100,6 +125,9 @@ export const normalizeLiveTrade = (value: Record<string, unknown>): LiveTrade =>
   notes: getString(value.notes ?? value.Notes),
   executedAt: getString(value.executedAt ?? value.ExecutedAt),
   closedAt: getNullableString(value.closedAt ?? value.ClosedAt),
+  closedTradeReview: normalizeClosedTradeReview(
+    value.closedTradeReview ?? value.ClosedTradeReview,
+  ),
 });
 
 export const normalizeLiveTradeExecution = (

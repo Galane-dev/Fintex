@@ -1,4 +1,5 @@
 using Fintex.Investments.MarketData.Dto;
+using Fintex.Investments.EconomicCalendar;
 using Fintex.Investments.News;
 using Fintex.Investments.PaperTrading.Dto;
 using Abp.Runtime.Session;
@@ -20,6 +21,7 @@ namespace Fintex.Investments.PaperTrading
             var newsInsight = await _newsRecommendationService.GetBitcoinUsdInsightAsync(
                 marketContext.RealtimeVerdict,
                 CancellationToken.None);
+            var economicCalendarInsight = await _economicCalendarService.GetBitcoinUsdRiskInsightAsync(CancellationToken.None);
             var suggestedPlan = BuildSuggestedTradePlan(
                 marketContext.LatestPoint.Price,
                 marketContext.RealtimeVerdict?.Atr,
@@ -49,6 +51,7 @@ namespace Fintex.Investments.PaperTrading
                 };
 
                 ApplyNewsOverlay(holdRecommendation, newsInsight);
+                ApplyEconomicCalendarOverlay(holdRecommendation, economicCalendarInsight);
                 return holdRecommendation;
             }
 
@@ -86,6 +89,7 @@ namespace Fintex.Investments.PaperTrading
             };
 
             ApplyNewsOverlay(recommendation, newsInsight);
+            ApplyEconomicCalendarOverlay(recommendation, economicCalendarInsight);
             return recommendation;
         }
 

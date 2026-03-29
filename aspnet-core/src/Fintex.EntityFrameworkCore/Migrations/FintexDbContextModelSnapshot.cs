@@ -1580,6 +1580,74 @@ namespace Fintex.Migrations
                     b.ToTable("AbpUsers");
                 });
 
+            modelBuilder.Entity("Fintex.Investments.Academy.AcademyQuizAttempt", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AnswersJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("CorrectAnswers")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CourseKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("DeleterUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastModifierUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("Passed")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("RequiredScorePercent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("ScorePercent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "UserId", "CreationTime");
+
+                    b.ToTable("AppAcademyQuizAttempts", (string)null);
+                });
+
             modelBuilder.Entity("Fintex.Investments.Automation.TradeAutomationRule", b =>
                 {
                     b.Property<long>("Id")
@@ -3654,6 +3722,14 @@ namespace Fintex.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime?>("AcademyGraduatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AcademyStage")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<decimal>("BehavioralRiskScore")
                         .HasPrecision(10, 4)
                         .HasColumnType("numeric(10,4)");
@@ -3662,11 +3738,23 @@ namespace Fintex.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
+                    b.Property<decimal>("BestIntroQuizScore")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("CompletedIntroLessonKeys")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<long?>("CreatorUserId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("CurrentIntroLessonKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<long?>("DeleterUserId")
                         .HasColumnType("bigint");
@@ -3677,6 +3765,12 @@ namespace Fintex.Migrations
                     b.Property<string>("FavoriteSymbols")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<int>("IntroQuizAttemptsCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("IntroQuizPassedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsAiInsightsEnabled")
                         .HasColumnType("boolean");

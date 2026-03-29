@@ -1,6 +1,7 @@
 using Abp.Authorization;
 using Abp.Domain.Repositories;
 using Abp.Events.Bus;
+using Fintex.Investments.Academy;
 using Fintex.Investments.Events;
 using Fintex.Investments.MarketData;
 
@@ -20,6 +21,7 @@ namespace Fintex.Investments.Brokers
         private readonly ITradeRepository _tradeRepository;
         private readonly IRepository<TradeExecutionContext, long> _tradeExecutionContextRepository;
         private readonly IEventBus _eventBus;
+        private readonly IAcademyProgressService _academyProgressService;
 
         public ExternalBrokerTradingAppService(
             IExternalBrokerConnectionRepository externalBrokerConnectionRepository,
@@ -29,7 +31,8 @@ namespace Fintex.Investments.Brokers
             IUserProfileRepository userProfileRepository,
             ITradeRepository tradeRepository,
             IRepository<TradeExecutionContext, long> tradeExecutionContextRepository,
-            IEventBus eventBus)
+            IEventBus eventBus,
+            IAcademyProgressService academyProgressService)
         {
             _externalBrokerConnectionRepository = externalBrokerConnectionRepository;
             _alpacaBrokerService = alpacaBrokerService;
@@ -39,6 +42,7 @@ namespace Fintex.Investments.Brokers
             _tradeRepository = tradeRepository;
             _tradeExecutionContextRepository = tradeExecutionContextRepository;
             _eventBus = eventBus;
+            _academyProgressService = academyProgressService;
         }
     }
 }

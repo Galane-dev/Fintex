@@ -20,6 +20,7 @@ namespace Fintex.Investments.Analytics
         private readonly IUserProfileRepository _userProfileRepository;
         private readonly ITradeRepository _tradeRepository;
         private readonly IBehavioralAnalysisClient _behavioralAnalysisClient;
+        private readonly IBehaviorTradeActivityService _behaviorTradeActivityService;
         private readonly IEventBus _eventBus;
 
         public TradeAnalysisService(
@@ -27,12 +28,14 @@ namespace Fintex.Investments.Analytics
             IUserProfileRepository userProfileRepository,
             ITradeRepository tradeRepository,
             IBehavioralAnalysisClient behavioralAnalysisClient,
+            IBehaviorTradeActivityService behaviorTradeActivityService,
             IEventBus eventBus)
         {
             _snapshotRepository = snapshotRepository;
             _userProfileRepository = userProfileRepository;
             _tradeRepository = tradeRepository;
             _behavioralAnalysisClient = behavioralAnalysisClient;
+            _behaviorTradeActivityService = behaviorTradeActivityService;
             _eventBus = eventBus;
         }
 
@@ -42,11 +45,7 @@ namespace Fintex.Investments.Analytics
         public async Task<TradeAnalysisSnapshot> AnalyzeAndPersistAsync(Trade trade, MarketDataPoint latestPoint, CancellationToken cancellationToken)
         {
             var profile = await EnsureProfileAsync(trade);
-            var recentTrades = await _tradeRepository.GetAll()
-                .Where(x => x.UserId == trade.UserId)
-                .OrderByDescending(x => x.CreationTime)
-                .Take(20)
-                .ToListAsync(cancellationToken);
+            var recentTrades = await _behaviorTradeActivityService.GetRecentActivityAsync(trade.UserId, 20, cancellationToken);
 
             var shouldRefreshBehavioralInsight = profile.IsAiInsightsEnabled
                 && (!profile.LastBehavioralAnalysisTime.HasValue

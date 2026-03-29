@@ -1,4 +1,5 @@
 using Abp.Application.Services.Dto;
+using Fintex.Investments.Academy;
 using System;
 
 namespace Fintex.Investments.Profiles.Dto
@@ -29,5 +30,15 @@ namespace Fintex.Investments.Profiles.Dto
         public string LastAiModel { get; set; }
 
         public DateTime? LastBehavioralAnalysisTime { get; set; }
+
+        public AcademyStage AcademyStage { get; set; }
+
+        public int IntroQuizAttemptsCount { get; set; }
+
+        public decimal BestIntroQuizScore { get; set; }
+
+        public DateTime? IntroQuizPassedAt { get; set; }
+
+        public DateTime? AcademyGraduatedAt { get; set; }
     }
 }

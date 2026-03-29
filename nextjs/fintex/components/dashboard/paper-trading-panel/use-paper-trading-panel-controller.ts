@@ -5,6 +5,7 @@ import { Form, message } from "antd";
 import { useExternalBrokerAccounts } from "@/hooks/useExternalBrokerAccounts";
 import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
+import { useAcademyStatus } from "@/hooks/use-academy-status";
 import {
   EXTERNAL_BROKER_PLATFORM_DIRECT_API,
   EXTERNAL_BROKER_PROVIDER_ALPACA,
@@ -46,6 +47,7 @@ export const usePaperTradingPanelController = ({
   const paperTrading = usePaperTrading();
   const externalBrokers = useExternalBrokerAccounts();
   const liveTrading = useLiveTrading();
+  const academy = useAcademyStatus();
   const account = paperTrading.snapshot?.account ?? null;
   const positions = paperTrading.snapshot?.positions ?? [];
   const orders = paperTrading.snapshot?.recentOrders ?? [];
@@ -53,7 +55,11 @@ export const usePaperTradingPanelController = ({
   const watchedQuantity = Form.useWatch("quantity", tradeForm);
   const sortedConnections = useMemo(() => sortConnections(externalBrokers.connections), [externalBrokers.connections]);
   const connectedExternalConnections = useMemo(() => getConnectedExternalConnections(sortedConnections), [sortedConnections]);
-  const availableExecutionTargets = useMemo(() => buildExecutionTargets(account, connectedExternalConnections), [account, connectedExternalConnections]);
+  const canConnectExternalBrokers = academy.status?.canConnectExternalBrokers ?? false;
+  const availableExecutionTargets = useMemo(
+    () => buildExecutionTargets(account, connectedExternalConnections, canConnectExternalBrokers),
+    [account, canConnectExternalBrokers, connectedExternalConnections],
+  );
   const accountMetrics = useMemo(() => buildAccountMetrics(account), [account]);
   const hasTradingAccess = account != null || connectedExternalConnections.length > 0;
   const requestRecommendationRef = useRef<() => Promise<void>>(async () => undefined);
@@ -248,7 +254,9 @@ export const usePaperTradingPanelController = ({
     accountForm,
     accountMetrics,
     activeFeedback: paperTrading.latestAssessment,
+    academyStatus: academy.status,
     availableExecutionTargets,
+    canConnectExternalBrokers,
     combinedError: paperTrading.error ?? externalBrokers.error ?? liveTrading.error,
     effectiveQuantity: watchedQuantity ?? 0.01,
     externalBrokerForm,
@@ -302,6 +310,7 @@ export const usePaperTradingPanelController = ({
     },
     isAccountsOpen,
     isAssessmentOpen,
+    isAcademyLoading: academy.isLoading,
     isBusy: paperTrading.isSubmitting || liveTrading.isSubmitting,
     isExternalLoading: externalBrokers.isLoading,
     isExternalSubmitting: externalBrokers.isSubmitting,

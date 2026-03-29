@@ -3,6 +3,7 @@ using Abp.Authorization;
 using Abp.Runtime.Session;
 using Abp.Runtime.Security;
 using Abp.UI;
+using Fintex.Investments.Academy;
 using Fintex.Investments.Brokers.Dto;
 using System;
 using System.Collections.Generic;
@@ -15,13 +16,16 @@ namespace Fintex.Investments.Brokers
     {
         private readonly IExternalBrokerConnectionRepository _externalBrokerConnectionRepository;
         private readonly IAlpacaBrokerService _alpacaBrokerService;
+        private readonly IAcademyProgressService _academyProgressService;
 
         public ExternalBrokerAppService(
             IExternalBrokerConnectionRepository externalBrokerConnectionRepository,
-            IAlpacaBrokerService alpacaBrokerService)
+            IAlpacaBrokerService alpacaBrokerService,
+            IAcademyProgressService academyProgressService)
         {
             _externalBrokerConnectionRepository = externalBrokerConnectionRepository;
             _alpacaBrokerService = alpacaBrokerService;
+            _academyProgressService = academyProgressService;
         }
 
         public async Task<ListResultDto<ExternalBrokerConnectionDto>> GetMyConnectionsAsync()
@@ -34,6 +38,7 @@ namespace Fintex.Investments.Brokers
 
         public async Task<ExternalBrokerConnectionDto> ConnectAlpacaAccountAsync(ConnectAlpacaBrokerAccountInput input)
         {
+            await _academyProgressService.EnsureExternalBrokerAccessAsync(AbpSession.GetUserId(), AbpSession.TenantId);
             var probeResult = await _alpacaBrokerService.ProbeConnectionAsync(new AlpacaConnectionProbeRequest
             {
                 ApiKey = input.ApiKey,

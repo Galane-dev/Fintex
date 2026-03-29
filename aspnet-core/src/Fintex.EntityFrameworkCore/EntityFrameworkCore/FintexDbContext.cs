@@ -1,6 +1,7 @@
 using Abp.Zero.EntityFrameworkCore;
 using Fintex.Authorization.Roles;
 using Fintex.Authorization.Users;
+using Fintex.Investments.Academy;
 using Fintex.Investments.Automation;
 using Fintex.Investments;
 using Fintex.MultiTenancy;
@@ -94,6 +95,11 @@ namespace Fintex.EntityFrameworkCore
         public DbSet<UserProfile> UserProfiles { get; set; }
 
         /// <summary>
+        /// Stores intro academy quiz attempts.
+        /// </summary>
+        public DbSet<AcademyQuizAttempt> AcademyQuizAttempts { get; set; }
+
+        /// <summary>
         /// Stores per-trade analytics snapshots.
         /// </summary>
         public DbSet<TradeAnalysisSnapshot> TradeAnalysisSnapshots { get; set; }
@@ -121,6 +127,7 @@ namespace Fintex.EntityFrameworkCore
             ConfigureMarketDataPoint(modelBuilder);
             ConfigureMarketDataTimeframeCandle(modelBuilder);
             ConfigureUserProfile(modelBuilder);
+            ConfigureAcademyQuizAttempt(modelBuilder);
             ConfigureTradeAnalysisSnapshot(modelBuilder);
         }
 
@@ -506,9 +513,26 @@ namespace Fintex.EntityFrameworkCore
                 entity.Property(x => x.StrategyNotes).HasMaxLength(UserProfile.MaxStrategyLength);
                 entity.Property(x => x.LastAiProvider).HasMaxLength(UserProfile.MaxProviderLength);
                 entity.Property(x => x.LastAiModel).HasMaxLength(UserProfile.MaxModelLength);
+                entity.Property(x => x.CurrentIntroLessonKey).HasMaxLength(UserProfile.MaxAcademyLessonKeysLength);
+                entity.Property(x => x.CompletedIntroLessonKeys).HasMaxLength(UserProfile.MaxAcademyLessonKeysLength);
+                entity.Property(x => x.AcademyStage).HasConversion<string>().HasMaxLength(32);
 
                 entity.Property(x => x.RiskTolerance).HasPrecision(10, 4);
                 entity.Property(x => x.BehavioralRiskScore).HasPrecision(10, 4);
+                entity.Property(x => x.BestIntroQuizScore).HasPrecision(10, 2);
+            });
+        }
+
+        private static void ConfigureAcademyQuizAttempt(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<AcademyQuizAttempt>(entity =>
+            {
+                entity.ToTable("AppAcademyQuizAttempts");
+                entity.HasIndex(x => new { x.TenantId, x.UserId, x.CreationTime });
+                entity.Property(x => x.CourseKey).IsRequired().HasMaxLength(AcademyQuizAttempt.MaxCourseKeyLength);
+                entity.Property(x => x.ScorePercent).HasPrecision(10, 2);
+                entity.Property(x => x.RequiredScorePercent).HasPrecision(10, 2);
+                entity.Property(x => x.AnswersJson).HasMaxLength(AcademyQuizAttempt.MaxAnswersJsonLength);
             });
         }
 

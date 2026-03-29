@@ -2,6 +2,9 @@
 
 import type { FormInstance } from "antd";
 import type {
+  AcademyStatus,
+} from "@/types/academy";
+import type {
   ExternalBrokerConnection,
   ExternalBrokerConnectionStatus,
 } from "@/types/external-broker";
@@ -66,13 +69,16 @@ export interface PaperTradingPanelController {
   accountForm: FormInstance<AccountFormValues>;
   accountMetrics: AccountMetric[];
   activeFeedback: PaperTradeAssessment | null;
+  academyStatus: AcademyStatus | null;
   availableExecutionTargets: ExecutionTargetOption[];
+  canConnectExternalBrokers: boolean;
   combinedError: string | null;
   externalBrokerForm: FormInstance<ExternalBrokerFormValues>;
   fills: PaperTradingSnapshot["recentFills"];
   isAccountsOpen: boolean;
   isAssessmentOpen: boolean;
   isBusy: boolean;
+  isAcademyLoading: boolean;
   isExternalLoading: boolean;
   isExternalSubmitting: boolean;
   isLoading: boolean;

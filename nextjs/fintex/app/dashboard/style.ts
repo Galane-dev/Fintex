@@ -458,6 +458,27 @@ export const useStyles = createStyles(({ css, token }) => ({
     font-size: 16px;
     font-weight: 600;
   `,
+  closedTradeReviewPanel: css`
+    display: grid;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  `,
+  closedTradeReviewLine: css`
+    display: grid;
+    gap: 6px;
+  `,
+  closedTradeReviewLabel: css`
+    color: ${token.colorTextSecondary};
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+  `,
+  closedTradeReviewCopy: css`
+    margin: 0 !important;
+    color: ${token.colorText} !important;
+    line-height: 1.7 !important;
+  `,
   emptyState: css`
     padding: 20px 0 8px;
   `,

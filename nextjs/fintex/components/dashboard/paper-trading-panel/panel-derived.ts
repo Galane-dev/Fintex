@@ -33,10 +33,15 @@ export const getConnectedExternalConnections = (
 export const buildExecutionTargets = (
   account: PaperTradingAccount | null,
   connections: ExternalBrokerConnection[],
+  canConnectExternalBrokers: boolean,
 ): ExecutionTargetOption[] => {
   const targets = account
     ? [{ label: "Paper academy", value: PAPER_EXECUTION_TARGET }]
     : [];
+
+  if (!canConnectExternalBrokers) {
+    return targets;
+  }
 
   connections.forEach((connection) => {
     targets.push({

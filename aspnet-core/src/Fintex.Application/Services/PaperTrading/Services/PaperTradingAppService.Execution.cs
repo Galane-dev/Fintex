@@ -11,6 +11,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<PaperTradeExecutionResultDto> PlaceMarketOrderAsync(PlacePaperOrderInput input)
         {
             var userId = AbpSession.GetUserId();
+            await _academyProgressService.EnsureTradeAcademyAccessAsync(userId, AbpSession.TenantId);
             var account = await GetMyAccountOrThrowAsync(userId);
             var marketContext = await GetMarketContextAsync(input.Symbol, input.Provider);
             var assessment = BuildTradeAssessment(
@@ -138,6 +139,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<PaperOrderDto> ClosePositionAsync(ClosePaperPositionInput input)
         {
             var userId = AbpSession.GetUserId();
+            await _academyProgressService.EnsureTradeAcademyAccessAsync(userId, AbpSession.TenantId);
             var account = await GetMyAccountOrThrowAsync(userId);
             var position = await _paperPositionRepository.FirstOrDefaultAsync(input.PositionId);
 

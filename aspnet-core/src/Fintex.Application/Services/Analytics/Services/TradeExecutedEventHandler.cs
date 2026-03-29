@@ -15,17 +15,17 @@ namespace Fintex.Investments.Analytics
     public class TradeExecutedEventHandler : IAsyncEventHandler<TradeExecutedEventData>, ITransientDependency
     {
         private readonly IUserProfileRepository _userProfileRepository;
-        private readonly ITradeRepository _tradeRepository;
         private readonly IBehavioralAnalysisClient _behavioralAnalysisClient;
+        private readonly IBehaviorTradeActivityService _behaviorTradeActivityService;
 
         public TradeExecutedEventHandler(
             IUserProfileRepository userProfileRepository,
-            ITradeRepository tradeRepository,
-            IBehavioralAnalysisClient behavioralAnalysisClient)
+            IBehavioralAnalysisClient behavioralAnalysisClient,
+            IBehaviorTradeActivityService behaviorTradeActivityService)
         {
             _userProfileRepository = userProfileRepository;
-            _tradeRepository = tradeRepository;
             _behavioralAnalysisClient = behavioralAnalysisClient;
+            _behaviorTradeActivityService = behaviorTradeActivityService;
         }
 
         public async Task HandleEventAsync(TradeExecutedEventData eventData)
@@ -41,11 +41,7 @@ namespace Fintex.Investments.Analytics
                 return;
             }
 
-            var recentTrades = await _tradeRepository.GetAll()
-                .Where(x => x.UserId == eventData.UserId)
-                .OrderByDescending(x => x.CreationTime)
-                .Take(20)
-                .ToListAsync();
+            var recentTrades = await _behaviorTradeActivityService.GetRecentActivityAsync(eventData.UserId, 20, CancellationToken.None);
 
             var insight = await _behavioralAnalysisClient.AnalyzeAsync(profile, recentTrades, CancellationToken.None);
             if (!insight.WasGenerated)

@@ -15,6 +15,7 @@ namespace Fintex.Investments.PaperTrading
         public async Task<PaperTradingAccountDto> CreateMyAccountAsync(CreatePaperTradingAccountInput input)
         {
             var userId = AbpSession.GetUserId();
+            await _academyProgressService.EnsureTradeAcademyAccessAsync(userId, AbpSession.TenantId);
             var existing = await GetActiveAccountAsync(userId);
             if (existing != null)
             {

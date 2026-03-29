@@ -5,6 +5,13 @@ export type TradeDirection = "Buy" | "Sell";
 export type PaperTradeRiskLevel = "Low" | "Medium" | "High";
 export type RecommendationAction = "Buy" | "Sell" | "Hold";
 
+export interface EconomicCalendarEvent {
+  title: string;
+  source: string;
+  occursAtUtc: string;
+  impactScore: number;
+}
+
 export interface PaperTradingAccount {
   id: number;
   name: string;
@@ -127,6 +134,10 @@ export interface PaperTradeRecommendation {
   newsRecommendedAction: RecommendationAction | null;
   newsLastUpdatedAt: string | null;
   newsHeadlines: string[];
+  economicCalendarSummary: string;
+  economicCalendarRiskScore: number | null;
+  economicCalendarNextEventAtUtc: string | null;
+  economicCalendarEvents: EconomicCalendarEvent[];
   reasons: string[];
   suggestions: string[];
 }

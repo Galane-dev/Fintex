@@ -9,6 +9,6 @@ namespace Fintex.Investments.Analytics
     /// </summary>
     public interface IBehavioralAnalysisClient
     {
-        Task<UserBehaviorInsight> AnalyzeAsync(UserProfile profile, IReadOnlyList<Trade> recentTrades, CancellationToken cancellationToken);
+        Task<UserBehaviorInsight> AnalyzeAsync(UserProfile profile, IReadOnlyList<BehaviorTradeActivity> recentTrades, CancellationToken cancellationToken);
     }
 }

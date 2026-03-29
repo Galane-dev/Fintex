@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   BellOutlined,
   BarChartOutlined,
+  CalendarOutlined,
   HomeOutlined,
   LogoutOutlined,
   MessageOutlined,
@@ -18,6 +19,7 @@ import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardAssistant } from "@/hooks/use-dashboard-assistant";
 import { useDashboardBehaviorAnalysis } from "@/hooks/use-dashboard-behavior-analysis";
+import { useDashboardEconomicCalendar } from "@/hooks/use-dashboard-economic-calendar";
 import { useDashboardStrategyValidation } from "@/hooks/use-dashboard-strategy-validation";
 import { useExternalBrokerAccounts } from "@/hooks/useExternalBrokerAccounts";
 import { useLiveTrading } from "@/hooks/useLiveTrading";
@@ -35,6 +37,7 @@ import {
 } from "@/utils/market-data";
 import { AnalysisTab } from "./analysis-tab";
 import { BehaviorAnalysisModal } from "./behavior-analysis-modal";
+import { EconomicCalendarModal } from "./economic-calendar-modal";
 import { NotificationsModal } from "./notifications-modal";
 import { StrategyValidationModal } from "./strategy-validation-modal";
 import { TradeTab } from "./trade-tab";
@@ -111,6 +114,7 @@ export function DashboardContent() {
   const { trades: liveTrades, isLoading: isLiveTradesLoading, refreshTrades } = useLiveTrading();
   const { connectionStatus, error, history, isLoading, latest, refreshSnapshot, timeframeRsi, verdict } = useMarketData();
   const behaviorAnalysis = useDashboardBehaviorAnalysis();
+  const economicCalendar = useDashboardEconomicCalendar();
   const strategyValidation = useDashboardStrategyValidation();
   const notifications = useNotifications();
   const tradeAutomation = useTradeAutomation();
@@ -203,6 +207,14 @@ export function DashboardContent() {
                 onClick={() => setIsNotificationsOpen(true)}
               />
             </Badge>
+            <Button
+              aria-label="Economic calendar"
+              title="Economic calendar"
+              icon={<CalendarOutlined />}
+              onClick={() => {
+                void economicCalendar.open();
+              }}
+            />
             <Button
               aria-label="Assistant"
               title="Assistant"
@@ -303,6 +315,13 @@ export function DashboardContent() {
         error={behaviorAnalysis.error}
         profile={behaviorAnalysis.profile}
         onClose={behaviorAnalysis.close}
+      />
+      <EconomicCalendarModal
+        isOpen={economicCalendar.isOpen}
+        isLoading={economicCalendar.isLoading}
+        error={economicCalendar.error}
+        insight={economicCalendar.insight}
+        onClose={economicCalendar.close}
       />
       <NotificationsModal
         isOpen={isNotificationsOpen}

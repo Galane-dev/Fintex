@@ -1,6 +1,15 @@
 export type TradeDirection = "Buy" | "Sell";
 export type TradeStatus = "Open" | "Closed" | "Cancelled";
 
+export interface ClosedTradeReview {
+  good: string;
+  bad: string;
+  repeatedPattern: string;
+  provider: string;
+  model: string;
+  wasGenerated: boolean;
+}
+
 export interface LiveTrade {
   id: number;
   userId: number;
@@ -24,6 +33,7 @@ export interface LiveTrade {
   notes: string;
   executedAt: string;
   closedAt: string | null;
+  closedTradeReview: ClosedTradeReview | null;
 }
 
 export interface PlaceLiveOrderInput {

@@ -9,6 +9,7 @@ using Fintex.Investments.Trading.Dto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Fintex.Investments.Trading
@@ -22,17 +23,23 @@ namespace Fintex.Investments.Trading
         private readonly ITradeRepository _tradeRepository;
         private readonly IMarketDataPointRepository _marketDataPointRepository;
         private readonly IRepository<TradeExecutionContext, long> _tradeExecutionContextRepository;
+        private readonly IRepository<UserProfile, long> _userProfileRepository;
+        private readonly ITradeReviewService _tradeReviewService;
         private readonly IEventBus _eventBus;
 
         public TradeAppService(
             ITradeRepository tradeRepository,
             IMarketDataPointRepository marketDataPointRepository,
             IRepository<TradeExecutionContext, long> tradeExecutionContextRepository,
+            IRepository<UserProfile, long> userProfileRepository,
+            ITradeReviewService tradeReviewService,
             IEventBus eventBus)
         {
             _tradeRepository = tradeRepository;
             _marketDataPointRepository = marketDataPointRepository;
             _tradeExecutionContextRepository = tradeExecutionContextRepository;
+            _userProfileRepository = userProfileRepository;
+            _tradeReviewService = tradeReviewService;
             _eventBus = eventBus;
         }
 
@@ -41,7 +48,8 @@ namespace Fintex.Investments.Trading
             var userId = AbpSession.GetUserId();
             var trades = await _tradeRepository.GetUserTradesAsync(userId);
             var contexts = await GetExecutionContextsAsync(trades.Select(x => x.Id));
-            return new ListResultDto<TradeDto>(trades.Select(trade => MapTradeDto(trade, contexts)).ToList());
+            var reviews = await BuildClosedTradeReviewsAsync(userId, trades, contexts, CancellationToken.None);
+            return new ListResultDto<TradeDto>(trades.Select(trade => MapTradeDto(trade, contexts, reviews)).ToList());
         }
 
         public async Task<TradeDto> GetAsync(EntityDto<long> input)
@@ -52,8 +60,10 @@ namespace Fintex.Investments.Trading
                 throw new UserFriendlyException("Trade not found.");
             }
 
-            var contexts = await GetExecutionContextsAsync(new[] { trade.Id });
-            return MapTradeDto(trade, contexts);
+            var recentTrades = await _tradeRepository.GetUserTradesAsync(trade.UserId);
+            var contexts = await GetExecutionContextsAsync(recentTrades.Select(item => item.Id));
+            var reviews = await BuildClosedTradeReviewsAsync(trade.UserId, recentTrades, contexts, CancellationToken.None);
+            return MapTradeDto(trade, contexts, reviews);
         }
 
         public async Task<TradeDto> CreateAsync(CreateTradeInput input)
@@ -91,7 +101,7 @@ namespace Fintex.Investments.Trading
             });
 
             var contexts = await GetExecutionContextsAsync(new[] { trade.Id });
-            return MapTradeDto(trade, contexts);
+            return MapTradeDto(trade, contexts, new Dictionary<long, ClosedTradeReviewDto>());
         }
 
         public async Task<TradeDto> CloseAsync(CloseTradeInput input)
@@ -117,8 +127,10 @@ namespace Fintex.Investments.Trading
                 OccurredAt = trade.ClosedAt ?? DateTime.UtcNow
             });
 
-            var contexts = await GetExecutionContextsAsync(new[] { trade.Id });
-            return MapTradeDto(trade, contexts);
+            var recentTrades = await _tradeRepository.GetUserTradesAsync(trade.UserId);
+            var contexts = await GetExecutionContextsAsync(recentTrades.Select(item => item.Id));
+            var reviews = await BuildClosedTradeReviewsAsync(trade.UserId, recentTrades, contexts, CancellationToken.None);
+            return MapTradeDto(trade, contexts, reviews);
         }
 
         private async Task<Dictionary<long, TradeExecutionContext>> GetExecutionContextsAsync(IEnumerable<long> tradeIds)
@@ -137,21 +149,43 @@ namespace Fintex.Investments.Trading
                     group => group.OrderByDescending(item => item.CreationTime).First());
         }
 
-        private TradeDto MapTradeDto(Trade trade, IReadOnlyDictionary<long, TradeExecutionContext> contexts)
+        private async Task<IReadOnlyDictionary<long, ClosedTradeReviewDto>> BuildClosedTradeReviewsAsync(
+            long userId,
+            IReadOnlyList<Trade> recentTrades,
+            IReadOnlyDictionary<long, TradeExecutionContext> contexts,
+            CancellationToken cancellationToken)
+        {
+            var closedTrades = recentTrades
+                .Where(trade => trade.Status == TradeStatus.Closed)
+                .OrderByDescending(trade => trade.ClosedAt ?? trade.ExecutedAt)
+                .ToList();
+
+            if (closedTrades.Count == 0)
+            {
+                return new Dictionary<long, ClosedTradeReviewDto>();
+            }
+
+            var profile = await _userProfileRepository.FirstOrDefaultAsync(item => item.UserId == userId);
+            return await _tradeReviewService.BuildClosedTradeReviewsAsync(closedTrades, recentTrades, contexts, profile, cancellationToken);
+        }
+
+        private TradeDto MapTradeDto(
+            Trade trade,
+            IReadOnlyDictionary<long, TradeExecutionContext> contexts,
+            IReadOnlyDictionary<long, ClosedTradeReviewDto> reviews)
         {
             var dto = ObjectMapper.Map<TradeDto>(trade);
-            if (dto.StopLoss.HasValue && dto.TakeProfit.HasValue)
+            if (contexts.TryGetValue(trade.Id, out var context) && context != null)
             {
-                return dto;
+                dto.StopLoss ??= context.StopLoss;
+                dto.TakeProfit ??= context.TakeProfit;
             }
 
-            if (!contexts.TryGetValue(trade.Id, out var context) || context == null)
+            if (trade.Status == TradeStatus.Closed && reviews.TryGetValue(trade.Id, out var review))
             {
-                return dto;
+                dto.ClosedTradeReview = review;
             }
 
-            dto.StopLoss ??= context.StopLoss;
-            dto.TakeProfit ??= context.TakeProfit;
             return dto;
         }
 
