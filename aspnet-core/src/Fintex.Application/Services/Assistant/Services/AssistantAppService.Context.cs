@@ -1,4 +1,5 @@
 using Fintex.Investments.Brokers.Dto;
+using Fintex.Investments.Goals.Dto;
 using Fintex.Investments.MarketData.Dto;
 using Fintex.Investments.Notifications.Dto;
 using Fintex.Investments.PaperTrading.Dto;
@@ -38,6 +39,7 @@ namespace Fintex.Investments.Assistant
             var profile = await _userProfileAppService.GetMyProfileAsync();
             var trades = await _tradeAppService.GetMyTradesAsync();
             var connections = await _externalBrokerAppService.GetMyConnectionsAsync();
+            var goals = await _goalAutomationAppService.GetMyGoalsAsync();
 
             return new AssistantContextSnapshot
             {
@@ -47,7 +49,8 @@ namespace Fintex.Investments.Assistant
                 Notifications = notifications,
                 Profile = profile,
                 Trades = trades.Items?.ToList() ?? new List<TradeDto>(),
-                Connections = connections.Items?.ToList() ?? new List<ExternalBrokerConnectionDto>()
+                Connections = connections.Items?.ToList() ?? new List<ExternalBrokerConnectionDto>(),
+                Goals = goals.Items?.ToList() ?? new List<GoalTargetDto>()
             };
         }
     }

@@ -1,6 +1,7 @@
 using Abp.Authorization;
 using Fintex.Investments.Assistant.Dto;
 using Fintex.Investments.Brokers;
+using Fintex.Investments.Goals.Services;
 using Fintex.Investments.MarketData;
 using Fintex.Investments.Notifications;
 using Fintex.Investments.PaperTrading;
@@ -29,6 +30,7 @@ namespace Fintex.Investments.Assistant
         private readonly ITradeAppService _tradeAppService;
         private readonly IExternalBrokerAppService _externalBrokerAppService;
         private readonly IExternalBrokerTradingAppService _externalBrokerTradingAppService;
+        private readonly IGoalAutomationAppService _goalAutomationAppService;
 
         public AssistantAppService(
             HttpClient httpClient,
@@ -39,7 +41,8 @@ namespace Fintex.Investments.Assistant
             IUserProfileAppService userProfileAppService,
             ITradeAppService tradeAppService,
             IExternalBrokerAppService externalBrokerAppService,
-            IExternalBrokerTradingAppService externalBrokerTradingAppService)
+            IExternalBrokerTradingAppService externalBrokerTradingAppService,
+            IGoalAutomationAppService goalAutomationAppService)
         {
             _httpClient = httpClient;
             _configuration = configuration;
@@ -50,6 +53,7 @@ namespace Fintex.Investments.Assistant
             _tradeAppService = tradeAppService;
             _externalBrokerAppService = externalBrokerAppService;
             _externalBrokerTradingAppService = externalBrokerTradingAppService;
+            _goalAutomationAppService = goalAutomationAppService;
         }
 
         public async Task<AssistantChatResponseDto> SendMessageAsync(AssistantChatInput input)
@@ -79,7 +83,7 @@ namespace Fintex.Investments.Assistant
                 "Explain the current verdict and confidence.",
                 "Set a BTC alert at 70000 and email me.",
                 "Give me a trade recommendation right now.",
-                snapshot.Connections.Any() ? "Place a small Alpaca BTC trade." : "Show me my open trades.",
+                snapshot.Goals.Any() ? "List my active BTC goals." : "Create a BTC growth goal for my paper account by tomorrow afternoon.",
             };
         }
     }

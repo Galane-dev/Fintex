@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import {
+  FlagOutlined,
   BellOutlined,
   BarChartOutlined,
   CalendarOutlined,
@@ -22,6 +23,7 @@ import { useDashboardBehaviorAnalysis } from "@/hooks/use-dashboard-behavior-ana
 import { useDashboardEconomicCalendar } from "@/hooks/use-dashboard-economic-calendar";
 import { useDashboardStrategyValidation } from "@/hooks/use-dashboard-strategy-validation";
 import { useExternalBrokerAccounts } from "@/hooks/useExternalBrokerAccounts";
+import { useGoalAutomation } from "@/hooks/useGoalAutomation";
 import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { useMarketData } from "@/hooks/useMarketData";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -40,6 +42,8 @@ import { BehaviorAnalysisModal } from "./behavior-analysis-modal";
 import { EconomicCalendarModal } from "./economic-calendar-modal";
 import { NotificationsModal } from "./notifications-modal";
 import { StrategyValidationModal } from "./strategy-validation-modal";
+import { GoalAutomationDrawer } from "./goal-automation-drawer";
+import type { GoalExecutionTargetOption } from "./targets-tab";
 import { TradeTab } from "./trade-tab";
 import { useStyles } from "../style";
 
@@ -85,6 +89,19 @@ const parseAutomationExecutionTarget = (value: string) => {
   return { destination: 1, externalConnectionId: null as number | null };
 };
 
+const mapGoalTradingSessionToCode = (value: string) => {
+  switch (value) {
+    case "Europe":
+      return 2;
+    case "Us":
+      return 3;
+    case "EuropeUsOverlap":
+      return 4;
+    default:
+      return 1;
+  }
+};
+
 const mapTriggerTypeToCode = (value: string) => {
   switch (value) {
     case "RelativeStrengthIndex":
@@ -118,17 +135,20 @@ export function DashboardContent() {
   const strategyValidation = useDashboardStrategyValidation();
   const notifications = useNotifications();
   const tradeAutomation = useTradeAutomation();
+  const goalAutomation = useGoalAutomation();
   const assistant = useDashboardAssistant({
     onActionRefresh: async () => {
       await Promise.all([
         refreshSnapshot(),
         refreshTrades(),
         notifications.refreshInbox(),
+        goalAutomation.refreshGoals(),
       ]);
     },
   });
   const [dashboardActions, setDashboardActions] = useState<DashboardPaperTradingActions>(defaultDashboardActions);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isGoalAutomationOpen, setIsGoalAutomationOpen] = useState(false);
 
   const timeframeRsiMap = useMemo(
     () => timeframeRsi.reduce<Record<string, number | null>>((accumulator, item) => {
@@ -149,6 +169,7 @@ export function DashboardContent() {
     () => buildAutomationExecutionTargets(snapshot?.account != null, externalBrokers.connections),
     [externalBrokers.connections, snapshot?.account],
   );
+  const goalExecutionTargets = automationExecutionTargets as GoalExecutionTargetOption[];
 
   const tradeOverlays = useMemo<ChartTradeOverlay[]>(
     () => [
@@ -214,6 +235,12 @@ export function DashboardContent() {
               onClick={() => {
                 void economicCalendar.open();
               }}
+            />
+            <Button
+              aria-label="Goal automation"
+              title="Goal automation"
+              icon={<FlagOutlined />}
+              onClick={() => setIsGoalAutomationOpen(true)}
             />
             <Button
               aria-label="Assistant"
@@ -383,6 +410,43 @@ export function DashboardContent() {
         history={strategyValidation.history}
         onClose={strategyValidation.close}
         onSubmit={strategyValidation.submit}
+      />
+      <GoalAutomationDrawer
+        isOpen={isGoalAutomationOpen}
+        isSaving={goalAutomation.isSaving}
+        error={goalAutomation.error}
+        goals={goalAutomation.goals}
+        executionTargets={goalExecutionTargets}
+        onClose={() => setIsGoalAutomationOpen(false)}
+        onClearError={goalAutomation.clearError}
+        onPauseGoal={(goalId) => {
+          void goalAutomation.pauseGoal(goalId);
+        }}
+        onResumeGoal={(goalId) => {
+          void goalAutomation.resumeGoal(goalId);
+        }}
+        onCancelGoal={(goalId) => {
+          void goalAutomation.cancelGoal(goalId);
+        }}
+        onCreateGoal={(values) => {
+          const executionTarget = parseAutomationExecutionTarget(values.executionTarget);
+          const deadlineLocal = values.deadlineLocal ? new Date(values.deadlineLocal) : null;
+
+          return goalAutomation.createGoal({
+            name: values.name,
+            accountType: executionTarget.destination,
+            externalConnectionId: executionTarget.externalConnectionId,
+            targetType: values.targetType === "TargetAmount" ? 2 : 1,
+            targetPercent: values.targetType === "TargetAmount" ? null : values.targetPercent ?? null,
+            targetAmount: values.targetType === "TargetAmount" ? values.targetAmount ?? null : null,
+            deadlineUtc: deadlineLocal?.toISOString() ?? "",
+            maxAcceptableRisk: values.maxAcceptableRisk,
+            maxDrawdownPercent: values.maxDrawdownPercent,
+            maxPositionSizePercent: values.maxPositionSizePercent,
+            tradingSession: mapGoalTradingSessionToCode(values.tradingSession),
+            allowOvernightPositions: values.allowOvernightPositions,
+          });
+        }}
       />
       <AssistantDrawer
         isOpen={assistant.isOpen}

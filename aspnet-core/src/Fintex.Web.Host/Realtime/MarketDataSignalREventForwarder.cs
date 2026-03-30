@@ -1,6 +1,7 @@
 using Abp.Dependency;
 using Abp.Events.Bus.Handlers;
 using Fintex.Investments.Automation;
+using Fintex.Investments.Goals.Services;
 using Fintex.Investments.Events;
 using Fintex.Investments.MarketData;
 using Fintex.Investments.MarketData.Dto;
@@ -26,6 +27,7 @@ namespace Fintex.Web.Host.Realtime
         private readonly IMarketDataAppService _marketDataAppService;
         private readonly INotificationEvaluationService _notificationEvaluationService;
         private readonly ITradeAutomationEvaluationService _tradeAutomationEvaluationService;
+        private readonly IGoalMonitoringService _goalMonitoringService;
         private readonly ILogger<MarketDataSignalREventForwarder> _logger;
 
         public MarketDataSignalREventForwarder(
@@ -33,12 +35,14 @@ namespace Fintex.Web.Host.Realtime
             IMarketDataAppService marketDataAppService,
             INotificationEvaluationService notificationEvaluationService,
             ITradeAutomationEvaluationService tradeAutomationEvaluationService,
+            IGoalMonitoringService goalMonitoringService,
             ILogger<MarketDataSignalREventForwarder> logger)
         {
             _hubContext = hubContext;
             _marketDataAppService = marketDataAppService;
             _notificationEvaluationService = notificationEvaluationService;
             _tradeAutomationEvaluationService = tradeAutomationEvaluationService;
+            _goalMonitoringService = goalMonitoringService;
             _logger = logger;
         }
 
@@ -144,6 +148,19 @@ namespace Fintex.Web.Host.Realtime
                 _logger.LogWarning(
                     exception,
                     "Failed to evaluate trade automations for {Symbol} from {Provider}.",
+                    eventData.Symbol,
+                    eventData.Provider);
+            }
+
+            try
+            {
+                await _goalMonitoringService.EvaluateAsync(notificationSnapshot, CancellationToken.None);
+            }
+            catch (System.Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Failed to evaluate goal automations for {Symbol} from {Provider}.",
                     eventData.Symbol,
                     eventData.Provider);
             }

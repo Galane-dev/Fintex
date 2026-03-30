@@ -1,4 +1,5 @@
 using Fintex.Investments.Assistant.Dto;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -42,16 +43,24 @@ namespace Fintex.Investments.Assistant
             var builder = new StringBuilder();
             builder.AppendLine("You are Fintex Copilot, a trading assistant inside the Fintex dashboard.");
             builder.AppendLine("Return strict JSON with properties: reply, voiceReply, suggestedPrompts, actions.");
-            builder.AppendLine("Allowed action types: create_price_alert, get_recommendation, place_paper_trade, place_live_trade, refresh_behavior_analysis, sync_live_trades.");
+            builder.AppendLine("Allowed action types: create_price_alert, get_recommendation, place_paper_trade, place_live_trade, refresh_behavior_analysis, sync_live_trades, create_goal_target, list_goal_targets, pause_goal_target, cancel_goal_target.");
             builder.AppendLine("Only create actions when the user explicitly asks you to do something.");
             builder.AppendLine("If trade quantity or destination is missing, ask a follow-up in reply and leave actions empty.");
+            builder.AppendLine("Goal automation is best-effort only. Never promise guaranteed returns.");
+            builder.AppendLine("For relative times like tomorrow or next week, convert them into a deadlineUtc ISO-8601 UTC timestamp using the client's timezone when available.");
             builder.AppendLine("For Binance market data and alerts, prefer BTCUSDT. For Alpaca live BTC trades, prefer BTCUSD.");
+            builder.AppendLine($"Client timezone={input.ClientTimeZone ?? "unknown"}, clientNow={input.ClientNowIso ?? DateTime.UtcNow.ToString("O")}");
             builder.AppendLine($"Market verdict: {snapshot.Verdict?.Verdict}, confidence={snapshot.Verdict?.ConfidenceScore}, trend={snapshot.Verdict?.TrendScore}, price={snapshot.Verdict?.Price}");
             builder.AppendLine($"Paper account equity={snapshot.PaperSnapshot?.Account?.Equity}, openPositions={snapshot.PaperSnapshot?.Positions?.Count ?? 0}");
             builder.AppendLine($"Recommendation: {snapshot.Recommendation?.RecommendedAction}, risk={snapshot.Recommendation?.RiskScore}");
             builder.AppendLine($"Unread notifications={snapshot.Notifications?.UnreadCount}, activeAlerts={snapshot.Notifications?.AlertRules?.Items?.Count ?? 0}");
             builder.AppendLine($"Behavior score={snapshot.Profile?.BehavioralRiskScore}, summary={snapshot.Profile?.BehavioralSummary}");
             builder.AppendLine($"Tracked trades={snapshot.Trades.Count}");
+            builder.AppendLine("Current goals:");
+            foreach (var goal in snapshot.Goals.Take(4))
+            {
+                builder.AppendLine($"- id={goal.Id}, name={goal.Name}, status={goal.Status}, accountType={goal.AccountType}, progress={goal.ProgressPercent}, deadlineUtc={goal.DeadlineUtc}");
+            }
             builder.AppendLine("Connected brokers:");
 
             foreach (var connection in snapshot.Connections.Where(x => x.IsActive))
@@ -66,7 +75,7 @@ namespace Fintex.Investments.Assistant
             }
 
             builder.AppendLine($"user: {input.Message}");
-            builder.AppendLine("Each action item may include: type, symbol, direction, quantity, targetPrice, stopLoss, takeProfit, connectionId, notifyEmail, notifyInApp, notes.");
+            builder.AppendLine("Each action item may include: type, symbol, direction, quantity, targetPrice, stopLoss, takeProfit, connectionId, notifyEmail, notifyInApp, notes, goalId, goalName, accountType, targetType, targetPercent, targetAmount, deadlineUtc, maxAcceptableRisk, maxDrawdownPercent, maxPositionSizePercent, tradingSession, allowOvernightPositions.");
             builder.AppendLine("Keep reply concise and directly useful.");
             return builder.ToString();
         }
@@ -82,7 +91,7 @@ namespace Fintex.Investments.Assistant
                     "Explain the current verdict.",
                     "Set a BTC alert at 70000.",
                     "Give me a recommendation right now.",
-                    "Place a small paper BTC buy."
+                    "Create a BTC growth goal for my paper account by tomorrow afternoon."
                 }
             };
         }
@@ -117,6 +126,18 @@ namespace Fintex.Investments.Assistant
                             StopLoss = ReadDecimal(action, "stopLoss"),
                             TakeProfit = ReadDecimal(action, "takeProfit"),
                             ConnectionId = ReadLong(action, "connectionId"),
+                            GoalId = ReadLong(action, "goalId"),
+                            GoalName = ReadString(action, "goalName"),
+                            AccountType = ReadString(action, "accountType"),
+                            TargetType = ReadString(action, "targetType"),
+                            TargetPercent = ReadDecimal(action, "targetPercent"),
+                            TargetAmount = ReadDecimal(action, "targetAmount"),
+                            DeadlineUtc = ReadDateTime(action, "deadlineUtc"),
+                            MaxAcceptableRisk = ReadDecimal(action, "maxAcceptableRisk"),
+                            MaxDrawdownPercent = ReadDecimal(action, "maxDrawdownPercent"),
+                            MaxPositionSizePercent = ReadDecimal(action, "maxPositionSizePercent"),
+                            TradingSession = ReadString(action, "tradingSession"),
+                            AllowOvernightPositions = ReadBool(action, "allowOvernightPositions"),
                             NotifyEmail = ReadBool(action, "notifyEmail"),
                             NotifyInApp = ReadBool(action, "notifyInApp"),
                             Notes = ReadString(action, "notes")
@@ -197,5 +218,21 @@ namespace Fintex.Investments.Assistant
 
         private static bool? ReadBool(JsonElement element, string name) =>
             element.TryGetProperty(name, out var property) && property.ValueKind is JsonValueKind.True or JsonValueKind.False ? property.GetBoolean() : null;
+
+        private static DateTime? ReadDateTime(JsonElement element, string name)
+        {
+            if (!element.TryGetProperty(name, out var property) || property.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return DateTime.TryParse(
+                property.GetString(),
+                null,
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var parsed)
+                ? parsed
+                : null;
+        }
     }
 }

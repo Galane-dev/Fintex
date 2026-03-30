@@ -2,6 +2,7 @@
 
 import { withAuth } from "@/hoc/withAuth";
 import { ExternalBrokerProvider } from "@/providers/external-broker-provider";
+import { GoalAutomationProvider } from "@/providers/goal-automation-provider";
 import { LiveTradingProvider } from "@/providers/live-trading-provider";
 import { MarketDataProvider } from "@/providers/market-data-provider";
 import { NotificationsProvider } from "@/providers/notifications-provider";
@@ -15,11 +16,13 @@ function DashboardViewContent() {
       <ExternalBrokerProvider>
         <NotificationsProvider>
           <TradeAutomationProvider>
-            <PaperTradingProvider>
-              <LiveTradingProvider>
-                <DashboardContent />
-              </LiveTradingProvider>
-            </PaperTradingProvider>
+            <GoalAutomationProvider>
+              <PaperTradingProvider>
+                <LiveTradingProvider>
+                  <DashboardContent />
+                </LiveTradingProvider>
+              </PaperTradingProvider>
+            </GoalAutomationProvider>
           </TradeAutomationProvider>
         </NotificationsProvider>
       </ExternalBrokerProvider>

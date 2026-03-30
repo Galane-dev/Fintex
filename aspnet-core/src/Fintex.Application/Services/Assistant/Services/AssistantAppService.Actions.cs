@@ -1,9 +1,13 @@
+using Abp.Application.Services.Dto;
 using Fintex.Investments.Assistant.Dto;
 using Fintex.Investments.Brokers.Dto;
+using Fintex.Investments.Goals;
+using Fintex.Investments.Goals.Dto;
 using Fintex.Investments.Notifications.Dto;
 using Fintex.Investments.PaperTrading.Dto;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 using System.Threading.Tasks;
 
 namespace Fintex.Investments.Assistant
@@ -33,6 +37,10 @@ namespace Fintex.Investments.Assistant
                     "place_live_trade" => await PlaceLiveTradeAsync(action),
                     "refresh_behavior_analysis" => await RefreshBehaviorAsync(),
                     "sync_live_trades" => await SyncLiveTradesAsync(),
+                    "create_goal_target" => await CreateGoalTargetAsync(action),
+                    "list_goal_targets" => await ListGoalTargetsAsync(),
+                    "pause_goal_target" => await PauseGoalTargetAsync(action),
+                    "cancel_goal_target" => await CancelGoalTargetAsync(action),
                     _ => BuildActionResult(action.Type, "ignored", "Action skipped", "I left that action untouched because it is not supported yet.")
                 };
             }
@@ -143,6 +151,73 @@ namespace Fintex.Investments.Assistant
             return BuildActionResult("sync_live_trades", "completed", "Broker sync finished", $"Imported {result.ImportedTrades} trades and updated {result.UpdatedTrades}.");
         }
 
+        private async Task<AssistantActionResultDto> CreateGoalTargetAsync(AssistantPlannedAction action)
+        {
+            if (!action.DeadlineUtc.HasValue || string.IsNullOrWhiteSpace(action.AccountType) || string.IsNullOrWhiteSpace(action.TargetType))
+            {
+                return BuildActionResult(action.Type, "needs_input", "Goal needs details", "Tell me the account type, target type, and exact deadline for the BTC goal.");
+            }
+
+            var input = new CreateGoalTargetInput
+            {
+                Name = string.IsNullOrWhiteSpace(action.GoalName) ? action.Notes : action.GoalName,
+                AccountType = ParseGoalAccountType(action.AccountType),
+                ExternalConnectionId = action.ConnectionId,
+                TargetType = ParseGoalTargetType(action.TargetType),
+                TargetPercent = action.TargetPercent,
+                TargetAmount = action.TargetAmount,
+                DeadlineUtc = action.DeadlineUtc.Value,
+                MaxAcceptableRisk = action.MaxAcceptableRisk ?? 45m,
+                MaxDrawdownPercent = action.MaxDrawdownPercent ?? 2.5m,
+                MaxPositionSizePercent = action.MaxPositionSizePercent ?? 20m,
+                TradingSession = ParseGoalTradingSession(action.TradingSession),
+                AllowOvernightPositions = action.AllowOvernightPositions ?? true
+            };
+
+            var goal = await _goalAutomationAppService.CreateGoalAsync(input);
+            return BuildActionResult(
+                action.Type,
+                goal.Status == GoalStatus.Rejected.ToString() ? "blocked" : "completed",
+                goal.Status == GoalStatus.Rejected.ToString() ? "Goal rejected" : "Goal created",
+                $"{goal.Name}: {goal.StatusReason}");
+        }
+
+        private async Task<AssistantActionResultDto> ListGoalTargetsAsync()
+        {
+            var goals = await _goalAutomationAppService.GetMyGoalsAsync();
+            if (goals.Items == null || goals.Items.Count == 0)
+            {
+                return BuildActionResult("list_goal_targets", "completed", "No goals yet", "You do not have any BTC goal targets yet.");
+            }
+
+            var summary = string.Join(" | ", goals.Items.Take(3).Select(goal => $"{goal.Name} [{goal.Status}] {goal.ProgressPercent:0.##}%"));
+            return BuildActionResult("list_goal_targets", "completed", "Goals loaded", summary);
+        }
+
+        private async Task<AssistantActionResultDto> PauseGoalTargetAsync(AssistantPlannedAction action)
+        {
+            var goal = await ResolveGoalAsync(action);
+            if (goal == null)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Goal not found", "Tell me which goal you want me to pause.");
+            }
+
+            var result = await _goalAutomationAppService.PauseGoalAsync(new EntityDto<long>(goal.Id));
+            return BuildActionResult(action.Type, "completed", "Goal paused", $"{result.Name}: {result.StatusReason}");
+        }
+
+        private async Task<AssistantActionResultDto> CancelGoalTargetAsync(AssistantPlannedAction action)
+        {
+            var goal = await ResolveGoalAsync(action);
+            if (goal == null)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Goal not found", "Tell me which goal you want me to cancel.");
+            }
+
+            var result = await _goalAutomationAppService.CancelGoalAsync(new EntityDto<long>(goal.Id));
+            return BuildActionResult(action.Type, "completed", "Goal canceled", $"{result.Name}: {result.StatusReason}");
+        }
+
         private async Task<long?> ResolveDefaultConnectionIdAsync()
         {
             var connections = await _externalBrokerAppService.GetMyConnectionsAsync();
@@ -178,6 +253,62 @@ namespace Fintex.Investments.Assistant
                 "BTCUSDT" => "BTCUSD",
                 "BTC" => "BTCUSD",
                 _ => normalized
+            };
+        }
+
+        private async Task<GoalTargetDto> ResolveGoalAsync(AssistantPlannedAction action)
+        {
+            var goals = await _goalAutomationAppService.GetMyGoalsAsync();
+            if (goals.Items == null || goals.Items.Count == 0)
+            {
+                return null;
+            }
+
+            if (action.GoalId.HasValue)
+            {
+                return goals.Items.FirstOrDefault(x => x.Id == action.GoalId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(action.GoalName))
+            {
+                var match = goals.Items.FirstOrDefault(x => string.Equals(x.Name, action.GoalName, StringComparison.OrdinalIgnoreCase));
+                if (match != null)
+                {
+                    return match;
+                }
+
+                return goals.Items.FirstOrDefault(x => x.Name?.IndexOf(action.GoalName, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            var activeGoals = goals.Items.Where(x => x.Status == GoalStatus.Active.ToString() || x.Status == GoalStatus.Accepted.ToString()).ToList();
+            return activeGoals.Count == 1 ? activeGoals[0] : null;
+        }
+
+        private static GoalAccountType ParseGoalAccountType(string value)
+        {
+            return string.Equals(value, "external", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "externalbroker", StringComparison.OrdinalIgnoreCase)
+                ? GoalAccountType.ExternalBroker
+                : GoalAccountType.PaperTrading;
+        }
+
+        private static GoalTargetType ParseGoalTargetType(string value)
+        {
+            return string.Equals(value, "amount", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "targetamount", StringComparison.OrdinalIgnoreCase)
+                ? GoalTargetType.TargetAmount
+                : GoalTargetType.PercentGrowth;
+        }
+
+        private static GoalTradingSession ParseGoalTradingSession(string value)
+        {
+            return value?.Trim().ToLowerInvariant() switch
+            {
+                "europe" => GoalTradingSession.Europe,
+                "us" => GoalTradingSession.Us,
+                "europeusoverlap" => GoalTradingSession.EuropeUsOverlap,
+                "overlap" => GoalTradingSession.EuropeUsOverlap,
+                _ => GoalTradingSession.AnyTime
             };
         }
     }

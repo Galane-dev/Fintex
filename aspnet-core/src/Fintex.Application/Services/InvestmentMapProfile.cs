@@ -1,6 +1,8 @@
 using AutoMapper;
 using Fintex.Investments.Brokers.Dto;
 using Fintex.Investments.Analytics.Dto;
+using Fintex.Investments.Goals;
+using Fintex.Investments.Goals.Dto;
 using Fintex.Investments.MarketData.Dto;
 using Fintex.Investments.Notifications;
 using Fintex.Investments.Notifications.Dto;
@@ -28,6 +30,10 @@ namespace Fintex.Investments
             CreateMap<PaperTradeFill, PaperTradeFillDto>();
             CreateMap<NotificationItem, NotificationItemDto>();
             CreateMap<NotificationAlertRule, NotificationAlertRuleDto>();
+            CreateMap<GoalTarget, GoalTargetDto>();
+            CreateMap<GoalEvaluationRun, GoalEvaluationRunDto>();
+            CreateMap<GoalExecutionPlan, GoalExecutionPlanDto>();
+            CreateMap<GoalExecutionEvent, GoalExecutionEventDto>();
         }
     }
 }

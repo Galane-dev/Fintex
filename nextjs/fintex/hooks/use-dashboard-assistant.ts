@@ -27,13 +27,13 @@ export const useDashboardAssistant = ({ onActionRefresh }: UseDashboardAssistant
   const [transcript, setTranscript] = useState("");
   const [speakReplies, setSpeakReplies] = useState(true);
   const [messages, setMessages] = useState<AssistantMessage[]>([
-    createMessage("assistant", "I can explain the dashboard, set alerts, get recommendations, and place trades for you."),
+    createMessage("assistant", "I can explain the dashboard, set alerts, place trades, and create BTC target goals for your paper or connected broker accounts."),
   ]);
   const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
     "Explain the current verdict.",
     "Set a BTC alert at 70000 and email me.",
     "Give me a trade recommendation right now.",
-    "Place a small paper BTC buy.",
+    "Create a BTC paper goal for 0.25% by tomorrow at 14:30.",
   ]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 

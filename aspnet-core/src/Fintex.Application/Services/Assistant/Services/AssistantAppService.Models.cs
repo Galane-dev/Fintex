@@ -1,4 +1,5 @@
 using Fintex.Investments.Brokers.Dto;
+using Fintex.Investments.Goals.Dto;
 using Fintex.Investments.MarketData.Dto;
 using Fintex.Investments.Notifications.Dto;
 using Fintex.Investments.PaperTrading.Dto;
@@ -25,6 +26,8 @@ namespace Fintex.Investments.Assistant
             public List<TradeDto> Trades { get; set; } = new List<TradeDto>();
 
             public List<ExternalBrokerConnectionDto> Connections { get; set; } = new List<ExternalBrokerConnectionDto>();
+
+            public List<GoalTargetDto> Goals { get; set; } = new List<GoalTargetDto>();
         }
 
         private sealed class AssistantPlan
@@ -55,6 +58,30 @@ namespace Fintex.Investments.Assistant
             public decimal? TakeProfit { get; set; }
 
             public long? ConnectionId { get; set; }
+
+            public long? GoalId { get; set; }
+
+            public string GoalName { get; set; }
+
+            public string AccountType { get; set; }
+
+            public string TargetType { get; set; }
+
+            public decimal? TargetPercent { get; set; }
+
+            public decimal? TargetAmount { get; set; }
+
+            public System.DateTime? DeadlineUtc { get; set; }
+
+            public decimal? MaxAcceptableRisk { get; set; }
+
+            public decimal? MaxDrawdownPercent { get; set; }
+
+            public decimal? MaxPositionSizePercent { get; set; }
+
+            public string TradingSession { get; set; }
+
+            public bool? AllowOvernightPositions { get; set; }
 
             public bool? NotifyEmail { get; set; }
 

@@ -52,7 +52,7 @@ export function AssistantDrawer({
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         {error ? <Alert type="warning" showIcon message={error} /> : null}
         <Typography.Text type="secondary">
-          Ask about the market, your trades, alerts, recommendations, or tell me to take action for you.
+          Ask about the market, your trades, alerts, recommendations, or ask me to create and manage BTC target goals for you.
         </Typography.Text>
         <Space wrap>
           {suggestedPrompts.map((prompt) => (
@@ -74,7 +74,7 @@ export function AssistantDrawer({
                   <Input.TextArea
                     value={draft}
                     onChange={(event) => onDraftChange(event.target.value)}
-                    placeholder="Ask me to explain the verdict, set an alert, or place a trade."
+                    placeholder="Ask me to explain the verdict, set an alert, place a trade, or create a BTC target goal."
                     autoSize={{ minRows: 4, maxRows: 8 }}
                   />
                   <Button

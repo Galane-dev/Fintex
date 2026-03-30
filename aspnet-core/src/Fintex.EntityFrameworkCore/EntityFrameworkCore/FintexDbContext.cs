@@ -129,6 +129,10 @@ namespace Fintex.EntityFrameworkCore
             ConfigureUserProfile(modelBuilder);
             ConfigureAcademyQuizAttempt(modelBuilder);
             ConfigureTradeAnalysisSnapshot(modelBuilder);
+            ConfigureGoalTarget(modelBuilder);
+            ConfigureGoalEvaluationRun(modelBuilder);
+            ConfigureGoalExecutionPlan(modelBuilder);
+            ConfigureGoalExecutionEvent(modelBuilder);
         }
 
         private static void ConfigureTrade(ModelBuilder modelBuilder)
