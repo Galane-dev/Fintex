@@ -3,7 +3,9 @@ import type {
   MarketConnectionStatus,
   MarketDataPoint,
   MarketDataProvider,
+  MarketProjectionMaturity,
   MarketVerdict,
+  MarketVerdictState,
 } from "@/types/market-data";
 
 const EMPTY = "—";
@@ -18,6 +20,48 @@ export const getVerdictLabel = (value: unknown): MarketVerdict => {
   }
 
   return "Hold";
+};
+
+export const getVerdictStateLabel = (value: MarketVerdictState) => {
+  switch (value) {
+    case "warming_up":
+      return "Warming up";
+    case "degraded":
+      return "Degraded";
+    case "stale":
+      return "Stale";
+    case "fallback":
+      return "Fallback";
+    default:
+      return "Live";
+  }
+};
+
+export const getVerdictStateTone = (value: MarketVerdictState) => {
+  switch (value) {
+    case "live":
+      return "green";
+    case "warming_up":
+      return "blue";
+    case "degraded":
+      return "gold";
+    case "stale":
+    case "fallback":
+      return "red";
+    default:
+      return "default";
+  }
+};
+
+export const getProjectionMaturityLabel = (value: MarketProjectionMaturity) => {
+  switch (value) {
+    case "warming_up":
+      return "Warm-up";
+    case "forming":
+      return "Forming";
+    default:
+      return "Mature";
+  }
 };
 
 export const getProviderLabel = (provider: MarketDataProvider) =>

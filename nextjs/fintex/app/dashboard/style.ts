@@ -89,7 +89,9 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   sideColumn: css`
     display: grid;
-    gap: 18px;
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 10px;
     min-width: 0;
 
     @media (min-width: 1181px) {
@@ -107,6 +109,46 @@ export const useStyles = createStyles(({ css, token }) => ({
         border-radius: 999px;
       }
     }
+  `,
+  sideSection: css`
+    display: grid;
+    gap: 0;
+    min-width: 0;
+  `,
+  sideSectionCollapse: css`
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+
+    .ant-collapse-item {
+      border-bottom: none !important;
+    }
+
+    .ant-collapse-header {
+      padding: 14px 18px !important;
+      align-items: center !important;
+    }
+
+    .ant-collapse-content {
+      border-top: 1px solid rgba(255, 255, 255, 0.04) !important;
+      background: transparent !important;
+    }
+
+    .ant-collapse-content-box {
+      padding: 0 18px 18px !important;
+    }
+
+    &.ant-collapse {
+      margin: 0 !important;
+    }
+  `,
+  sideSectionLabel: css`
+    color: ${token.colorText};
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
   `,
   dashboardTabs: css`
     .ant-tabs-nav {
@@ -280,6 +322,29 @@ export const useStyles = createStyles(({ css, token }) => ({
     letter-spacing: -0.04em;
     color: ${token.colorText};
   `,
+  verdictStateCard: css`
+    padding: 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: grid;
+    gap: 8px;
+  `,
+  verdictStateHeader: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  `,
+  verdictStateTimestamp: css`
+    color: ${token.colorTextSecondary};
+    font-size: 12px;
+  `,
+  verdictStateCopy: css`
+    margin: 0 !important;
+    color: ${token.colorTextSecondary} !important;
+    line-height: 1.7 !important;
+  `,
   predictionGrid: css`
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -329,6 +394,37 @@ export const useStyles = createStyles(({ css, token }) => ({
     color: ${token.colorTextSecondary};
     font-size: 12px;
     line-height: 1.6;
+  `,
+  predictionFacts: css`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  `,
+  predictionFact: css`
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    display: grid;
+    gap: 4px;
+    color: ${token.colorText};
+    font-size: 13px;
+  `,
+  predictionFactLabel: css`
+    color: ${token.colorTextSecondary};
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  `,
+  predictionEmptyCopy: css`
+    margin: 0 !important;
+    color: ${token.colorTextSecondary} !important;
+    line-height: 1.7 !important;
+    font-size: 13px !important;
   `,
   metricList: css`
     display: grid;
@@ -541,5 +637,119 @@ export const useStyles = createStyles(({ css, token }) => ({
     color: ${token.colorText};
     font-size: 16px;
     font-weight: 600;
+  `,
+  automationDesk: css`
+    display: grid;
+    gap: 16px;
+  `,
+  automationSummary: css`
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  `,
+  automationMetric: css`
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: grid;
+    gap: 6px;
+  `,
+  automationLabel: css`
+    color: ${token.colorTextSecondary};
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+  `,
+  automationValue: css`
+    color: ${token.colorText};
+    font-size: 22px;
+    font-weight: 600;
+  `,
+  automationCopy: css`
+    margin: 0 !important;
+    color: ${token.colorTextSecondary} !important;
+    line-height: 1.7 !important;
+  `,
+  indicatorMonitor: css`
+    display: grid;
+    gap: 14px;
+  `,
+  indicatorMonitorHeader: css`
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  `,
+  indicatorMonitorTitle: css`
+    display: grid;
+    gap: 6px;
+  `,
+  indicatorMonitorValue: css`
+    color: ${token.colorText};
+    font-size: 24px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+  `,
+  indicatorMonitorMeta: css`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  `,
+  indicatorMonitorGrid: css`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  `,
+  indicatorMiniCard: css`
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  `,
+  indicatorMiniHeader: css`
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  `,
+  indicatorMiniLabel: css`
+    color: ${token.colorTextSecondary};
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  `,
+  indicatorMiniValue: css`
+    color: ${token.colorText};
+    font-size: 18px;
+    line-height: 1.1;
+    font-weight: 600;
+  `,
+  indicatorMiniNote: css`
+    color: ${token.colorTextSecondary};
+    font-size: 12px;
+    line-height: 1.5;
+  `,
+  indicatorSparkline: css`
+    width: 100%;
+    height: 56px;
+    display: block;
+  `,
+  indicatorFallback: css`
+    margin: 0 !important;
+    color: ${token.colorTextSecondary} !important;
+    line-height: 1.7 !important;
   `,
 }));

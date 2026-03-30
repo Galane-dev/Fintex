@@ -29,12 +29,6 @@ namespace Fintex.Investments.Analytics
 
         public decimal? BollingerLower { get; set; }
 
-        public decimal? TrendScore { get; set; }
-
-        public decimal? ConfidenceScore { get; set; }
-
-        public MarketVerdict Verdict { get; set; } = MarketVerdict.Hold;
-
         public IReadOnlyList<IndicatorScore> Scores { get; set; } = new List<IndicatorScore>();
     }
 }

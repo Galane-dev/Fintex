@@ -12,6 +12,10 @@ import {
   formatSigned,
   formatSignedPoints,
   getConnectionTone,
+  getProjectionMaturityLabel,
+  getVerdictStateLabel,
+  getVerdictStateTone,
+  formatTime,
 } from "@/utils/market-data";
 import { useStyles } from "../style";
 
@@ -94,27 +98,57 @@ export function AnalysisTab({
       <div className={styles.predictionCard}>
         <div className={styles.predictionHeader}>
           <span className={styles.predictionLabel}>{title}</span>
-          <span
-            className={cx(
-              styles.predictionDelta,
-              projectionTone(consensusDelta) === "positive" ? styles.positive : undefined,
-              projectionTone(consensusDelta) === "negative" ? styles.negative : undefined,
-              projectionTone(consensusDelta) === "neutral" ? styles.neutral : undefined,
-            )}
-          >
-            {formatSignedPoints(consensusDelta)}
-          </span>
+          {projection ? (
+            <span
+              className={cx(
+                styles.predictionDelta,
+                projectionTone(consensusDelta) === "positive" ? styles.positive : undefined,
+                projectionTone(consensusDelta) === "negative" ? styles.negative : undefined,
+                projectionTone(consensusDelta) === "neutral" ? styles.neutral : undefined,
+              )}
+            >
+              {formatSignedPoints(consensusDelta)}
+            </span>
+          ) : (
+            <Tag color="default">Waiting</Tag>
+          )}
         </div>
 
         <div className={styles.predictionValue}>
           {projection?.consensusPrice != null ? formatPrice(projection.consensusPrice) : "-"}
         </div>
 
-        <div className={styles.predictionMeta}>
-          <span>SMA {formatPrice(projection?.smaPrice ?? null)}</span>
-          <span>EMA {formatPrice(projection?.emaPrice ?? null)}</span>
-          <span>SMMA {formatPrice(projection?.smmaPrice ?? null)}</span>
-        </div>
+        {projection ? (
+          <>
+            <div className={styles.predictionFacts}>
+              <div className={styles.predictionFact}>
+                <span className={styles.predictionFactLabel}>Model</span>
+                <span>{projection.modelName}</span>
+              </div>
+              <div className={styles.predictionFact}>
+                <span className={styles.predictionFactLabel}>Maturity</span>
+                <span>{getProjectionMaturityLabel(projection.maturity)}</span>
+              </div>
+              <div className={styles.predictionFact}>
+                <span className={styles.predictionFactLabel}>Confidence</span>
+                <span>{projection.confidenceScore != null ? `${projection.confidenceScore.toFixed(0)}%` : "-"}</span>
+              </div>
+              <div className={styles.predictionFact}>
+                <span className={styles.predictionFactLabel}>Bars used</span>
+                <span>{projection.barsUsed}</span>
+              </div>
+            </div>
+            <div className={styles.predictionMeta}>
+              <span>SMA {formatPrice(projection.smaPrice)}</span>
+              <span>EMA {formatPrice(projection.emaPrice)}</span>
+              <span>SMMA {formatPrice(projection.smmaPrice)}</span>
+            </div>
+          </>
+        ) : (
+          <Typography.Paragraph className={styles.predictionEmptyCopy}>
+            The backend has not published this estimate yet. Fintex waits until the verdict engine has enough candle coverage to avoid showing weak early projections.
+          </Typography.Paragraph>
+        )}
       </div>
     );
   };
@@ -128,7 +162,14 @@ export function AnalysisTab({
               <Typography.Text type="secondary">Realtime stance</Typography.Text>
               <div className={styles.verdictValue}>{latestVerdict} bias</div>
             </div>
-            <Tag color={getConnectionTone(connectionStatus)}>{connectionStatus}</Tag>
+            <Space wrap>
+              <Tag color={getConnectionTone(connectionStatus)}>{connectionStatus}</Tag>
+              {verdict ? (
+                <Tag color={getVerdictStateTone(verdict.verdictState)}>
+                  {getVerdictStateLabel(verdict.verdictState)}
+                </Tag>
+              ) : null}
+            </Space>
           </div>
 
           <div className={styles.scoreBlock}>
@@ -144,13 +185,27 @@ export function AnalysisTab({
             />
           </div>
 
+          {verdict ? (
+            <div className={styles.verdictStateCard}>
+              <div className={styles.verdictStateHeader}>
+                <span className={styles.scoreLabel}>Verdict engine state</span>
+                <span className={styles.verdictStateTimestamp}>
+                  Evaluated {formatTime(verdict.evaluatedAtUtc)}
+                </span>
+              </div>
+              <Typography.Paragraph className={styles.verdictStateCopy}>
+                {verdict.verdictStateReason}
+              </Typography.Paragraph>
+            </div>
+          ) : null}
+
           <div className={styles.predictionGrid}>
             {renderProjectionCard("Estimated next 1 minute", nextOneMinuteProjection)}
-            {renderProjectionCard("Estimated next 5 minutes", nextFiveMinuteProjection)}
+            {renderProjectionCard("Estimated next 5 minutes from 5m bars", nextFiveMinuteProjection)}
           </div>
 
           <Typography.Paragraph className={styles.verdictCopy}>
-            Multi-timeframe EMA, RSI, MACD, ATR, ADX, structure, and alignment checks now sit beside short-horizon price estimates built from SMA, EMA, and SMMA drift, so the verdict stays actionable without becoming noisy.
+            Multi-timeframe EMA, RSI, MACD, ATR, ADX, structure, and alignment checks now sit beside backend projections, so the dashboard shows the actual verdict engine output instead of inventing its own forecast.
           </Typography.Paragraph>
 
           <Space wrap>

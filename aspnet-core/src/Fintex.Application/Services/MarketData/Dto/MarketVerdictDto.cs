@@ -22,7 +22,13 @@ namespace Fintex.Investments.MarketData.Dto
 
         public MarketVerdict Verdict { get; set; }
 
+        public MarketVerdictState VerdictState { get; set; }
+
+        public string VerdictStateReason { get; set; }
+
         public DateTime Timestamp { get; set; }
+
+        public DateTime EvaluatedAtUtc { get; set; }
 
         public decimal? Sma { get; set; }
 

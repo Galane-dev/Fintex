@@ -2,12 +2,15 @@ export {
   formatCompact,
   formatPercent,
   formatPrice,
+  getProjectionMaturityLabel,
   formatSigned,
   formatSignedPoints,
   formatTime,
   getConnectionTone,
   getProviderLabel,
   getVerdictLabel,
+  getVerdictStateLabel,
+  getVerdictStateTone,
   sortHistoryAscending,
   upsertHistoryPoint,
 } from "./market-data/formatters";
@@ -16,5 +19,4 @@ export {
   normalizeMarketVerdict,
   normalizeTimeframeRsi,
 } from "./market-data/normalize";
-export { buildFallbackProjectionFromHistory } from "./market-data/projections";
 export { buildMarketInsights } from "./market-data/insights";

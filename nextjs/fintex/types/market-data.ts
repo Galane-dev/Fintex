@@ -1,6 +1,13 @@
 export type MarketDataProvider = 1 | 2 | 3;
 export type AssetClass = 1 | 2;
 export type MarketVerdict = "Hold" | "Buy" | "Sell";
+export type MarketVerdictState =
+  | "warming_up"
+  | "live"
+  | "degraded"
+  | "stale"
+  | "fallback";
+export type MarketProjectionMaturity = "warming_up" | "forming" | "mature";
 export type MarketConnectionStatus =
   | "idle"
   | "connecting"
@@ -60,10 +67,15 @@ export interface MarketPriceProjection {
   horizon: string;
   minutesAhead: number;
   targetTimestamp: string;
+  modelName: string;
   consensusPrice: number | null;
   smaPrice: number | null;
   emaPrice: number | null;
   smmaPrice: number | null;
+  confidenceScore: number | null;
+  maturity: MarketProjectionMaturity;
+  barsUsed: number;
+  effectivePeriod: number;
 }
 
 export interface MarketTimeframeRsi {
@@ -80,7 +92,10 @@ export interface MarketVerdictSnapshot {
   trendScore: number | null;
   confidenceScore: number | null;
   verdict: MarketVerdict;
+  verdictState: MarketVerdictState;
+  verdictStateReason: string;
   timestamp: string;
+  evaluatedAtUtc: string;
   sma: number | null;
   ema: number | null;
   rsi: number | null;

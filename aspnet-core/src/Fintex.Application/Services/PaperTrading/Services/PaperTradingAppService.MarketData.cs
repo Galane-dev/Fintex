@@ -26,7 +26,6 @@ namespace Fintex.Investments.PaperTrading
                 Provider = provider,
                 Take = 80
             });
-            realtimeVerdict ??= BuildFallbackVerdict(latestPoint);
 
             decimal? spread = null;
             decimal? spreadPercent = null;
@@ -86,47 +85,6 @@ namespace Fintex.Investments.PaperTrading
             }
 
             return latestPoint.Price;
-        }
-
-        private static MarketVerdictDto BuildFallbackVerdict(MarketDataPoint latestPoint)
-        {
-            if (latestPoint == null)
-            {
-                return null;
-            }
-
-            var hasDirectionalSignal =
-                latestPoint.TrendScore.HasValue ||
-                latestPoint.ConfidenceScore.HasValue ||
-                latestPoint.Verdict != MarketVerdict.Hold;
-
-            if (!hasDirectionalSignal)
-            {
-                return null;
-            }
-
-            return new MarketVerdictDto
-            {
-                MarketDataPointId = latestPoint.Id,
-                Symbol = latestPoint.Symbol,
-                Provider = latestPoint.Provider,
-                Price = latestPoint.Price,
-                TrendScore = latestPoint.TrendScore,
-                ConfidenceScore = latestPoint.ConfidenceScore,
-                Verdict = latestPoint.Verdict,
-                Timestamp = latestPoint.Timestamp,
-                Sma = latestPoint.Sma,
-                Ema = latestPoint.Ema,
-                Rsi = latestPoint.Rsi,
-                Macd = latestPoint.Macd,
-                MacdSignal = latestPoint.MacdSignal,
-                MacdHistogram = latestPoint.MacdHistogram,
-                Momentum = latestPoint.Momentum,
-                RateOfChange = latestPoint.RateOfChange,
-                StructureLabel = "Waiting",
-                IndicatorScores = new List<IndicatorScoreDto>(),
-                TimeframeSignals = new List<MarketVerdictTimeframeDto>()
-            };
         }
 
         private static string GetAlternateMarketSymbol(string symbol, MarketDataProvider provider)

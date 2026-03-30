@@ -6,16 +6,6 @@ namespace Fintex.Investments.PaperTrading
 {
     public partial class PaperTradingAppService
     {
-        private static bool ShouldHoldRecommendation(MarketVerdictDto verdict)
-        {
-            return verdict == null ||
-                verdict.Verdict == MarketVerdict.Hold ||
-                !verdict.ConfidenceScore.HasValue ||
-                verdict.ConfidenceScore.Value < 45m ||
-                !verdict.TrendScore.HasValue ||
-                Math.Abs(verdict.TrendScore.Value) < 15m;
-        }
-
         private static void ApplyVerdictQualityAdjustments(
             MarketVerdictDto verdict,
             PaperTradeMarketContext marketContext,
@@ -31,6 +21,13 @@ namespace Fintex.Investments.PaperTrading
                 AddUnique(reasons, "The market verdict is still loading, so the setup cannot be confirmed yet.");
                 AddUnique(suggestions, "Wait for the realtime verdict stack to finish loading before entering.");
                 return;
+            }
+
+            if (verdict.VerdictState != MarketVerdictState.Live)
+            {
+                riskScore += verdict.VerdictState == MarketVerdictState.Stale ? 24m : 14m;
+                AddUnique(reasons, verdict.VerdictStateReason ?? $"The verdict is currently {verdict.VerdictState.ToString().ToLowerInvariant()}, so the setup quality is reduced.");
+                AddUnique(suggestions, "Wait for the verdict state to return to live before trusting the signal fully.");
             }
 
             var confidence = verdict.ConfidenceScore ?? 0m;

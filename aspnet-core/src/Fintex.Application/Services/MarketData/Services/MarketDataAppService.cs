@@ -1,5 +1,6 @@
 using Abp.Authorization;
 using Fintex.Investments.Analytics;
+using Microsoft.Extensions.Logging;
 
 namespace Fintex.Investments.MarketData
 {
@@ -36,15 +37,24 @@ namespace Fintex.Investments.MarketData
         private readonly IMarketDataPointRepository _marketDataPointRepository;
         private readonly IMarketDataTimeframeCandleRepository _marketDataTimeframeCandleRepository;
         private readonly IIndicatorCalculator _indicatorCalculator;
+        private readonly IMarketProjectionBuilder _marketProjectionBuilder;
+        private readonly IMarketVerdictPolicy _marketVerdictPolicy;
+        private readonly ILogger<MarketDataAppService> _logger;
 
         public MarketDataAppService(
             IMarketDataPointRepository marketDataPointRepository,
             IMarketDataTimeframeCandleRepository marketDataTimeframeCandleRepository,
-            IIndicatorCalculator indicatorCalculator)
+            IIndicatorCalculator indicatorCalculator,
+            IMarketProjectionBuilder marketProjectionBuilder,
+            IMarketVerdictPolicy marketVerdictPolicy,
+            ILogger<MarketDataAppService> logger)
         {
             _marketDataPointRepository = marketDataPointRepository;
             _marketDataTimeframeCandleRepository = marketDataTimeframeCandleRepository;
             _indicatorCalculator = indicatorCalculator;
+            _marketProjectionBuilder = marketProjectionBuilder;
+            _marketVerdictPolicy = marketVerdictPolicy;
+            _logger = logger;
         }
     }
 }

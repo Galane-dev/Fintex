@@ -7,6 +7,7 @@ using Fintex.Investments.Notifications;
 using Fintex.Investments.PaperTrading;
 using Fintex.Investments.PaperTrading.Dto;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading;
@@ -23,6 +24,7 @@ namespace Fintex.Investments.Goals.Services
         private readonly IRepository<GoalExecutionPlan, long> _goalPlanRepository;
         private readonly IRepository<GoalExecutionEvent, long> _goalEventRepository;
         private readonly IPaperTradingAppService _paperTradingAppService;
+        private readonly IRecommendationSnapshotCache _recommendationSnapshotCache;
         private readonly IExternalBrokerConnectionRepository _externalBrokerConnectionRepository;
         private readonly ITradeRepository _tradeRepository;
         private readonly IGoalProgressService _goalProgressService;
@@ -30,6 +32,7 @@ namespace Fintex.Investments.Goals.Services
         private readonly IGoalExecutionService _goalExecutionService;
         private readonly IAbpSession _abpSession;
         private readonly IUnitOfWorkManager _unitOfWorkManager;
+        private readonly ILogger<GoalMonitoringService> _logger;
 
         public GoalMonitoringService(
             IGoalTargetRepository goalTargetRepository,
@@ -37,19 +40,22 @@ namespace Fintex.Investments.Goals.Services
             IRepository<GoalExecutionPlan, long> goalPlanRepository,
             IRepository<GoalExecutionEvent, long> goalEventRepository,
             IPaperTradingAppService paperTradingAppService,
+            IRecommendationSnapshotCache recommendationSnapshotCache,
             IExternalBrokerConnectionRepository externalBrokerConnectionRepository,
             ITradeRepository tradeRepository,
             IGoalProgressService goalProgressService,
             IGoalPlannerService goalPlannerService,
             IGoalExecutionService goalExecutionService,
             IAbpSession abpSession,
-            IUnitOfWorkManager unitOfWorkManager)
+            IUnitOfWorkManager unitOfWorkManager,
+            ILogger<GoalMonitoringService> logger)
         {
             _goalTargetRepository = goalTargetRepository;
             _goalEvaluationRepository = goalEvaluationRepository;
             _goalPlanRepository = goalPlanRepository;
             _goalEventRepository = goalEventRepository;
             _paperTradingAppService = paperTradingAppService;
+            _recommendationSnapshotCache = recommendationSnapshotCache;
             _externalBrokerConnectionRepository = externalBrokerConnectionRepository;
             _tradeRepository = tradeRepository;
             _goalProgressService = goalProgressService;
@@ -57,6 +63,7 @@ namespace Fintex.Investments.Goals.Services
             _goalExecutionService = goalExecutionService;
             _abpSession = abpSession;
             _unitOfWorkManager = unitOfWorkManager;
+            _logger = logger;
         }
 
         public async Task EvaluateAsync(NotificationMarketSnapshot snapshot, CancellationToken cancellationToken)
@@ -110,12 +117,15 @@ namespace Fintex.Investments.Goals.Services
                     return;
                 }
 
-                var recommendation = await _paperTradingAppService.GetRecommendationAsync(new GetPaperTradeRecommendationInput
-                {
-                    Symbol = goal.MarketSymbol,
-                    Provider = MarketDataProvider.Binance,
-                    AssetClass = AssetClass.Crypto
-                });
+                var recommendation = await _recommendationSnapshotCache.GetOrCreateAsync(
+                    goal.MarketSymbol,
+                    MarketDataProvider.Binance,
+                    () => _paperTradingAppService.GetRecommendationAsync(new GetPaperTradeRecommendationInput
+                    {
+                        Symbol = goal.MarketSymbol,
+                        Provider = MarketDataProvider.Binance,
+                        AssetClass = AssetClass.Crypto
+                    }));
                 var plan = _goalPlannerService.BuildPlan(goal, progress, recommendation, context.HasOpenExposure);
 
                 goal.RefreshProgress(progress.CurrentEquity, progress.ProgressPercent, progress.RequiredDailyGrowthPercent, progress.Summary, nowUtc);
@@ -141,6 +151,13 @@ namespace Fintex.Investments.Goals.Services
 
                 if (!plan.ShouldExecute || !goal.CanAttemptExecution(nowUtc, ExecutionCooldown))
                 {
+                    _logger.LogDebug(
+                        "Goal {GoalId} skipped execution. Status={Status}, ShouldExecute={ShouldExecute}, NextAction={NextAction}, Summary={Summary}",
+                        goal.Id,
+                        goal.Status,
+                        plan.ShouldExecute,
+                        plan.NextAction,
+                        plan.Summary);
                     await _goalTargetRepository.UpdateAsync(goal);
                     return;
                 }
@@ -151,11 +168,22 @@ namespace Fintex.Investments.Goals.Services
                 {
                     goal.RecordExecutionSuccess(execution.TradeId, execution.Summary, nowUtc);
                     await PersistEventAsync(goal, "trade-executed", "executed", execution.Summary, progress.CurrentEquity, execution.TradeId, nowUtc);
+                    _logger.LogInformation(
+                        "Goal {GoalId} executed a trade. TradeId={TradeId}, Symbol={Symbol}, Summary={Summary}",
+                        goal.Id,
+                        execution.TradeId,
+                        goal.MarketSymbol,
+                        execution.Summary);
                 }
                 else if (!string.IsNullOrWhiteSpace(execution.Error))
                 {
                     goal.RecordExecutionFailure(execution.Error, nowUtc);
                     await PersistEventAsync(goal, "trade-blocked", "blocked", execution.Error, progress.CurrentEquity, execution.TradeId, nowUtc);
+                    _logger.LogWarning(
+                        "Goal {GoalId} blocked execution. Symbol={Symbol}, Error={Error}",
+                        goal.Id,
+                        goal.MarketSymbol,
+                        execution.Error);
                 }
 
                 await _goalTargetRepository.UpdateAsync(goal);

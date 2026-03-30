@@ -89,9 +89,9 @@ namespace Fintex.Investments.MarketData
                     indicators.RateOfChange,
                     indicators.BollingerUpper,
                     indicators.BollingerLower,
-                    indicators.TrendScore,
-                    indicators.ConfidenceScore,
-                    indicators.Verdict);
+                    null,
+                    null,
+                    MarketVerdict.Hold);
 
                 await _marketDataPointRepository.InsertAsync(point);
                 await _unitOfWorkManager.Current.SaveChangesAsync();

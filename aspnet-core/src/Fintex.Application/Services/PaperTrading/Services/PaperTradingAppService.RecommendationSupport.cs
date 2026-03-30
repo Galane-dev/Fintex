@@ -80,6 +80,11 @@ namespace Fintex.Investments.PaperTrading
                 return reasons;
             }
 
+            if (verdict.VerdictState != MarketVerdictState.Live)
+            {
+                reasons.Add(verdict.VerdictStateReason ?? $"The verdict is currently {verdict.VerdictState.ToString().ToLowerInvariant()}.");
+            }
+
             if (verdict.ConfidenceScore.HasValue && verdict.ConfidenceScore.Value < 45m)
             {
                 reasons.Add("Confidence is too low to justify forcing a trade.");

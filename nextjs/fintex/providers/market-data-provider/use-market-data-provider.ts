@@ -19,8 +19,6 @@ import { getMarketSelectionByKey, marketDataActions } from "./actions";
 import { initialMarketDataState, marketDataReducer } from "./reducer";
 
 const FALLBACK_REFRESH_MS = 45_000;
-const DERIVED_REFRESH_MS = 60_000;
-
 const buildMarketHubUrl = (encryptedToken: string) =>
   `${getApiBaseUrl()}/signalr/market-data?enc_auth_token=${encodeURIComponent(encryptedToken)}`;
 
@@ -47,19 +45,6 @@ export const useMarketDataProvider = () => {
             : "We could not refresh the market snapshot.",
         ),
       );
-    }
-  }, [state.selection]);
-
-  const refreshDerivedData = useCallback(async () => {
-    try {
-      const [verdict, timeframeRsi] = await Promise.all([
-        getRealtimeVerdict(state.selection),
-        getRelativeStrengthIndexTimeframes(state.selection),
-      ]);
-
-      dispatch(marketDataActions.derivedDataRefreshed({ verdict, timeframeRsi }));
-    } catch {
-      // Keep live market updates flowing even when the periodic derived refresh fails.
     }
   }, [state.selection]);
 
@@ -169,16 +154,6 @@ export const useMarketDataProvider = () => {
       window.clearInterval(interval);
     };
   }, [refreshSnapshot, state.connectionStatus]);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      void refreshDerivedData();
-    }, DERIVED_REFRESH_MS);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [refreshDerivedData]);
 
   const actionValues = useMemo<MarketDataProviderActions>(
     () => ({

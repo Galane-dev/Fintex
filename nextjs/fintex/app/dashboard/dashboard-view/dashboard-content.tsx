@@ -30,7 +30,6 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
 import { useTradeAutomation } from "@/hooks/useTradeAutomation";
 import {
-  buildFallbackProjectionFromHistory,
   buildMarketInsights,
   formatPercent,
   formatPrice,
@@ -38,8 +37,11 @@ import {
   formatSignedPoints,
 } from "@/utils/market-data";
 import { AnalysisTab } from "./analysis-tab";
+import { AutomationDeskCard } from "./automation-desk-card";
 import { BehaviorAnalysisModal } from "./behavior-analysis-modal";
+import { DashboardSideSection } from "./dashboard-side-section";
 import { EconomicCalendarModal } from "./economic-calendar-modal";
+import { IndicatorMonitorCard } from "./indicator-monitor-card";
 import { NotificationsModal } from "./notifications-modal";
 import { StrategyValidationModal } from "./strategy-validation-modal";
 import { GoalAutomationDrawer } from "./goal-automation-drawer";
@@ -128,8 +130,8 @@ export function DashboardContent() {
   const { signOut } = useAuth();
   const { closePosition, isSubmitting: isPaperSubmitting, snapshot } = usePaperTrading();
   const externalBrokers = useExternalBrokerAccounts();
-  const { trades: liveTrades, isLoading: isLiveTradesLoading, refreshTrades } = useLiveTrading();
-  const { connectionStatus, error, history, isLoading, latest, refreshSnapshot, timeframeRsi, verdict } = useMarketData();
+  const { trades: liveTrades, refreshTrades } = useLiveTrading();
+  const { connectionStatus, error, history, latest, refreshSnapshot, timeframeRsi, verdict } = useMarketData();
   const behaviorAnalysis = useDashboardBehaviorAnalysis();
   const economicCalendar = useDashboardEconomicCalendar();
   const strategyValidation = useDashboardStrategyValidation();
@@ -149,6 +151,7 @@ export function DashboardContent() {
   const [dashboardActions, setDashboardActions] = useState<DashboardPaperTradingActions>(defaultDashboardActions);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isGoalAutomationOpen, setIsGoalAutomationOpen] = useState(false);
+  const [isManualSnapshotRefreshing, setIsManualSnapshotRefreshing] = useState(false);
 
   const timeframeRsiMap = useMemo(
     () => timeframeRsi.reduce<Record<string, number | null>>((accumulator, item) => {
@@ -159,8 +162,8 @@ export function DashboardContent() {
   );
 
   const oneMinuteRsi = timeframeRsiMap["1m"] ?? latest?.rsi ?? null;
-  const nextOneMinuteProjection = verdict?.nextOneMinuteProjection?.consensusPrice != null ? verdict.nextOneMinuteProjection : buildFallbackProjectionFromHistory(history, latest?.price, 1);
-  const nextFiveMinuteProjection = verdict?.nextFiveMinuteProjection?.consensusPrice != null ? verdict.nextFiveMinuteProjection : buildFallbackProjectionFromHistory(history, latest?.price, 5);
+  const nextOneMinuteProjection = verdict?.nextOneMinuteProjection ?? null;
+  const nextFiveMinuteProjection = verdict?.nextFiveMinuteProjection ?? null;
   const openPositions = useMemo(() => snapshot?.positions ?? [], [snapshot?.positions]);
   const closedFills = useMemo(() => snapshot?.recentFills ?? [], [snapshot?.recentFills]);
   const openLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status === "Open"), [liveTrades]);
@@ -207,6 +210,15 @@ export function DashboardContent() {
 
   const marketSignals = useMemo(() => buildMarketInsights(latest, verdict), [latest, verdict]);
   const handleRegisterDashboardActions = useCallback((actions: DashboardPaperTradingActions) => setDashboardActions(actions), []);
+  const handleManualSnapshotRefresh = useCallback(async () => {
+    setIsManualSnapshotRefreshing(true);
+
+    try {
+      await Promise.all([refreshSnapshot(), refreshTrades()]);
+    } finally {
+      setIsManualSnapshotRefreshing(false);
+    }
+  }, [refreshSnapshot, refreshTrades]);
 
   return (
     <div className={styles.page}>
@@ -217,8 +229,10 @@ export function DashboardContent() {
               aria-label="Refresh snapshot"
               title="Refresh snapshot"
               icon={<ReloadOutlined />}
-              onClick={() => { void refreshSnapshot(); void refreshTrades(); }}
-              loading={isLoading || isLiveTradesLoading}
+              onClick={() => {
+                void handleManualSnapshotRefresh();
+              }}
+              loading={isManualSnapshotRefreshing}
             />
             <Badge count={notifications.unreadCount} size="small">
               <Button
@@ -289,36 +303,48 @@ export function DashboardContent() {
           </div>
 
           <div className={styles.sideColumn}>
-            <PaperTradingPanel currentPrice={latest?.price ?? null} registerDashboardActions={handleRegisterDashboardActions} displayMode="support" />
+            <DashboardSideSection title="Account operations" defaultOpen>
+              <PaperTradingPanel currentPrice={latest?.price ?? null} registerDashboardActions={handleRegisterDashboardActions} displayMode="support" />
+            </DashboardSideSection>
 
-            <Card className={styles.panelCard}>
+            <DashboardSideSection title="Decision support">
+              <Card className={styles.panelCard}>
+                <AnalysisTab
+                  connectionStatus={connectionStatus}
+                  error={error}
+                  latestVerdict={verdict?.verdict ?? latest?.verdict ?? "Hold"}
+                  confidenceScore={verdict?.confidenceScore ?? latest?.confidenceScore ?? null}
+                  oneMinuteRsi={oneMinuteRsi}
+                  macd={verdict?.macd ?? latest?.macd ?? null}
+                  macdSignal={verdict?.macdSignal ?? latest?.macdSignal ?? null}
+                  momentum={verdict?.momentum ?? latest?.momentum ?? null}
+                  trendScore={verdict?.trendScore ?? latest?.trendScore ?? null}
+                  adx={verdict?.adx ?? null}
+                  timeframeRsiMap={timeframeRsiMap}
+                  verdict={verdict}
+                  calculations={calculations}
+                  marketSignals={marketSignals}
+                  nextOneMinuteProjection={nextOneMinuteProjection}
+                  nextFiveMinuteProjection={nextFiveMinuteProjection}
+                />
+              </Card>
+            </DashboardSideSection>
+
+            <DashboardSideSection title="Automation">
+              <AutomationDeskCard
+                alertCount={notifications.alertRules.length}
+                automationCount={tradeAutomation.rules.length}
+                goalCount={goalAutomation.goals.length}
+                onOpenAlerts={() => setIsNotificationsOpen(true)}
+                onOpenGoals={() => setIsGoalAutomationOpen(true)}
+              />
+            </DashboardSideSection>
+
+            <DashboardSideSection title="Trade activity">
+              <Card className={styles.panelCard}>
               <Tabs
                 className={styles.dashboardTabs}
                 items={[
-                  {
-                    key: "analysis",
-                    label: "Verdict & analysis",
-                    children: (
-                      <AnalysisTab
-                        connectionStatus={connectionStatus}
-                        error={error}
-                        latestVerdict={verdict?.verdict ?? latest?.verdict ?? "Hold"}
-                        confidenceScore={verdict?.confidenceScore ?? latest?.confidenceScore ?? null}
-                        oneMinuteRsi={oneMinuteRsi}
-                        macd={verdict?.macd ?? latest?.macd ?? null}
-                        macdSignal={verdict?.macdSignal ?? latest?.macdSignal ?? null}
-                        momentum={verdict?.momentum ?? latest?.momentum ?? null}
-                        trendScore={verdict?.trendScore ?? latest?.trendScore ?? null}
-                        adx={verdict?.adx ?? null}
-                        timeframeRsiMap={timeframeRsiMap}
-                        verdict={verdict}
-                        calculations={calculations}
-                        marketSignals={marketSignals}
-                        nextOneMinuteProjection={nextOneMinuteProjection}
-                        nextFiveMinuteProjection={nextFiveMinuteProjection}
-                      />
-                    ),
-                  },
                   {
                     key: "open-trade",
                     label: `Open trade (${openPositions.length + openLiveTrades.length})`,
@@ -330,8 +356,12 @@ export function DashboardContent() {
                     children: <TradeTab mode="closed" closedFills={closedFills} liveTrades={closedLiveTrades} isPaperSubmitting={isPaperSubmitting} />,
                   },
                 ]}
+                defaultActiveKey="open-trade"
               />
-            </Card>
+              </Card>
+            </DashboardSideSection>
+
+            <IndicatorMonitorCard history={history} latest={latest} verdict={verdict} />
           </div>
         </div>
       </div>

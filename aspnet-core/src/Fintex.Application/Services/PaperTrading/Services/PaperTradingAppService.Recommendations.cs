@@ -27,7 +27,7 @@ namespace Fintex.Investments.PaperTrading
                 marketContext.RealtimeVerdict?.Atr,
                 marketContext.RealtimeVerdict?.Verdict == MarketVerdict.Sell ? TradeDirection.Sell : TradeDirection.Buy);
 
-            if (ShouldHoldRecommendation(marketContext.RealtimeVerdict))
+            if (_recommendationGuardService.ShouldHold(marketContext.RealtimeVerdict))
             {
                 var holdRecommendation = new PaperTradeRecommendationDto
                 {
@@ -52,6 +52,7 @@ namespace Fintex.Investments.PaperTrading
 
                 ApplyNewsOverlay(holdRecommendation, newsInsight);
                 ApplyEconomicCalendarOverlay(holdRecommendation, economicCalendarInsight);
+                Logger.Debug($"Recommendation outcome for {input.Symbol}: hold, verdictState={marketContext.RealtimeVerdict?.VerdictState}, confidence={marketContext.RealtimeVerdict?.ConfidenceScore}, trend={marketContext.RealtimeVerdict?.TrendScore}, price={marketContext.LatestPoint.Price}.");
                 return holdRecommendation;
             }
 
@@ -90,6 +91,7 @@ namespace Fintex.Investments.PaperTrading
 
             ApplyNewsOverlay(recommendation, newsInsight);
             ApplyEconomicCalendarOverlay(recommendation, economicCalendarInsight);
+            Logger.Debug($"Recommendation outcome for {input.Symbol}: {recommendation.RecommendedAction}, risk={recommendation.RiskScore}, confidence={recommendation.ConfidenceScore}, trend={recommendation.TrendScore}, price={recommendation.ReferencePrice}.");
             return recommendation;
         }
 

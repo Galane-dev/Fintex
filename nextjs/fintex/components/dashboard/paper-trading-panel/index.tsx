@@ -20,7 +20,13 @@ export const PaperTradingPanel = ({
   const { styles } = usePaperTradingStyles();
   const controller = usePaperTradingPanelController({ registerDashboardActions });
 
-  if (controller.isLoading && !controller.account && controller.positions.length === 0) {
+  const shouldShowInitialSkeleton =
+    displayMode !== "support" &&
+    controller.isLoading &&
+    !controller.account &&
+    controller.positions.length === 0;
+
+  if (shouldShowInitialSkeleton) {
     return <Skeleton active paragraph={{ rows: 8 }} />;
   }
 
@@ -41,9 +47,7 @@ export const PaperTradingPanel = ({
       <TradeModal controller={controller} />
       <RecommendationModal controller={controller} />
 
-      {displayMode === "support" ? null : (
-        <PanelSections controller={controller} currentPrice={currentPrice} />
-      )}
+      <PanelSections controller={controller} currentPrice={currentPrice} />
     </div>
   );
 };

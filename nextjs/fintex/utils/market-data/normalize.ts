@@ -3,7 +3,9 @@ import type {
   MarketDataPoint,
   MarketDataProvider,
   MarketPriceProjection,
+  MarketProjectionMaturity,
   MarketTimeframeRsi,
+  MarketVerdictState,
   MarketVerdictSnapshot,
 } from "@/types/market-data";
 import { getVerdictLabel } from "./formatters";
@@ -13,6 +15,38 @@ const getNumberOrNull = (value: unknown) =>
 
 const getStringOrEmpty = (value: unknown) =>
   typeof value === "string" ? value : "";
+
+const normalizeVerdictState = (value: unknown): MarketVerdictState => {
+  if (value === 1 || value === "WarmingUp" || value === "warming_up") {
+    return "warming_up";
+  }
+
+  if (value === 3 || value === "Degraded" || value === "degraded") {
+    return "degraded";
+  }
+
+  if (value === 4 || value === "Stale" || value === "stale") {
+    return "stale";
+  }
+
+  if (value === 5 || value === "Fallback" || value === "fallback") {
+    return "fallback";
+  }
+
+  return "live";
+};
+
+const normalizeProjectionMaturity = (value: unknown): MarketProjectionMaturity => {
+  if (value === 1 || value === "WarmingUp" || value === "warming_up") {
+    return "warming_up";
+  }
+
+  if (value === 2 || value === "Forming" || value === "forming") {
+    return "forming";
+  }
+
+  return "mature";
+};
 
 export const normalizeMarketDataPoint = (
   value: Record<string, unknown>,
@@ -58,10 +92,15 @@ const normalizeMarketPriceProjection = (
   horizon: getStringOrEmpty(value.horizon ?? value.Horizon),
   minutesAhead: Number(value.minutesAhead ?? value.MinutesAhead ?? 0),
   targetTimestamp: getStringOrEmpty(value.targetTimestamp ?? value.TargetTimestamp),
+  modelName: getStringOrEmpty(value.modelName ?? value.ModelName),
   consensusPrice: getNumberOrNull(value.consensusPrice ?? value.ConsensusPrice),
   smaPrice: getNumberOrNull(value.smaPrice ?? value.SmaPrice),
   emaPrice: getNumberOrNull(value.emaPrice ?? value.EmaPrice),
   smmaPrice: getNumberOrNull(value.smmaPrice ?? value.SmmaPrice),
+  confidenceScore: getNumberOrNull(value.confidenceScore ?? value.ConfidenceScore),
+  maturity: normalizeProjectionMaturity(value.maturity ?? value.Maturity),
+  barsUsed: Number(value.barsUsed ?? value.BarsUsed ?? 0),
+  effectivePeriod: Number(value.effectivePeriod ?? value.EffectivePeriod ?? 0),
 });
 
 export const normalizeTimeframeRsi = (
@@ -86,7 +125,10 @@ export const normalizeMarketVerdict = (
   trendScore: getNumberOrNull(value.trendScore ?? value.TrendScore),
   confidenceScore: getNumberOrNull(value.confidenceScore ?? value.ConfidenceScore),
   verdict: getVerdictLabel(value.verdict ?? value.Verdict),
+  verdictState: normalizeVerdictState(value.verdictState ?? value.VerdictState),
+  verdictStateReason: getStringOrEmpty(value.verdictStateReason ?? value.VerdictStateReason),
   timestamp: getStringOrEmpty(value.timestamp ?? value.Timestamp),
+  evaluatedAtUtc: getStringOrEmpty(value.evaluatedAtUtc ?? value.EvaluatedAtUtc),
   sma: getNumberOrNull(value.sma ?? value.Sma),
   ema: getNumberOrNull(value.ema ?? value.Ema),
   rsi: getNumberOrNull(value.rsi ?? value.Rsi),

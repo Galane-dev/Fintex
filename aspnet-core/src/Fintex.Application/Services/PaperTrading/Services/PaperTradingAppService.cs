@@ -21,6 +21,7 @@ namespace Fintex.Investments.PaperTrading
         private readonly INewsRecommendationService _newsRecommendationService;
         private readonly IEconomicCalendarService _economicCalendarService;
         private readonly IAcademyProgressService _academyProgressService;
+        private readonly IRecommendationGuardService _recommendationGuardService;
 
         public PaperTradingAppService(
             IPaperTradingAccountRepository paperTradingAccountRepository,
@@ -31,7 +32,8 @@ namespace Fintex.Investments.PaperTrading
             IMarketDataAppService marketDataAppService,
             INewsRecommendationService newsRecommendationService,
             IEconomicCalendarService economicCalendarService,
-            IAcademyProgressService academyProgressService)
+            IAcademyProgressService academyProgressService,
+            IRecommendationGuardService recommendationGuardService)
         {
             _paperTradingAccountRepository = paperTradingAccountRepository;
             _paperOrderRepository = paperOrderRepository;
@@ -42,6 +44,7 @@ namespace Fintex.Investments.PaperTrading
             _newsRecommendationService = newsRecommendationService;
             _economicCalendarService = economicCalendarService;
             _academyProgressService = academyProgressService;
+            _recommendationGuardService = recommendationGuardService;
         }
     }
 }
