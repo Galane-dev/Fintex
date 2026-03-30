@@ -188,6 +188,11 @@ namespace Fintex.Investments.Brokers
                 TradeId = trade.Id,
                 UserId = trade.UserId,
                 Symbol = trade.Symbol,
+                Provider = trade.Provider,
+                Direction = trade.Direction,
+                Quantity = trade.Quantity,
+                ExecutionPrice = trade.Status == TradeStatus.Closed ? trade.ExitPrice : trade.EntryPrice,
+                Source = "Alpaca broker",
                 Status = trade.Status,
                 RealizedProfitLoss = trade.RealizedProfitLoss,
                 OccurredAt = occurredAt

@@ -5,6 +5,7 @@ using Abp.Runtime.Session;
 using Abp.UI;
 using Fintex.Investments.Brokers;
 using Fintex.Investments.Goals.Dto;
+using Fintex.Investments.Notifications;
 using Fintex.Investments.PaperTrading;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,7 @@ namespace Fintex.Investments.Goals.Services
         private readonly IGoalProgressService _goalProgressService;
         private readonly IPaperTradingAppService _paperTradingAppService;
         private readonly IExternalBrokerConnectionRepository _externalBrokerConnectionRepository;
+        private readonly INotificationDispatchService _notificationDispatchService;
 
         public GoalAutomationAppService(
             IGoalTargetRepository goalTargetRepository,
@@ -33,7 +35,8 @@ namespace Fintex.Investments.Goals.Services
             IGoalFeasibilityService goalFeasibilityService,
             IGoalProgressService goalProgressService,
             IPaperTradingAppService paperTradingAppService,
-            IExternalBrokerConnectionRepository externalBrokerConnectionRepository)
+            IExternalBrokerConnectionRepository externalBrokerConnectionRepository,
+            INotificationDispatchService notificationDispatchService)
         {
             _goalTargetRepository = goalTargetRepository;
             _goalEvaluationRepository = goalEvaluationRepository;
@@ -43,6 +46,7 @@ namespace Fintex.Investments.Goals.Services
             _goalProgressService = goalProgressService;
             _paperTradingAppService = paperTradingAppService;
             _externalBrokerConnectionRepository = externalBrokerConnectionRepository;
+            _notificationDispatchService = notificationDispatchService;
         }
 
         public async Task<ListResultDto<GoalTargetDto>> GetMyGoalsAsync()
@@ -119,7 +123,7 @@ namespace Fintex.Investments.Goals.Services
                 result.CounterProposalTargetPercent,
                 DateTime.UtcNow));
 
-            await _goalEventRepository.InsertAsync(new GoalExecutionEvent(
+            var goalEvent = new GoalExecutionEvent(
                 goal.TenantId,
                 goal.UserId,
                 goal.Id,
@@ -128,7 +132,8 @@ namespace Fintex.Investments.Goals.Services
                 result.Summary,
                 null,
                 accountContext.CurrentEquity,
-                DateTime.UtcNow));
+                DateTime.UtcNow);
+            await _goalEventRepository.InsertAsync(goalEvent);
 
             if (result.IsAccepted)
             {
@@ -148,6 +153,7 @@ namespace Fintex.Investments.Goals.Services
             }
 
             await CurrentUnitOfWork.SaveChangesAsync();
+            await SendGoalNotificationAsync(goal, goalEvent);
             return (await GetMyGoalsAsync()).Items.First(x => x.Id == goal.Id);
         }
 
@@ -189,7 +195,7 @@ namespace Fintex.Investments.Goals.Services
 
             var update = apply(goal);
             await _goalTargetRepository.UpdateAsync(goal);
-            await _goalEventRepository.InsertAsync(new GoalExecutionEvent(
+            var goalEvent = new GoalExecutionEvent(
                 goal.TenantId,
                 goal.UserId,
                 goal.Id,
@@ -198,10 +204,55 @@ namespace Fintex.Investments.Goals.Services
                 update.Summary,
                 null,
                 goal.CurrentEquity,
-                DateTime.UtcNow));
+                DateTime.UtcNow);
+            await _goalEventRepository.InsertAsync(goalEvent);
             await CurrentUnitOfWork.SaveChangesAsync();
+            await SendGoalNotificationAsync(goal, goalEvent);
 
             return (await GetMyGoalsAsync()).Items.First(x => x.Id == goal.Id);
+        }
+
+        private async Task SendGoalNotificationAsync(GoalTarget goal, GoalExecutionEvent goalEvent)
+        {
+            await _notificationDispatchService.DispatchAsync(new NotificationDispatchRequest
+            {
+                TenantId = goal.TenantId,
+                UserId = goal.UserId,
+                Type = NotificationType.GoalAutomation,
+                Severity = ResolveGoalSeverity(goalEvent.Status),
+                Title = BuildGoalNotificationTitle(goal, goalEvent),
+                Message = goalEvent.Summary,
+                Symbol = goal.MarketSymbol,
+                Provider = MarketDataProvider.Binance,
+                ReferencePrice = goal.CurrentEquity,
+                TargetPrice = goal.TargetEquity,
+                ConfidenceScore = null,
+                Verdict = null,
+                TriggerKey = $"goal:{goal.Id}:{goalEvent.EventType}:{goalEvent.OccurredAtUtc:O}",
+                NotifyInApp = true,
+                NotifyEmail = true,
+                ContextJson = $"{{\"goalId\":{goal.Id},\"eventType\":\"{goalEvent.EventType}\",\"status\":\"{goalEvent.Status}\",\"tradeId\":{goalEvent.TradeId?.ToString() ?? "null"}}}",
+                OccurredAt = goalEvent.OccurredAtUtc
+            });
+        }
+
+        private static NotificationSeverity ResolveGoalSeverity(string status)
+        {
+            return status switch
+            {
+                "accepted" => NotificationSeverity.Success,
+                "resumed" => NotificationSeverity.Success,
+                "completed" => NotificationSeverity.Success,
+                "rejected" => NotificationSeverity.Warning,
+                "expired" => NotificationSeverity.Warning,
+                "canceled" => NotificationSeverity.Warning,
+                _ => NotificationSeverity.Info
+            };
+        }
+
+        private static string BuildGoalNotificationTitle(GoalTarget goal, GoalExecutionEvent goalEvent)
+        {
+            return $"Goal update: {goal.Name} ({goalEvent.Status})";
         }
 
         private async Task<(decimal CurrentEquity, string ExternalConnectionName)> ResolveAccountContextAsync(CreateGoalTargetInput input)

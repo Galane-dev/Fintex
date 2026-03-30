@@ -347,12 +347,8 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   predictionGrid: css`
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 12px;
-
-    @media (max-width: 640px) {
-      grid-template-columns: 1fr;
-    }
   `,
   predictionCard: css`
     padding: 14px 16px;
@@ -703,12 +699,8 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   indicatorMonitorGrid: css`
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 12px;
-
-    @media (max-width: 640px) {
-      grid-template-columns: 1fr;
-    }
   `,
   indicatorMiniCard: css`
     padding: 12px;
@@ -716,7 +708,7 @@ export const useStyles = createStyles(({ css, token }) => ({
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
     display: grid;
-    gap: 10px;
+    gap: 12px;
     min-width: 0;
   `,
   indicatorMiniHeader: css`
@@ -742,10 +734,38 @@ export const useStyles = createStyles(({ css, token }) => ({
     font-size: 12px;
     line-height: 1.5;
   `,
+  indicatorChartRow: css`
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+    min-width: 0;
+  `,
+  indicatorAxis: css`
+    display: grid;
+    align-content: space-between;
+    gap: 4px;
+    color: ${token.colorTextSecondary};
+    font-size: 10px;
+    line-height: 1;
+    text-align: right;
+  `,
+  indicatorAxisLabel: css`
+    display: block;
+  `,
   indicatorSparkline: css`
     width: 100%;
-    height: 56px;
+    height: 82px;
     display: block;
+  `,
+  indicatorXAxis: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: ${token.colorTextSecondary};
+    font-size: 10px;
+    line-height: 1;
   `,
   indicatorFallback: css`
     margin: 0 !important;

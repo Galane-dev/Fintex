@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Button, Modal, Skeleton, Tag, Typography } from "antd";
+import { Alert, Button, Skeleton, Space, Tag, Typography } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import { formatPrice, formatTime } from "@/utils/market-data";
 import { getRecommendationActionTone, getRiskTone } from "./helpers";
 import type { PaperTradingPanelController } from "./types";
@@ -13,6 +14,8 @@ interface RecommendationModalProps {
 export const RecommendationModal = ({ controller }: RecommendationModalProps) => {
   const { styles } = usePaperTradingStyles();
   const recommendation = controller.recommendation;
+  const hasSuggestedTrade =
+    recommendation?.recommendedAction === "Buy" || recommendation?.recommendedAction === "Sell";
 
   const renderSuggestedTrade = () => {
     if (!recommendation || recommendation.recommendedAction === "Hold") {
@@ -36,15 +39,26 @@ export const RecommendationModal = ({ controller }: RecommendationModalProps) =>
   };
 
   return (
-    <Modal
+    <DashboardDrawerShell
       open={controller.isRecommendationOpen}
-      onCancel={controller.closeRecommendationModal}
+      onClose={controller.closeRecommendationModal}
       title="Trade recommendation"
-      width={680}
-      footer={[
-        <Button key="close" className={styles.actionButton} onClick={controller.closeRecommendationModal}>Close</Button>,
-        <Button key="place" type="primary" danger={recommendation?.riskLevel === "High"} disabled={controller.isRecommendationLoading || !recommendation || recommendation.recommendedAction === "Hold"} loading={controller.isBusy || controller.isRecommendationLoading} className={styles.actionButton} onClick={() => void controller.handlePlaceSuggestedTrade()}>Place suggested trade</Button>,
-      ]}
+      width={720}
+      footer={
+        <Space>
+          <Button className={styles.actionButton} onClick={controller.closeRecommendationModal}>Close</Button>
+          <Button
+            type="primary"
+            danger={recommendation?.riskLevel === "High"}
+            disabled={controller.isRecommendationLoading || !hasSuggestedTrade}
+            loading={controller.isBusy || controller.isRecommendationLoading}
+            className={styles.actionButton}
+            onClick={() => void controller.handlePlaceSuggestedTrade()}
+          >
+            {hasSuggestedTrade ? "Place suggested trade" : "No trade suggested"}
+          </Button>
+        </Space>
+      }
     >
       {controller.isRecommendationLoading ? (
         <div className={styles.feedbackBody}>
@@ -73,6 +87,6 @@ export const RecommendationModal = ({ controller }: RecommendationModalProps) =>
       ) : (
         <Alert type="info" showIcon title="No recommendation is ready yet." description="Try requesting a recommendation again once live market data is flowing." />
       )}
-    </Modal>
+    </DashboardDrawerShell>
   );
 };

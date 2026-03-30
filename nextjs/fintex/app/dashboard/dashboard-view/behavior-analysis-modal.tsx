@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Modal, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, Skeleton, Space, Tag, Typography } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { UserProfile } from "@/types/user-profile";
 import { formatTime } from "@/utils/market-data";
 import { useStyles } from "../style";
@@ -64,9 +65,9 @@ export function BehaviorAnalysisModal({
   );
 
   return (
-    <Modal open={isOpen} onCancel={onClose} footer={null} title="My behavior analysis" width={720}>
+    <DashboardDrawerShell open={isOpen} onClose={onClose} title="My behavior analysis" width={720}>
       {content}
-    </Modal>
+    </DashboardDrawerShell>
   );
 }
 

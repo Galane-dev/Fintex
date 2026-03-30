@@ -34,6 +34,10 @@ const mapType = (value: unknown): NotificationType =>
     ? "PriceTarget"
     : value === 3 || value === "TradeAutomation"
       ? "TradeAutomation"
+      : value === 4 || value === "TradeFill"
+        ? "TradeFill"
+        : value === 5 || value === "GoalAutomation"
+          ? "GoalAutomation"
       : "TradeOpportunity";
 
 export const normalizeNotification = (payload: Record<string, unknown>): NotificationItem => ({

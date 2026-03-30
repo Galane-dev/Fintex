@@ -1,6 +1,11 @@
 export type NotificationSeverity = "Info" | "Success" | "Warning" | "Danger";
 
-export type NotificationType = "TradeOpportunity" | "PriceTarget" | "TradeAutomation";
+export type NotificationType =
+  | "TradeOpportunity"
+  | "PriceTarget"
+  | "TradeAutomation"
+  | "TradeFill"
+  | "GoalAutomation";
 
 export type NotificationItem = {
   id: number;

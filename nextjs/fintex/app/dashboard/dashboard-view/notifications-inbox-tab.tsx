@@ -37,7 +37,7 @@ export function NotificationsInboxTab({
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <Space style={{ justifyContent: "space-between", width: "100%" }}>
         <Typography.Text type="secondary">
-          High-confidence opportunities, triggered price alerts, and executed automations arrive here.
+          Triggered alerts, trade fills, automation runs, and goal updates arrive here.
         </Typography.Text>
         <Button onClick={() => onMarkAllAsRead()} disabled={unreadCount === 0}>
           Mark all as read

@@ -55,5 +55,16 @@ namespace Fintex.Investments.Events
         public MarketVerdict Verdict { get; set; }
 
         public DateTime Timestamp { get; set; }
+
+        /// <summary>
+        /// Carries the authoritative realtime verdict snapshot computed during ingestion.
+        /// The payload stays typed as object so the domain event can remain application-agnostic.
+        /// </summary>
+        public object RealtimeVerdict { get; set; }
+
+        /// <summary>
+        /// Carries the timeframe RSI snapshot computed alongside the realtime verdict.
+        /// </summary>
+        public object TimeframeRsi { get; set; }
     }
 }

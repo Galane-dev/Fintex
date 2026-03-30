@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Button, Modal, Tag } from "antd";
+import { Alert, Button, Space, Tag } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import { formatPrice } from "@/utils/market-data";
 import { getRiskTone } from "./helpers";
 import type { PaperTradingPanelController } from "./types";
@@ -15,25 +16,26 @@ export const AssessmentModal = ({ controller }: AssessmentModalProps) => {
   const { activeFeedback, feedbackTone } = controller;
 
   return (
-    <Modal
+    <DashboardDrawerShell
       open={controller.isAssessmentOpen && activeFeedback != null}
-      onCancel={controller.closeAssessmentModal}
+      onClose={controller.closeAssessmentModal}
       title="Trade feedback"
-      width={680}
-      footer={[
-        <Button key="close" className={styles.actionButton} onClick={controller.closeAssessmentModal}>
-          Close
-        </Button>,
-        <Button
-          key="apply"
-          type="primary"
-          className={styles.actionButton}
-          loading={controller.isBusy}
-          onClick={() => void controller.handleApplyAssessmentSuggestions()}
-        >
-          Apply suggested setup
-        </Button>,
-      ]}
+      width={720}
+      footer={
+        <Space>
+          <Button className={styles.actionButton} onClick={controller.closeAssessmentModal}>
+            Close
+          </Button>
+          <Button
+            type="primary"
+            className={styles.actionButton}
+            loading={controller.isBusy}
+            onClick={() => void controller.handleApplyAssessmentSuggestions()}
+          >
+            Apply suggested setup
+          </Button>
+        </Space>
+      }
     >
       {activeFeedback && feedbackTone ? (
         <div className={styles.feedbackBody}>
@@ -61,6 +63,6 @@ export const AssessmentModal = ({ controller }: AssessmentModalProps) => {
           </div>
         </div>
       ) : null}
-    </Modal>
+    </DashboardDrawerShell>
   );
 };

@@ -1,4 +1,5 @@
 using Abp.Authorization;
+using Abp.Events.Bus;
 using Fintex.Investments.Academy;
 using Fintex.Investments.EconomicCalendar;
 using Fintex.Investments.MarketData;
@@ -22,6 +23,7 @@ namespace Fintex.Investments.PaperTrading
         private readonly IEconomicCalendarService _economicCalendarService;
         private readonly IAcademyProgressService _academyProgressService;
         private readonly IRecommendationGuardService _recommendationGuardService;
+        private readonly IEventBus _eventBus;
 
         public PaperTradingAppService(
             IPaperTradingAccountRepository paperTradingAccountRepository,
@@ -33,7 +35,8 @@ namespace Fintex.Investments.PaperTrading
             INewsRecommendationService newsRecommendationService,
             IEconomicCalendarService economicCalendarService,
             IAcademyProgressService academyProgressService,
-            IRecommendationGuardService recommendationGuardService)
+            IRecommendationGuardService recommendationGuardService,
+            IEventBus eventBus)
         {
             _paperTradingAccountRepository = paperTradingAccountRepository;
             _paperOrderRepository = paperOrderRepository;
@@ -45,6 +48,7 @@ namespace Fintex.Investments.PaperTrading
             _economicCalendarService = economicCalendarService;
             _academyProgressService = academyProgressService;
             _recommendationGuardService = recommendationGuardService;
+            _eventBus = eventBus;
         }
     }
 }

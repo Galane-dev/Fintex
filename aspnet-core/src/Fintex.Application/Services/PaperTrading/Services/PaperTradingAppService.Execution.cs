@@ -1,5 +1,6 @@
 using Abp.Runtime.Session;
 using Abp.UI;
+using Fintex.Investments.Events;
 using Fintex.Investments.PaperTrading.Dto;
 using System;
 using System.Threading.Tasks;
@@ -127,6 +128,21 @@ namespace Fintex.Investments.PaperTrading
             var openPositions = await _paperPositionRepository.GetOpenPositionsAsync(account.Id);
             await MarkAccountToMarketAsync(account, openPositions, occurredAt);
             await CurrentUnitOfWork.SaveChangesAsync();
+            await _eventBus.TriggerAsync(new TradeExecutedEventData
+            {
+                TenantId = AbpSession.TenantId,
+                TradeId = order.Id,
+                UserId = userId,
+                Symbol = input.Symbol,
+                Provider = input.Provider,
+                Direction = input.Direction,
+                Quantity = input.Quantity,
+                ExecutionPrice = fillPrice,
+                Source = "Paper academy",
+                Status = position.Status == PaperPositionStatus.Open ? TradeStatus.Open : TradeStatus.Closed,
+                RealizedProfitLoss = realizedProfitLoss,
+                OccurredAt = occurredAt
+            });
 
             return new PaperTradeExecutionResultDto
             {
@@ -153,6 +169,7 @@ namespace Fintex.Investments.PaperTrading
                 throw new UserFriendlyException("Only open positions can be closed.");
             }
 
+            var originalQuantity = position.Quantity;
             var quantity = input.Quantity ?? position.Quantity;
             if (quantity <= 0m || quantity > position.Quantity)
             {
@@ -204,6 +221,21 @@ namespace Fintex.Investments.PaperTrading
             var openPositions = await _paperPositionRepository.GetOpenPositionsAsync(account.Id);
             await MarkAccountToMarketAsync(account, openPositions, occurredAt);
             await CurrentUnitOfWork.SaveChangesAsync();
+            await _eventBus.TriggerAsync(new TradeExecutedEventData
+            {
+                TenantId = AbpSession.TenantId,
+                TradeId = order.Id,
+                UserId = userId,
+                Symbol = position.Symbol,
+                Provider = position.Provider,
+                Direction = closingDirection,
+                Quantity = quantity,
+                ExecutionPrice = fillPrice,
+                Source = "Paper academy",
+                Status = quantity >= originalQuantity ? TradeStatus.Closed : TradeStatus.Open,
+                RealizedProfitLoss = realizedProfitLoss,
+                OccurredAt = occurredAt
+            });
 
             return ObjectMapper.Map<PaperOrderDto>(order);
         }

@@ -21,8 +21,9 @@ interface IndicatorSeriesConfig {
   data: number[];
 }
 
-const SVG_WIDTH = 220;
-const SVG_HEIGHT = 56;
+const SVG_WIDTH = 320;
+const SVG_HEIGHT = 82;
+const SERIES_WINDOW = 60;
 
 const buildSparklinePath = (values: number[]) => {
   if (values.length === 0) {
@@ -48,9 +49,23 @@ const buildSparklinePath = (values: number[]) => {
 
 const getRecentSeries = (history: MarketDataPoint[], selector: (point: MarketDataPoint) => number | null) =>
   history
-    .slice(-24)
+    .slice(-SERIES_WINDOW)
     .map(selector)
     .filter((value): value is number => value != null && Number.isFinite(value));
+
+const getSeriesRange = (values: number[]) => {
+  if (values.length === 0) {
+    return null;
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const latest = values[values.length - 1];
+
+  return { min, max, latest };
+};
+
+const formatAxisValue = (value: number, decimals = 1) => value.toFixed(decimals);
 
 export function IndicatorMonitorCard({ history, latest, verdict }: IndicatorMonitorCardProps) {
   const { styles } = useStyles();
@@ -61,10 +76,10 @@ export function IndicatorMonitorCard({ history, latest, verdict }: IndicatorMoni
     const momentumSeries = getRecentSeries(history, (point) => point.momentum);
     const trendSeries = getRecentSeries(history, (point) => point.trendScore);
 
-    const currentRsi = verdict?.rsi ?? latest?.rsi ?? null;
-    const currentMacdHistogram = verdict?.macdHistogram ?? latest?.macdHistogram ?? null;
-    const currentMomentum = verdict?.momentum ?? latest?.momentum ?? null;
-    const currentTrend = verdict?.trendScore ?? latest?.trendScore ?? null;
+    const currentRsi = latest?.rsi ?? verdict?.rsi ?? null;
+    const currentMacdHistogram = latest?.macdHistogram ?? verdict?.macdHistogram ?? null;
+    const currentMomentum = latest?.momentum ?? verdict?.momentum ?? null;
+    const currentTrend = latest?.trendScore ?? verdict?.trendScore ?? null;
 
     return [
       {
@@ -109,7 +124,7 @@ export function IndicatorMonitorCard({ history, latest, verdict }: IndicatorMoni
           <div className={styles.indicatorMonitorTitle}>
             <Typography.Text type="secondary">Live indicator monitor</Typography.Text>
             <div className={styles.indicatorMonitorValue}>
-              {verdict?.verdict ?? latest?.verdict ?? "Hold"} bias
+              {latest?.verdict ?? verdict?.verdict ?? "Hold"} bias
             </div>
           </div>
           <div className={styles.indicatorMonitorMeta}>
@@ -124,39 +139,62 @@ export function IndicatorMonitorCard({ history, latest, verdict }: IndicatorMoni
           </Typography.Paragraph>
         ) : (
           <div className={styles.indicatorMonitorGrid}>
-            {series.map((item) => (
-              <div key={item.key} className={styles.indicatorMiniCard}>
-                <div className={styles.indicatorMiniHeader}>
-                  <div>
-                    <div className={styles.indicatorMiniLabel}>{item.label}</div>
-                    <div className={styles.indicatorMiniValue}>{item.value}</div>
+            {series.map((item) => {
+              const range = getSeriesRange(item.data);
+
+              return (
+                <div key={item.key} className={styles.indicatorMiniCard}>
+                  <div className={styles.indicatorMiniHeader}>
+                    <div>
+                      <div className={styles.indicatorMiniLabel}>{item.label}</div>
+                      <div className={styles.indicatorMiniValue}>{item.value}</div>
+                    </div>
                   </div>
+                  <div className={styles.indicatorChartRow}>
+                    <div className={styles.indicatorAxis}>
+                      <span className={styles.indicatorAxisLabel}>
+                        {range ? formatAxisValue(range.max, item.key === "trend" ? 0 : 1) : "-"}
+                      </span>
+                      <span className={styles.indicatorAxisLabel}>
+                        {range ? formatAxisValue(range.latest, item.key === "trend" ? 0 : 1) : "-"}
+                      </span>
+                      <span className={styles.indicatorAxisLabel}>
+                        {range ? formatAxisValue(range.min, item.key === "trend" ? 0 : 1) : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <svg
+                        className={styles.indicatorSparkline}
+                        viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+                        preserveAspectRatio="none"
+                        role="img"
+                        aria-label={`${item.label} sparkline`}
+                      >
+                        <defs>
+                          <linearGradient id={`spark-${item.key}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor={item.accent} stopOpacity="0.35" />
+                            <stop offset="100%" stopColor={item.accent} stopOpacity="1" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d={buildSparklinePath(item.data)}
+                          fill="none"
+                          stroke={`url(#spark-${item.key})`}
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className={styles.indicatorXAxis}>
+                        <span>{Math.max(item.data.length - 1, 0)} points ago</span>
+                        <span>Now</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.indicatorMiniNote}>{item.note}</div>
                 </div>
-                <svg
-                  className={styles.indicatorSparkline}
-                  viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-                  preserveAspectRatio="none"
-                  role="img"
-                  aria-label={`${item.label} sparkline`}
-                >
-                  <defs>
-                    <linearGradient id={`spark-${item.key}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor={item.accent} stopOpacity="0.35" />
-                      <stop offset="100%" stopColor={item.accent} stopOpacity="1" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d={buildSparklinePath(item.data)}
-                    fill="none"
-                    stroke={`url(#spark-${item.key})`}
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <div className={styles.indicatorMiniNote}>{item.note}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

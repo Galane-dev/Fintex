@@ -1,4 +1,6 @@
 using Abp.Application.Services.Dto;
+using Abp.Authorization;
+using Abp.Domain.Uow;
 using Fintex.Investments.MarketData.Dto;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -11,21 +13,27 @@ namespace Fintex.Investments.MarketData
     {
         public async Task<MarketDataPointDto> GetLatestAsync(GetMarketDataHistoryInput input)
         {
-            var entity = await _marketDataPointRepository.GetLatestAsync(input.Symbol, input.Provider);
-            return entity == null ? null : ObjectMapper.Map<MarketDataPointDto>(entity);
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
+            {
+                var entity = await _marketDataPointRepository.GetLatestAsync(input.Symbol, input.Provider);
+                return entity == null ? null : ObjectMapper.Map<MarketDataPointDto>(entity);
+            }
         }
 
         public async Task<ListResultDto<MarketDataPointDto>> GetHistoryAsync(GetMarketDataHistoryInput input)
         {
-            var normalized = input.Symbol.ToUpperInvariant();
-            var history = await _marketDataPointRepository.GetAll()
-                .Where(x => x.Symbol == normalized && x.Provider == input.Provider)
-                .OrderByDescending(x => x.Timestamp)
-                .Take(input.Take)
-                .ToListAsync();
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
+            {
+                var normalized = input.Symbol.ToUpperInvariant();
+                var history = await _marketDataPointRepository.GetAll()
+                    .Where(x => x.Symbol == normalized && x.Provider == input.Provider)
+                    .OrderByDescending(x => x.Timestamp)
+                    .Take(input.Take)
+                    .ToListAsync();
 
-            return new ListResultDto<MarketDataPointDto>(
-                ObjectMapper.Map<List<MarketDataPointDto>>(history));
+                return new ListResultDto<MarketDataPointDto>(
+                    ObjectMapper.Map<List<MarketDataPointDto>>(history));
+            }
         }
 
         public async Task<MarketIndicatorValueDto> GetIndicatorLatestAsync(GetMarketIndicatorInput input)
@@ -65,22 +73,26 @@ namespace Fintex.Investments.MarketData
         public Task<ListResultDto<MarketIndicatorValueDto>> GetRelativeStrengthIndexHistoryAsync(GetMarketDataHistoryInput input) =>
             GetIndicatorHistoryInternalAsync(input, MarketIndicatorType.Rsi);
 
+        [AbpAllowAnonymous]
         public async Task<ListResultDto<MarketTimeframeRsiDto>> GetRelativeStrengthIndexTimeframesAsync(GetMarketDataHistoryInput input)
         {
-            var items = new List<MarketTimeframeRsiDto>();
-
-            foreach (var timeframe in SupportedRsiTimeframes)
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
             {
-                var candleSeries = await GetClosingSeriesAsync(input.Symbol, input.Provider, timeframe, RsiWarmupCandles);
-                items.Add(new MarketTimeframeRsiDto
-                {
-                    Timeframe = timeframe.ToCode(),
-                    Value = _indicatorCalculator.CalculateRsi(candleSeries.Select(x => x.Close).ToList(), RsiPeriod),
-                    CandleTimestamp = candleSeries.LastOrDefault()?.OpenTime
-                });
-            }
+                var items = new List<MarketTimeframeRsiDto>();
 
-            return new ListResultDto<MarketTimeframeRsiDto>(items);
+                foreach (var timeframe in SupportedRsiTimeframes)
+                {
+                    var candleSeries = await GetClosingSeriesAsync(input.Symbol, input.Provider, timeframe, RsiWarmupCandles);
+                    items.Add(new MarketTimeframeRsiDto
+                    {
+                        Timeframe = timeframe.ToCode(),
+                        Value = _indicatorCalculator.CalculateRsi(candleSeries.Select(x => x.Close).ToList(), RsiPeriod),
+                        CandleTimestamp = candleSeries.LastOrDefault()?.OpenTime
+                    });
+                }
+
+                return new ListResultDto<MarketTimeframeRsiDto>(items);
+            }
         }
 
         public Task<MarketIndicatorValueDto> GetStandardDeviationLatestAsync(GetMarketDataHistoryInput input) =>
@@ -145,21 +157,27 @@ namespace Fintex.Investments.MarketData
 
         private async Task<MarketIndicatorValueDto> GetIndicatorLatestInternalAsync(GetMarketDataHistoryInput input, MarketIndicatorType indicator)
         {
-            var entity = await _marketDataPointRepository.GetLatestAsync(input.Symbol, input.Provider);
-            return entity == null ? null : MapIndicatorValue(entity, indicator);
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
+            {
+                var entity = await _marketDataPointRepository.GetLatestAsync(input.Symbol, input.Provider);
+                return entity == null ? null : MapIndicatorValue(entity, indicator);
+            }
         }
 
         private async Task<ListResultDto<MarketIndicatorValueDto>> GetIndicatorHistoryInternalAsync(GetMarketDataHistoryInput input, MarketIndicatorType indicator)
         {
-            var normalized = input.Symbol.ToUpperInvariant();
-            var history = await _marketDataPointRepository.GetAll()
-                .Where(x => x.Symbol == normalized && x.Provider == input.Provider)
-                .OrderByDescending(x => x.Timestamp)
-                .Take(input.Take)
-                .ToListAsync();
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
+            {
+                var normalized = input.Symbol.ToUpperInvariant();
+                var history = await _marketDataPointRepository.GetAll()
+                    .Where(x => x.Symbol == normalized && x.Provider == input.Provider)
+                    .OrderByDescending(x => x.Timestamp)
+                    .Take(input.Take)
+                    .ToListAsync();
 
-            return new ListResultDto<MarketIndicatorValueDto>(
-                history.Select(x => MapIndicatorValue(x, indicator)).ToList());
+                return new ListResultDto<MarketIndicatorValueDto>(
+                    history.Select(x => MapIndicatorValue(x, indicator)).ToList());
+            }
         }
     }
 }

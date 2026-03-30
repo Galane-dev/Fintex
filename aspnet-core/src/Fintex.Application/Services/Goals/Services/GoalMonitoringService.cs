@@ -30,6 +30,7 @@ namespace Fintex.Investments.Goals.Services
         private readonly IGoalProgressService _goalProgressService;
         private readonly IGoalPlannerService _goalPlannerService;
         private readonly IGoalExecutionService _goalExecutionService;
+        private readonly INotificationDispatchService _notificationDispatchService;
         private readonly IAbpSession _abpSession;
         private readonly IUnitOfWorkManager _unitOfWorkManager;
         private readonly ILogger<GoalMonitoringService> _logger;
@@ -46,6 +47,7 @@ namespace Fintex.Investments.Goals.Services
             IGoalProgressService goalProgressService,
             IGoalPlannerService goalPlannerService,
             IGoalExecutionService goalExecutionService,
+            INotificationDispatchService notificationDispatchService,
             IAbpSession abpSession,
             IUnitOfWorkManager unitOfWorkManager,
             ILogger<GoalMonitoringService> logger)
@@ -61,6 +63,7 @@ namespace Fintex.Investments.Goals.Services
             _goalProgressService = goalProgressService;
             _goalPlannerService = goalPlannerService;
             _goalExecutionService = goalExecutionService;
+            _notificationDispatchService = notificationDispatchService;
             _abpSession = abpSession;
             _unitOfWorkManager = unitOfWorkManager;
             _logger = logger;
@@ -230,7 +233,7 @@ namespace Fintex.Investments.Goals.Services
 
         private async Task PersistEventAsync(GoalTarget goal, string eventType, string status, string summary, decimal? equityAfter, long? tradeId, DateTime occurredAtUtc)
         {
-            await _goalEventRepository.InsertAsync(new GoalExecutionEvent(
+            var goalEvent = new GoalExecutionEvent(
                 goal.TenantId,
                 goal.UserId,
                 goal.Id,
@@ -239,7 +242,40 @@ namespace Fintex.Investments.Goals.Services
                 summary,
                 tradeId,
                 equityAfter,
-                occurredAtUtc));
+                occurredAtUtc);
+            await _goalEventRepository.InsertAsync(goalEvent);
+            await _notificationDispatchService.DispatchAsync(new NotificationDispatchRequest
+            {
+                TenantId = goal.TenantId,
+                UserId = goal.UserId,
+                Type = NotificationType.GoalAutomation,
+                Severity = ResolveGoalSeverity(status),
+                Title = $"Goal update: {goal.Name} ({status})",
+                Message = summary,
+                Symbol = goal.MarketSymbol,
+                Provider = MarketDataProvider.Binance,
+                ReferencePrice = equityAfter,
+                TargetPrice = goal.TargetEquity,
+                ConfidenceScore = null,
+                Verdict = null,
+                TriggerKey = $"goal:{goal.Id}:{eventType}:{occurredAtUtc:O}",
+                NotifyInApp = true,
+                NotifyEmail = true,
+                ContextJson = $"{{\"goalId\":{goal.Id},\"eventType\":\"{eventType}\",\"status\":\"{status}\",\"tradeId\":{tradeId?.ToString() ?? "null"}}}",
+                OccurredAt = occurredAtUtc
+            });
+        }
+
+        private static NotificationSeverity ResolveGoalSeverity(string status)
+        {
+            return status switch
+            {
+                "executed" => NotificationSeverity.Success,
+                "completed" => NotificationSeverity.Success,
+                "blocked" => NotificationSeverity.Warning,
+                "expired" => NotificationSeverity.Warning,
+                _ => NotificationSeverity.Info
+            };
         }
 
         private async Task<(bool HasAccount, decimal? CurrentEquity, bool HasOpenExposure)> ResolveContextAsync(GoalTarget goal)

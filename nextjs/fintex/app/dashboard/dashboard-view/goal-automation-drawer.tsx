@@ -1,6 +1,6 @@
 "use client";
 
-import { Drawer } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { GoalTarget } from "@/types/goal-automation";
 import { TargetsTab, type GoalExecutionTargetOption } from "./targets-tab";
 
@@ -46,11 +46,10 @@ export function GoalAutomationDrawer({
   onCreateGoal,
 }: GoalAutomationDrawerProps) {
   return (
-    <Drawer
+    <DashboardDrawerShell
       open={isOpen}
       onClose={onClose}
       title="Goal automation"
-      placement="right"
       width={560}
       destroyOnHidden={false}
     >
@@ -65,6 +64,6 @@ export function GoalAutomationDrawer({
         onCancelGoal={onCancelGoal}
         onCreateGoal={onCreateGoal}
       />
-    </Drawer>
+    </DashboardDrawerShell>
   );
 }

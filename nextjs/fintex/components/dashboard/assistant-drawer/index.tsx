@@ -1,7 +1,8 @@
 "use client";
 
 import { MessageOutlined, SendOutlined } from "@ant-design/icons";
-import { Alert, Button, Drawer, Input, Space, Tabs, Typography } from "antd";
+import { Alert, Button, Input, Space, Tabs, Typography } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { AssistantMessage } from "@/types/assistant";
 import { MessageList } from "./message-list";
 import { VoicePanel } from "./voice-panel";
@@ -42,11 +43,10 @@ export function AssistantDrawer({
   onToggleSpeakReplies,
 }: AssistantDrawerProps) {
   return (
-    <Drawer
+    <DashboardDrawerShell
       open={isOpen}
       onClose={onClose}
       width={420}
-      placement="right"
       title={<Space><MessageOutlined /><span>Fintex Copilot</span></Space>}
     >
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -106,6 +106,6 @@ export function AssistantDrawer({
           ]}
         />
       </Space>
-    </Drawer>
+    </DashboardDrawerShell>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Button, Empty, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Tabs, Tag, Typography } from "antd";
+import { Alert, Button, Empty, Form, Input, InputNumber, Select, Skeleton, Space, Tabs, Tag, Typography } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import { getExternalBrokerEnvironmentLabel, maskExternalBrokerKey } from "@/utils/external-broker";
 import { formatPrice, formatTime } from "@/utils/market-data";
 import type { PaperTradingPanelController } from "./types";
@@ -52,8 +53,8 @@ export const AccountsModal = ({ controller, currentPrice }: AccountsModalProps) 
     );
 
   return (
-    <Modal open={controller.isAccountsOpen} onCancel={controller.closeAccountsModal} title="Accounts" width={760} footer={null}>
+    <DashboardDrawerShell open={controller.isAccountsOpen} onClose={controller.closeAccountsModal} title="Accounts" width={780}>
       <Tabs className={styles.accountTabs} items={[{ key: "paper-academy", label: "Paper academy", children: renderPaperAccount() }, { key: "external-broker", label: "External broker", children: renderExternalBroker() }]} />
-    </Modal>
+    </DashboardDrawerShell>
   );
 };

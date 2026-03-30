@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Alert, Button, Form, Input, Modal, Segmented, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, Button, Form, Input, Segmented, Skeleton, Space, Tag, Typography } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { StrategyValidationResult, ValidateStrategyInput } from "@/types/strategy-validation";
 import { formatPrice, formatTime } from "@/utils/market-data";
 
@@ -44,7 +45,7 @@ export function StrategyValidationModal({
   }, [form, isOpen]);
 
   return (
-    <Modal open={isOpen} onCancel={onClose} footer={null} title="Validate strategy" width={860}>
+    <DashboardDrawerShell open={isOpen} onClose={onClose} title="Validate strategy" width={860}>
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         {error ? <Alert type="warning" showIcon message={error} /> : null}
 
@@ -107,7 +108,7 @@ export function StrategyValidationModal({
           </div>
         ) : null}
       </Space>
-    </Modal>
+    </DashboardDrawerShell>
   );
 }
 

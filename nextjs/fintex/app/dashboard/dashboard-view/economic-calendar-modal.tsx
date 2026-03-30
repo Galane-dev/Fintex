@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, List, Modal, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, List, Skeleton, Space, Tag, Typography } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { EconomicCalendarInsight } from "@/types/economic-calendar";
 import { formatTime } from "@/utils/market-data";
 
@@ -77,14 +78,13 @@ export function EconomicCalendarModal({
   );
 
   return (
-    <Modal
+    <DashboardDrawerShell
       open={isOpen}
-      onCancel={onClose}
-      footer={null}
+      onClose={onClose}
       title="Economic calendar"
       width={720}
     >
       {content}
-    </Modal>
+    </DashboardDrawerShell>
   );
 }

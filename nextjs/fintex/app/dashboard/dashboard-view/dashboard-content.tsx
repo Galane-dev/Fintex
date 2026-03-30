@@ -47,6 +47,7 @@ import { StrategyValidationModal } from "./strategy-validation-modal";
 import { GoalAutomationDrawer } from "./goal-automation-drawer";
 import type { GoalExecutionTargetOption } from "./targets-tab";
 import { TradeTab } from "./trade-tab";
+import { useDecisionSupport } from "./use-decision-support";
 import { useStyles } from "../style";
 
 const defaultDashboardActions: DashboardPaperTradingActions = {
@@ -131,13 +132,27 @@ export function DashboardContent() {
   const { closePosition, isSubmitting: isPaperSubmitting, snapshot } = usePaperTrading();
   const externalBrokers = useExternalBrokerAccounts();
   const { trades: liveTrades, refreshTrades } = useLiveTrading();
-  const { connectionStatus, error, history, latest, refreshSnapshot, timeframeRsi, verdict } = useMarketData();
+  const {
+    connectionStatus,
+    history,
+    latest,
+    refreshSnapshot,
+    selection,
+    verdict: streamedVerdict,
+    timeframeRsi: streamedTimeframeRsi,
+  } = useMarketData();
   const behaviorAnalysis = useDashboardBehaviorAnalysis();
   const economicCalendar = useDashboardEconomicCalendar();
   const strategyValidation = useDashboardStrategyValidation();
   const notifications = useNotifications();
   const tradeAutomation = useTradeAutomation();
   const goalAutomation = useGoalAutomation();
+  const decisionSupportSnapshot = useDecisionSupport({
+    selection,
+    streamedVerdict,
+    streamedTimeframeRsi,
+    connectionStatus,
+  });
   const assistant = useDashboardAssistant({
     onActionRefresh: async () => {
       await Promise.all([
@@ -153,17 +168,20 @@ export function DashboardContent() {
   const [isGoalAutomationOpen, setIsGoalAutomationOpen] = useState(false);
   const [isManualSnapshotRefreshing, setIsManualSnapshotRefreshing] = useState(false);
 
+  const resolvedVerdict = decisionSupportSnapshot.verdict;
+  const resolvedTimeframeRsi = decisionSupportSnapshot.timeframeRsi;
+
   const timeframeRsiMap = useMemo(
-    () => timeframeRsi.reduce<Record<string, number | null>>((accumulator, item) => {
+    () => resolvedTimeframeRsi.reduce<Record<string, number | null>>((accumulator, item) => {
       accumulator[item.timeframe] = item.value;
       return accumulator;
     }, {}),
-    [timeframeRsi],
+    [resolvedTimeframeRsi],
   );
 
-  const oneMinuteRsi = timeframeRsiMap["1m"] ?? latest?.rsi ?? null;
-  const nextOneMinuteProjection = verdict?.nextOneMinuteProjection ?? null;
-  const nextFiveMinuteProjection = verdict?.nextFiveMinuteProjection ?? null;
+  const oneMinuteRsi = timeframeRsiMap["1m"] ?? resolvedVerdict?.rsi ?? null;
+  const nextOneMinuteProjection = resolvedVerdict?.nextOneMinuteProjection ?? null;
+  const nextFiveMinuteProjection = resolvedVerdict?.nextFiveMinuteProjection ?? null;
   const openPositions = useMemo(() => snapshot?.positions ?? [], [snapshot?.positions]);
   const closedFills = useMemo(() => snapshot?.recentFills ?? [], [snapshot?.recentFills]);
   const openLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status === "Open"), [liveTrades]);
@@ -196,19 +214,19 @@ export function DashboardContent() {
 
   const calculations = useMemo(
     () => [
-      { name: "Simple moving average", note: "20-period trend anchor", value: formatPrice(verdict?.sma ?? latest?.sma ?? null), tone: ((verdict?.sma ?? latest?.sma ?? null) != null && latest?.price != null && latest.price >= (verdict?.sma ?? latest?.sma ?? 0) ? "positive" : "neutral") as CalculationTone },
-      { name: "Exponential moving average", note: "9-period fast response", value: formatPrice(verdict?.ema ?? latest?.ema ?? null), tone: ((verdict?.ema ?? latest?.ema ?? null) != null && latest?.price != null && latest.price >= (verdict?.ema ?? latest?.ema ?? 0) ? "positive" : "neutral") as CalculationTone },
+      { name: "Simple moving average", note: "20-period trend anchor", value: formatPrice(resolvedVerdict?.sma ?? null), tone: (resolvedVerdict?.sma != null && resolvedVerdict?.price != null && resolvedVerdict.price >= resolvedVerdict.sma ? "positive" : "neutral") as CalculationTone },
+      { name: "Exponential moving average", note: "9-period fast response", value: formatPrice(resolvedVerdict?.ema ?? null), tone: (resolvedVerdict?.ema != null && resolvedVerdict?.price != null && resolvedVerdict.price >= resolvedVerdict.ema ? "positive" : "neutral") as CalculationTone },
       { name: "Relative strength index", note: "14-period Wilder RSI", value: oneMinuteRsi != null ? oneMinuteRsi.toFixed(1) : "-", tone: (oneMinuteRsi == null ? "neutral" : oneMinuteRsi >= 65 ? "positive" : oneMinuteRsi <= 35 ? "negative" : "neutral") as CalculationTone },
-      { name: "MACD signal", note: "9-period signal line", value: formatSigned(verdict?.macdSignal ?? latest?.macdSignal ?? null), tone: ((verdict?.macd ?? latest?.macd ?? null) != null && (verdict?.macdSignal ?? latest?.macdSignal ?? null) != null && (verdict?.macd ?? latest?.macd ?? 0) >= (verdict?.macdSignal ?? latest?.macdSignal ?? 0) ? "positive" : "negative") as CalculationTone },
-      { name: "MACD histogram", note: "Bullish versus bearish expansion", value: formatSigned(verdict?.macdHistogram ?? latest?.macdHistogram ?? null), tone: ((verdict?.macdHistogram ?? latest?.macdHistogram ?? null) == null ? "neutral" : (verdict?.macdHistogram ?? latest?.macdHistogram ?? 0) >= 0 ? "positive" : "negative") as CalculationTone },
-      { name: "ATR volatility", note: "14-period normalized ATR", value: verdict?.atrPercent != null ? formatPercent(verdict.atrPercent, 2) : "-", tone: (verdict?.atrPercent == null ? "neutral" : verdict.atrPercent >= 0.65 ? "negative" : "positive") as CalculationTone },
-      { name: "Momentum", note: "14-period acceleration", value: formatSignedPoints(verdict?.momentum ?? latest?.momentum ?? null), tone: ((verdict?.momentum ?? latest?.momentum ?? null) == null ? "neutral" : (verdict?.momentum ?? latest?.momentum ?? 0) >= 0 ? "positive" : "negative") as CalculationTone },
-      { name: "ADX trend strength", note: "14-period directional strength", value: verdict?.adx != null ? verdict.adx.toFixed(1) : "-", tone: (verdict?.adx == null ? "neutral" : verdict.adx >= 25 ? "positive" : verdict.adx < 15 ? "negative" : "neutral") as CalculationTone },
+      { name: "MACD signal", note: "9-period signal line", value: formatSigned(resolvedVerdict?.macdSignal ?? null), tone: (resolvedVerdict?.macd != null && resolvedVerdict?.macdSignal != null && resolvedVerdict.macd >= resolvedVerdict.macdSignal ? "positive" : resolvedVerdict?.macd != null && resolvedVerdict?.macdSignal != null ? "negative" : "neutral") as CalculationTone },
+      { name: "MACD histogram", note: "Bullish versus bearish expansion", value: formatSigned(resolvedVerdict?.macdHistogram ?? null), tone: (resolvedVerdict?.macdHistogram == null ? "neutral" : resolvedVerdict.macdHistogram >= 0 ? "positive" : "negative") as CalculationTone },
+      { name: "ATR volatility", note: "14-period normalized ATR", value: resolvedVerdict?.atrPercent != null ? formatPercent(resolvedVerdict.atrPercent, 2) : "-", tone: (resolvedVerdict?.atrPercent == null ? "neutral" : resolvedVerdict.atrPercent >= 0.65 ? "negative" : "positive") as CalculationTone },
+      { name: "Momentum", note: "14-period acceleration", value: formatSignedPoints(resolvedVerdict?.momentum ?? null), tone: (resolvedVerdict?.momentum == null ? "neutral" : resolvedVerdict.momentum >= 0 ? "positive" : "negative") as CalculationTone },
+      { name: "ADX trend strength", note: "14-period directional strength", value: resolvedVerdict?.adx != null ? resolvedVerdict.adx.toFixed(1) : "-", tone: (resolvedVerdict?.adx == null ? "neutral" : resolvedVerdict.adx >= 25 ? "positive" : resolvedVerdict.adx < 15 ? "negative" : "neutral") as CalculationTone },
     ],
-    [latest, oneMinuteRsi, verdict],
+    [oneMinuteRsi, resolvedVerdict],
   );
 
-  const marketSignals = useMemo(() => buildMarketInsights(latest, verdict), [latest, verdict]);
+  const marketSignals = useMemo(() => buildMarketInsights(resolvedVerdict), [resolvedVerdict]);
   const handleRegisterDashboardActions = useCallback((actions: DashboardPaperTradingActions) => setDashboardActions(actions), []);
   const handleManualSnapshotRefresh = useCallback(async () => {
     setIsManualSnapshotRefreshing(true);
@@ -310,18 +328,18 @@ export function DashboardContent() {
             <DashboardSideSection title="Decision support">
               <Card className={styles.panelCard}>
                 <AnalysisTab
-                  connectionStatus={connectionStatus}
-                  error={error}
-                  latestVerdict={verdict?.verdict ?? latest?.verdict ?? "Hold"}
-                  confidenceScore={verdict?.confidenceScore ?? latest?.confidenceScore ?? null}
+                  connectionStatus={decisionSupportSnapshot.connectionStatus}
+                  error={decisionSupportSnapshot.error}
+                  latestVerdict={resolvedVerdict?.verdict ?? "Waiting"}
+                  confidenceScore={resolvedVerdict?.confidenceScore ?? null}
                   oneMinuteRsi={oneMinuteRsi}
-                  macd={verdict?.macd ?? latest?.macd ?? null}
-                  macdSignal={verdict?.macdSignal ?? latest?.macdSignal ?? null}
-                  momentum={verdict?.momentum ?? latest?.momentum ?? null}
-                  trendScore={verdict?.trendScore ?? latest?.trendScore ?? null}
-                  adx={verdict?.adx ?? null}
+                  macd={resolvedVerdict?.macd ?? null}
+                  macdSignal={resolvedVerdict?.macdSignal ?? null}
+                  momentum={resolvedVerdict?.momentum ?? null}
+                  trendScore={resolvedVerdict?.trendScore ?? null}
+                  adx={resolvedVerdict?.adx ?? null}
                   timeframeRsiMap={timeframeRsiMap}
-                  verdict={verdict}
+                  verdict={resolvedVerdict}
                   calculations={calculations}
                   marketSignals={marketSignals}
                   nextOneMinuteProjection={nextOneMinuteProjection}
@@ -361,7 +379,7 @@ export function DashboardContent() {
               </Card>
             </DashboardSideSection>
 
-            <IndicatorMonitorCard history={history} latest={latest} verdict={verdict} />
+            <IndicatorMonitorCard history={history} latest={latest} verdict={resolvedVerdict} />
           </div>
         </div>
       </div>

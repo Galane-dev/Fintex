@@ -3,6 +3,7 @@ using Abp.Domain.Uow;
 using Abp.Events.Bus;
 using Fintex.Investments.Analytics;
 using Fintex.Investments.Events;
+using Fintex.Investments.MarketData.Dto;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -19,6 +20,7 @@ namespace Fintex.Investments.MarketData
         private readonly IMarketDataTimeframeCandleRepository _marketDataTimeframeCandleRepository;
         private readonly ITradeRepository _tradeRepository;
         private readonly IIndicatorCalculator _indicatorCalculator;
+        private readonly IMarketDataAppService _marketDataAppService;
         private readonly TradeAnalysisService _tradeAnalysisService;
         private readonly IEventBus _eventBus;
         private readonly IUnitOfWorkManager _unitOfWorkManager;
@@ -28,6 +30,7 @@ namespace Fintex.Investments.MarketData
             IMarketDataTimeframeCandleRepository marketDataTimeframeCandleRepository,
             ITradeRepository tradeRepository,
             IIndicatorCalculator indicatorCalculator,
+            IMarketDataAppService marketDataAppService,
             TradeAnalysisService tradeAnalysisService,
             IEventBus eventBus,
             IUnitOfWorkManager unitOfWorkManager)
@@ -36,6 +39,7 @@ namespace Fintex.Investments.MarketData
             _marketDataTimeframeCandleRepository = marketDataTimeframeCandleRepository;
             _tradeRepository = tradeRepository;
             _indicatorCalculator = indicatorCalculator;
+            _marketDataAppService = marketDataAppService;
             _tradeAnalysisService = tradeAnalysisService;
             _eventBus = eventBus;
             _unitOfWorkManager = unitOfWorkManager;
@@ -96,6 +100,37 @@ namespace Fintex.Investments.MarketData
                 await _marketDataPointRepository.InsertAsync(point);
                 await _unitOfWorkManager.Current.SaveChangesAsync();
 
+                var realtimeInput = new GetMarketDataHistoryInput
+                {
+                    Symbol = point.Symbol,
+                    Provider = point.Provider,
+                    Take = 80
+                };
+
+                var realtimeVerdict = await _marketDataAppService.GetRealtimeVerdictAsync(realtimeInput);
+                var timeframeRsi = await _marketDataAppService.GetRelativeStrengthIndexTimeframesAsync(realtimeInput);
+
+                if (realtimeVerdict != null)
+                {
+                    point.ApplyIndicators(
+                        indicators.Sma,
+                        indicators.Ema,
+                        indicators.Rsi,
+                        indicators.StdDev,
+                        indicators.Macd,
+                        indicators.MacdSignal,
+                        indicators.MacdHistogram,
+                        indicators.Momentum,
+                        indicators.RateOfChange,
+                        indicators.BollingerUpper,
+                        indicators.BollingerLower,
+                        realtimeVerdict.TrendScore,
+                        realtimeVerdict.ConfidenceScore,
+                        realtimeVerdict.Verdict);
+
+                    await _unitOfWorkManager.Current.SaveChangesAsync();
+                }
+
                 var openTrades = await _tradeRepository.GetOpenTradesBySymbolAsync(point.Symbol);
                 foreach (var trade in openTrades)
                 {
@@ -128,7 +163,9 @@ namespace Fintex.Investments.MarketData
                     TrendScore = point.TrendScore,
                     ConfidenceScore = point.ConfidenceScore,
                     Verdict = point.Verdict,
-                    Timestamp = point.Timestamp
+                    Timestamp = point.Timestamp,
+                    RealtimeVerdict = realtimeVerdict,
+                    TimeframeRsi = timeframeRsi.Items
                 });
 
                 await uow.CompleteAsync();

@@ -16,6 +16,16 @@ namespace Fintex.Investments.Events
 
         public string Symbol { get; set; }
 
+        public MarketDataProvider Provider { get; set; }
+
+        public TradeDirection Direction { get; set; }
+
+        public decimal? Quantity { get; set; }
+
+        public decimal? ExecutionPrice { get; set; }
+
+        public string Source { get; set; }
+
         public TradeStatus Status { get; set; }
 
         public decimal? RealizedProfitLoss { get; set; }

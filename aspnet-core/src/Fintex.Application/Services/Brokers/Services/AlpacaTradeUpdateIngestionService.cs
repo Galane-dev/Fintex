@@ -116,6 +116,11 @@ namespace Fintex.Investments.Brokers
                         TradeId = trade.Id,
                         UserId = trade.UserId,
                         Symbol = trade.Symbol,
+                        Provider = trade.Provider,
+                        Direction = trade.Direction,
+                        Quantity = trade.Quantity,
+                        ExecutionPrice = trade.ExitPrice ?? trade.LastMarketPrice,
+                        Source = "Alpaca broker",
                         Status = trade.Status,
                         RealizedProfitLoss = trade.RealizedProfitLoss,
                         OccurredAt = message.OccurredAt ?? DateTime.UtcNow
@@ -163,6 +168,11 @@ namespace Fintex.Investments.Brokers
                         TradeId = trade.Id,
                         UserId = trade.UserId,
                         Symbol = trade.Symbol,
+                        Provider = trade.Provider,
+                        Direction = trade.Direction,
+                        Quantity = trade.Quantity,
+                        ExecutionPrice = trade.ExitPrice ?? exitPrice,
+                        Source = "Alpaca broker",
                         Status = trade.Status,
                         RealizedProfitLoss = trade.RealizedProfitLoss,
                         OccurredAt = trade.ClosedAt ?? DateTime.UtcNow

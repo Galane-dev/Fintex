@@ -1,31 +1,26 @@
-import type {
-  MarketDataPoint,
-  MarketInsight,
-  MarketVerdictSnapshot,
-} from "@/types/market-data";
+import type { MarketInsight, MarketVerdictSnapshot } from "@/types/market-data";
 import { formatSignedPoints } from "./formatters";
 
 export const buildMarketInsights = (
-  latest: MarketDataPoint | null,
   verdict: MarketVerdictSnapshot | null,
 ): MarketInsight[] => {
-  if (!latest) {
+  if (!verdict) {
     return [
       {
         title: "Snapshot pending",
         tag: "Waiting",
         tone: "blue",
-        copy: "We are waiting for the first live market snapshot before calculating structure, momentum, and conviction.",
+        copy: "Fintex is waiting for the first enriched verdict snapshot before it scores structure, confidence, and forward estimates.",
       },
     ];
   }
 
-  const effectiveVerdict = verdict?.verdict ?? latest.verdict;
-  const effectiveRsi = verdict?.rsi ?? latest.rsi;
-  const effectiveMomentum = verdict?.momentum ?? latest.momentum;
-  const effectiveMacd = verdict?.macd ?? latest.macd;
-  const effectiveMacdSignal = verdict?.macdSignal ?? latest.macdSignal;
-  const effectiveAtrPercent = verdict?.atrPercent;
+  const effectiveVerdict = verdict.verdict;
+  const effectiveRsi = verdict.rsi;
+  const effectiveMomentum = verdict.momentum;
+  const effectiveMacd = verdict.macd;
+  const effectiveMacdSignal = verdict.macdSignal;
+  const effectiveAtrPercent = verdict.atrPercent;
   const isBullish = effectiveVerdict === "Buy";
 
   const rsiState =
@@ -67,12 +62,12 @@ export const buildMarketInsights = (
     {
       title: "Confidence context",
       tag:
-        verdict?.confidenceScore != null
+        verdict.confidenceScore != null
           ? `${Math.round(verdict.confidenceScore)} / 100`
           : "Pending",
       tone: "blue",
       copy:
-        verdict?.trendScore != null
+        verdict.trendScore != null
           ? `Trend score sits at ${Math.round(verdict.trendScore)}, which helps summarize the current market-only posture without leaning on user behavior or external signals.`
           : "Trend and confidence are loading from the latest backend snapshot.",
     },

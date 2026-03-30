@@ -4,6 +4,55 @@ import { createInitialMarketDataState, type MarketDataReducerAction } from "./ac
 
 export const initialMarketDataState: MarketDataState = createInitialMarketDataState();
 
+const getIsoTime = (value: string | null | undefined) => {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const getVerdictVersion = (verdict: MarketDataState["verdict"]) =>
+  verdict == null
+    ? 0
+    : Math.max(getIsoTime(verdict.evaluatedAtUtc), getIsoTime(verdict.timestamp));
+
+const pickNewerVerdict = (
+  current: MarketDataState["verdict"],
+  incoming: MarketDataState["verdict"],
+) => {
+  if (incoming == null) {
+    return current;
+  }
+
+  if (current == null) {
+    return incoming;
+  }
+
+  return getVerdictVersion(incoming) >= getVerdictVersion(current) ? incoming : current;
+};
+
+const getLatestTimeframeRsiVersion = (items: MarketDataState["timeframeRsi"]) =>
+  items.reduce((latest, item) => Math.max(latest, getIsoTime(item.candleTimestamp)), 0);
+
+const pickNewerTimeframeRsi = (
+  current: MarketDataState["timeframeRsi"],
+  incoming: MarketDataState["timeframeRsi"],
+) => {
+  if (incoming.length === 0) {
+    return current;
+  }
+
+  if (current.length === 0) {
+    return incoming;
+  }
+
+  return getLatestTimeframeRsiVersion(incoming) >= getLatestTimeframeRsiVersion(current)
+    ? incoming
+    : current;
+};
+
 export const marketDataReducer = (
   state: MarketDataState,
   action: MarketDataReducerAction,
@@ -29,6 +78,8 @@ export const marketDataReducer = (
       };
     case "LOAD_SUCCESS": {
       const latest = action.payload.history.at(-1) ?? null;
+      const verdict = pickNewerVerdict(state.verdict, action.payload.verdict);
+      const timeframeRsi = pickNewerTimeframeRsi(state.timeframeRsi, action.payload.timeframeRsi);
 
       return {
         ...state,
@@ -36,8 +87,8 @@ export const marketDataReducer = (
         error: null,
         history: action.payload.history,
         latest,
-        verdict: action.payload.verdict,
-        timeframeRsi: action.payload.timeframeRsi,
+        verdict,
+        timeframeRsi,
         lastHydratedAt: new Date().toISOString(),
       };
     }
@@ -51,16 +102,16 @@ export const marketDataReducer = (
       return {
         ...state,
         error: null,
-        verdict: action.payload.verdict,
-        timeframeRsi: action.payload.timeframeRsi,
+        verdict: pickNewerVerdict(state.verdict, action.payload.verdict),
+        timeframeRsi: pickNewerTimeframeRsi(state.timeframeRsi, action.payload.timeframeRsi),
         lastHydratedAt: new Date().toISOString(),
       };
     case "LIVE_VERDICT_UPDATED":
       return {
         ...state,
         error: null,
-        verdict: action.payload.verdict,
-        timeframeRsi: action.payload.timeframeRsi,
+        verdict: pickNewerVerdict(state.verdict, action.payload.verdict),
+        timeframeRsi: pickNewerTimeframeRsi(state.timeframeRsi, action.payload.timeframeRsi),
         lastHydratedAt: new Date().toISOString(),
       };
     case "CONNECTION_STATUS_CHANGED":
@@ -70,52 +121,10 @@ export const marketDataReducer = (
       };
     case "MARKET_DATA_UPDATED": {
       const history = upsertHistoryPoint(state.history, action.payload);
-
       return {
         ...state,
         history,
         latest: action.payload,
-        verdict: state.verdict
-          ? {
-              ...state.verdict,
-              marketDataPointId: action.payload.id,
-              price: action.payload.price,
-              trendScore: action.payload.trendScore,
-              confidenceScore: action.payload.confidenceScore,
-              verdict: action.payload.verdict,
-              timestamp: action.payload.timestamp,
-            }
-          : {
-              marketDataPointId: action.payload.id,
-              symbol: action.payload.symbol,
-              provider: action.payload.provider,
-              price: action.payload.price,
-              sma: action.payload.sma,
-              ema: action.payload.ema,
-              verdictState: "fallback",
-              verdictStateReason: "Waiting for the first enriched verdict update from the backend.",
-              rsi: action.payload.rsi,
-              macd: action.payload.macd,
-              macdSignal: action.payload.macdSignal,
-              macdHistogram: action.payload.macdHistogram,
-              momentum: action.payload.momentum,
-              rateOfChange: action.payload.rateOfChange,
-              evaluatedAtUtc: action.payload.timestamp,
-              atr: null,
-              atrPercent: null,
-              adx: null,
-              structureScore: 0,
-              structureLabel: "Waiting",
-              timeframeAlignmentScore: 0,
-              nextOneMinuteProjection: null,
-              nextFiveMinuteProjection: null,
-              trendScore: action.payload.trendScore,
-              confidenceScore: action.payload.confidenceScore,
-              verdict: action.payload.verdict,
-              timestamp: action.payload.timestamp,
-              indicatorScores: [],
-              timeframeSignals: [],
-            },
       };
     }
     default:

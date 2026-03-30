@@ -95,6 +95,11 @@ namespace Fintex.Investments.Trading
                 TradeId = trade.Id,
                 UserId = trade.UserId,
                 Symbol = trade.Symbol,
+                Provider = trade.Provider,
+                Direction = trade.Direction,
+                Quantity = trade.Quantity,
+                ExecutionPrice = trade.EntryPrice,
+                Source = "Manual trade",
                 Status = trade.Status,
                 RealizedProfitLoss = trade.RealizedProfitLoss,
                 OccurredAt = trade.ExecutedAt
@@ -122,6 +127,11 @@ namespace Fintex.Investments.Trading
                 TradeId = trade.Id,
                 UserId = trade.UserId,
                 Symbol = trade.Symbol,
+                Provider = trade.Provider,
+                Direction = trade.Direction,
+                Quantity = trade.Quantity,
+                ExecutionPrice = trade.ExitPrice,
+                Source = "Manual trade",
                 Status = trade.Status,
                 RealizedProfitLoss = trade.RealizedProfitLoss,
                 OccurredAt = trade.ClosedAt ?? DateTime.UtcNow

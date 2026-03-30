@@ -160,7 +160,9 @@ export function AnalysisTab({
           <div className={styles.verdictRow}>
             <div className={styles.verdictLabel}>
               <Typography.Text type="secondary">Realtime stance</Typography.Text>
-              <div className={styles.verdictValue}>{latestVerdict} bias</div>
+              <div className={styles.verdictValue}>
+                {verdict ? `${latestVerdict} bias` : latestVerdict}
+              </div>
             </div>
             <Space wrap>
               <Tag color={getConnectionTone(connectionStatus)}>{connectionStatus}</Tag>

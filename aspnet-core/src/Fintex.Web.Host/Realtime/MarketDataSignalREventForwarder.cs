@@ -75,7 +75,6 @@ namespace Fintex.Web.Host.Realtime
                 eventData.Timestamp
             };
 
-            await _hubContext.Clients.All.SendAsync("marketDataUpdated", payload);
             await _hubContext.Clients.Group(MarketDataHub.BuildSymbolGroup(eventData.Symbol)).SendAsync("marketDataUpdated", payload);
 
             var notificationSnapshot = new NotificationMarketSnapshot
@@ -95,22 +94,28 @@ namespace Fintex.Web.Host.Realtime
 
             try
             {
-                var input = new GetMarketDataHistoryInput
-                {
-                    Symbol = eventData.Symbol,
-                    Provider = eventData.Provider,
-                    Take = 80
-                };
+                var verdict = eventData.RealtimeVerdict as MarketVerdictDto;
+                var timeframeRsiItems = eventData.TimeframeRsi as System.Collections.Generic.IEnumerable<MarketTimeframeRsiDto>;
 
-                var verdict = await _marketDataAppService.GetRealtimeVerdictAsync(input);
-                var timeframeRsi = await _marketDataAppService.GetRelativeStrengthIndexTimeframesAsync(input);
+                if (verdict == null || timeframeRsiItems == null)
+                {
+                    var input = new GetMarketDataHistoryInput
+                    {
+                        Symbol = eventData.Symbol,
+                        Provider = eventData.Provider,
+                        Take = 80
+                    };
+
+                    verdict = await _marketDataAppService.GetRealtimeVerdictAsync(input);
+                    timeframeRsiItems = (await _marketDataAppService.GetRelativeStrengthIndexTimeframesAsync(input)).Items;
+                }
+
                 var verdictPayload = new
                 {
                     Verdict = verdict,
-                    TimeframeRsi = timeframeRsi.Items
+                    TimeframeRsi = timeframeRsiItems
                 };
 
-                await _hubContext.Clients.All.SendAsync("marketVerdictUpdated", verdictPayload);
                 await _hubContext.Clients.Group(MarketDataHub.BuildSymbolGroup(eventData.Symbol)).SendAsync("marketVerdictUpdated", verdictPayload);
 
                 notificationSnapshot.Verdict = verdict.Verdict;

@@ -1,7 +1,8 @@
 "use client";
 
 import { BellOutlined } from "@ant-design/icons";
-import { Alert, Badge, Modal, Space, Tabs } from "antd";
+import { Alert, Badge, Space, Tabs } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { NotificationAlertRule, NotificationItem } from "@/types/notifications";
 import type { TradeAutomationRule } from "@/types/trade-automation";
 import { NotificationsAlertsTab } from "./notifications-alerts-tab";
@@ -72,10 +73,9 @@ export function NotificationsModal({
   onDeleteAutomationRule,
 }: NotificationsModalProps) {
   return (
-    <Modal
+    <DashboardDrawerShell
       open={isOpen}
-      onCancel={onClose}
-      footer={null}
+      onClose={onClose}
       width={760}
       title={<Space><BellOutlined /><span>Notifications</span><Badge count={unreadCount} /></Space>}
     >
@@ -100,6 +100,6 @@ export function NotificationsModal({
           },
         ]}
       />
-    </Modal>
+    </DashboardDrawerShell>
   );
 }

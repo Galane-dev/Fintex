@@ -1,3 +1,5 @@
+using Abp.Authorization;
+using Abp.Domain.Uow;
 using Fintex.Investments.MarketData.Dto;
 using Microsoft.Extensions.Logging;
 using System;
@@ -11,102 +13,108 @@ namespace Fintex.Investments.MarketData
     {
         private static readonly TimeSpan StaleVerdictAge = TimeSpan.FromMinutes(3);
 
+        [AbpAllowAnonymous]
         public Task<MarketVerdictDto> GetRealtimeEstimateAsync(GetMarketDataHistoryInput input) =>
             GetRealtimeVerdictAsync(input);
 
+        [AbpAllowAnonymous]
         public async Task<MarketVerdictDto> GetRealtimeVerdictAsync(GetMarketDataHistoryInput input)
         {
-            var latest = await _marketDataPointRepository.GetLatestAsync(input.Symbol, input.Provider);
-            if (latest == null)
+            using (CurrentUnitOfWork.DisableFilter(AbpDataFilters.MayHaveTenant))
             {
-                return null;
+                var latest = await _marketDataPointRepository.GetLatestAsync(input.Symbol, input.Provider);
+                if (latest == null)
+                {
+                    return null;
+                }
+
+                var cacheKey = BuildVerdictCacheKey(input.Symbol, input.Provider, latest.Id);
+                var cachedVerdict = TryGetCachedVerdict(cacheKey);
+                if (cachedVerdict != null)
+                {
+                    return cachedVerdict;
+                }
+
+                // These bar fetches share the same ABP request-scoped DbContext underneath.
+                // Running them in parallel causes EF Core to throw "A second operation was started..."
+                // and that keeps the dashboard stuck in fallback mode.
+                var oneMinuteBars = await GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.OneMinute, VerdictBarTake);
+                var fiveMinuteBars = await GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.FiveMinutes, VerdictBarTake);
+                var fifteenMinuteBars = await GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.FifteenMinutes, VerdictBarTake);
+                var oneHourBars = await GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.OneHour, VerdictBarTake);
+
+                if (oneMinuteBars.Count == 0)
+                {
+                    var fallbackVerdict = BuildFallbackVerdict(latest, MarketVerdictState.WarmingUp, "Waiting for the first reliable 1m candle sequence.");
+                    CacheVerdict(cacheKey, fallbackVerdict);
+                    return fallbackVerdict;
+                }
+
+                var primaryCloses = oneMinuteBars.Select(item => item.Close).ToList();
+                var primarySnapshot = _indicatorCalculator.Calculate(primaryCloses);
+                var atr = _indicatorCalculator.CalculateAtr(oneMinuteBars);
+                var adx = _indicatorCalculator.CalculateAdx(oneMinuteBars);
+                var atrPercent = atr.HasValue && latest.Price > 0m
+                    ? decimal.Round((atr.Value / latest.Price) * 100m, 4, MidpointRounding.AwayFromZero)
+                    : (decimal?)null;
+                var structureScore = CalculateMarketStructureScore(oneMinuteBars);
+
+                var timeframeSignals = BuildTimeframeSignals(oneMinuteBars, fiveMinuteBars, fifteenMinuteBars, oneHourBars);
+                var timeframeAlignmentScore = CalculateTimeframeAlignmentScore(timeframeSignals);
+                var enhancedTrend = BuildEnhancedTrend(primarySnapshot, structureScore, timeframeAlignmentScore);
+                var confidenceScore = BuildConfidenceScore(primarySnapshot, timeframeSignals, enhancedTrend, adx, atrPercent);
+                var verdict = _marketVerdictPolicy.ResolveVerdict(enhancedTrend, confidenceScore);
+
+                var nextOneMinuteProjection = _marketProjectionBuilder.Build(primaryCloses, latest.Price, latest.Timestamp, 1, "1m-moving-average-drift", ProjectionSmaPeriod, ProjectionEmaPeriod, ProjectionSmmaPeriod, atrPercent);
+                var nextFiveMinuteProjection = _marketProjectionBuilder.Build(fiveMinuteBars.Select(item => item.Close).ToList(), latest.Price, latest.Timestamp, 5, "5m-moving-average-drift", ProjectionSmaPeriod, ProjectionEmaPeriod, ProjectionSmmaPeriod, atrPercent);
+                var evaluatedAtUtc = DateTime.UtcNow;
+                var verdictState = ResolveVerdictState(latest.Timestamp, oneMinuteBars.Count, timeframeSignals.Count, atr, adx, nextOneMinuteProjection, nextFiveMinuteProjection);
+                var stateReason = BuildVerdictStateReason(verdictState, oneMinuteBars.Count, timeframeSignals.Count, latest.Timestamp, nextOneMinuteProjection, nextFiveMinuteProjection);
+
+                var liveVerdict = new MarketVerdictDto
+                {
+                    MarketDataPointId = latest.Id,
+                    Symbol = latest.Symbol,
+                    Provider = latest.Provider,
+                    Price = latest.Price,
+                    TrendScore = enhancedTrend,
+                    ConfidenceScore = confidenceScore,
+                    Verdict = verdict,
+                    VerdictState = verdictState,
+                    VerdictStateReason = stateReason,
+                    Timestamp = latest.Timestamp,
+                    EvaluatedAtUtc = evaluatedAtUtc,
+                    Sma = primarySnapshot.Sma,
+                    Ema = primarySnapshot.Ema,
+                    Rsi = primarySnapshot.Rsi,
+                    Macd = primarySnapshot.Macd,
+                    MacdSignal = primarySnapshot.MacdSignal,
+                    MacdHistogram = primarySnapshot.MacdHistogram,
+                    Momentum = primarySnapshot.Momentum,
+                    RateOfChange = primarySnapshot.RateOfChange,
+                    Atr = atr,
+                    AtrPercent = atrPercent,
+                    Adx = adx,
+                    StructureScore = decimal.Round(structureScore * 100m, 4, MidpointRounding.AwayFromZero),
+                    StructureLabel = DescribeStructure(structureScore),
+                    TimeframeAlignmentScore = timeframeAlignmentScore,
+                    NextOneMinuteProjection = nextOneMinuteProjection,
+                    NextFiveMinuteProjection = nextFiveMinuteProjection,
+                    IndicatorScores = BuildEnhancedIndicatorScores(latest.Price, primarySnapshot, atrPercent, adx, structureScore, timeframeAlignmentScore),
+                    TimeframeSignals = timeframeSignals
+                        .Select(item => new MarketVerdictTimeframeDto
+                        {
+                            Timeframe = item.Timeframe.ToCode(),
+                            BiasScore = item.BiasScore,
+                            Signal = item.Signal
+                        })
+                        .ToList()
+                };
+
+                CacheVerdict(cacheKey, liveVerdict);
+                LogVerdict(liveVerdict);
+                return liveVerdict;
             }
-
-            var cacheKey = BuildVerdictCacheKey(input.Symbol, input.Provider, latest.Id);
-            var cachedVerdict = TryGetCachedVerdict(cacheKey);
-            if (cachedVerdict != null)
-            {
-                return cachedVerdict;
-            }
-
-            var oneMinuteBarsTask = GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.OneMinute, VerdictBarTake);
-            var fiveMinuteBarsTask = GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.FiveMinutes, VerdictBarTake);
-            var fifteenMinuteBarsTask = GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.FifteenMinutes, VerdictBarTake);
-            var oneHourBarsTask = GetBarSeriesAsync(input.Symbol, input.Provider, MarketDataTimeframe.OneHour, VerdictBarTake);
-            await Task.WhenAll(oneMinuteBarsTask, fiveMinuteBarsTask, fifteenMinuteBarsTask, oneHourBarsTask);
-
-            var oneMinuteBars = oneMinuteBarsTask.Result;
-            if (oneMinuteBars.Count == 0)
-            {
-                var fallbackVerdict = BuildFallbackVerdict(latest, MarketVerdictState.WarmingUp, "Waiting for the first reliable 1m candle sequence.");
-                CacheVerdict(cacheKey, fallbackVerdict);
-                return fallbackVerdict;
-            }
-
-            var primaryCloses = oneMinuteBars.Select(item => item.Close).ToList();
-            var primarySnapshot = _indicatorCalculator.Calculate(primaryCloses);
-            var atr = _indicatorCalculator.CalculateAtr(oneMinuteBars);
-            var adx = _indicatorCalculator.CalculateAdx(oneMinuteBars);
-            var atrPercent = atr.HasValue && latest.Price > 0m
-                ? decimal.Round((atr.Value / latest.Price) * 100m, 4, MidpointRounding.AwayFromZero)
-                : (decimal?)null;
-            var structureScore = CalculateMarketStructureScore(oneMinuteBars);
-
-            var timeframeSignals = BuildTimeframeSignals(oneMinuteBars, fiveMinuteBarsTask.Result, fifteenMinuteBarsTask.Result, oneHourBarsTask.Result);
-            var timeframeAlignmentScore = CalculateTimeframeAlignmentScore(timeframeSignals);
-            var enhancedTrend = BuildEnhancedTrend(primarySnapshot, structureScore, timeframeAlignmentScore);
-            var confidenceScore = BuildConfidenceScore(primarySnapshot, timeframeSignals, enhancedTrend, adx, atrPercent);
-            var verdict = _marketVerdictPolicy.ResolveVerdict(enhancedTrend, confidenceScore);
-
-            var nextOneMinuteProjection = _marketProjectionBuilder.Build(primaryCloses, latest.Price, latest.Timestamp, 1, "1m-moving-average-drift", ProjectionSmaPeriod, ProjectionEmaPeriod, ProjectionSmmaPeriod, atrPercent);
-            var nextFiveMinuteProjection = _marketProjectionBuilder.Build(fiveMinuteBarsTask.Result.Select(item => item.Close).ToList(), latest.Price, latest.Timestamp, 5, "5m-moving-average-drift", ProjectionSmaPeriod, ProjectionEmaPeriod, ProjectionSmmaPeriod, atrPercent);
-            var evaluatedAtUtc = DateTime.UtcNow;
-            var verdictState = ResolveVerdictState(latest.Timestamp, oneMinuteBars.Count, timeframeSignals.Count, atr, adx, nextOneMinuteProjection, nextFiveMinuteProjection);
-            var stateReason = BuildVerdictStateReason(verdictState, oneMinuteBars.Count, timeframeSignals.Count, latest.Timestamp, nextOneMinuteProjection, nextFiveMinuteProjection);
-
-            var liveVerdict = new MarketVerdictDto
-            {
-                MarketDataPointId = latest.Id,
-                Symbol = latest.Symbol,
-                Provider = latest.Provider,
-                Price = latest.Price,
-                TrendScore = enhancedTrend,
-                ConfidenceScore = confidenceScore,
-                Verdict = verdict,
-                VerdictState = verdictState,
-                VerdictStateReason = stateReason,
-                Timestamp = latest.Timestamp,
-                EvaluatedAtUtc = evaluatedAtUtc,
-                Sma = primarySnapshot.Sma,
-                Ema = primarySnapshot.Ema,
-                Rsi = primarySnapshot.Rsi,
-                Macd = primarySnapshot.Macd,
-                MacdSignal = primarySnapshot.MacdSignal,
-                MacdHistogram = primarySnapshot.MacdHistogram,
-                Momentum = primarySnapshot.Momentum,
-                RateOfChange = primarySnapshot.RateOfChange,
-                Atr = atr,
-                AtrPercent = atrPercent,
-                Adx = adx,
-                StructureScore = decimal.Round(structureScore * 100m, 4, MidpointRounding.AwayFromZero),
-                StructureLabel = DescribeStructure(structureScore),
-                TimeframeAlignmentScore = timeframeAlignmentScore,
-                NextOneMinuteProjection = nextOneMinuteProjection,
-                NextFiveMinuteProjection = nextFiveMinuteProjection,
-                IndicatorScores = BuildEnhancedIndicatorScores(latest.Price, primarySnapshot, atrPercent, adx, structureScore, timeframeAlignmentScore),
-                TimeframeSignals = timeframeSignals
-                    .Select(item => new MarketVerdictTimeframeDto
-                    {
-                        Timeframe = item.Timeframe.ToCode(),
-                        BiasScore = item.BiasScore,
-                        Signal = item.Signal
-                    })
-                    .ToList()
-            };
-
-            CacheVerdict(cacheKey, liveVerdict);
-            LogVerdict(liveVerdict);
-            return liveVerdict;
         }
 
         private List<TimeframeDirectionPoint> BuildTimeframeSignals(

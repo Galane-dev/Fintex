@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Form, Input, InputNumber, Modal, Select, Typography } from "antd";
+import { Button, Form, Input, InputNumber, Select, Space, Typography } from "antd";
+import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { PaperTradingPanelController } from "./types";
 import { usePaperTradingStyles } from "../paper-trading-style";
 
@@ -12,26 +13,27 @@ export const TradeModal = ({ controller }: TradeModalProps) => {
   const { styles } = usePaperTradingStyles();
 
   return (
-    <Modal
+    <DashboardDrawerShell
       open={controller.isTradeOpen}
-      onCancel={controller.closeTradeModal}
+      onClose={controller.closeTradeModal}
       title={`${controller.tradeDirection} BTCUSDT`}
-      width={680}
-      footer={[
-        <Button key="cancel" className={styles.actionButton} onClick={controller.closeTradeModal}>
-          Cancel
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          danger={controller.tradeDirection === "Sell"}
-          loading={controller.isBusy}
-          className={styles.actionButton}
-          onClick={() => void controller.submitTrade(controller.tradeDirection)}
-        >
-          Confirm {controller.tradeDirection}
-        </Button>,
-      ]}
+      width={720}
+      footer={
+        <Space>
+          <Button className={styles.actionButton} onClick={controller.closeTradeModal}>
+            Cancel
+          </Button>
+          <Button
+            type="primary"
+            danger={controller.tradeDirection === "Sell"}
+            loading={controller.isBusy}
+            className={styles.actionButton}
+            onClick={() => void controller.submitTrade(controller.tradeDirection)}
+          >
+            Confirm {controller.tradeDirection}
+          </Button>
+        </Space>
+      }
     >
       <div className={styles.section}>
         <Typography.Paragraph className={styles.helper}>
@@ -73,6 +75,6 @@ export const TradeModal = ({ controller }: TradeModalProps) => {
           </Form.Item>
         </Form>
       </div>
-    </Modal>
+    </DashboardDrawerShell>
   );
 };
