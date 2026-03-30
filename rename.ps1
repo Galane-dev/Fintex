@@ -21,15 +21,15 @@ $dirType="DirectoryInfo"
 Write-Host 'Start copy folders...'
 $newRoot=$newCompanyName+"."+$newProjectName
 mkdir $newRoot
-Copy-Item -Recurse .\aspnet-core\ .\$newRoot\
-Copy-Item -Recurse .\vue\ .\$newRoot\
+Copy-Item -Recurse .\Backend\aspnet-core\ .\$newRoot\Backend\
+Copy-Item -Recurse .\Frontend\nextjs\ .\$newRoot\Frontend\
 Copy-Item .gitignore .\$newRoot\
 Copy-Item LICENSE .\$newRoot\
 Copy-Item README.md .\$newRoot\
 
 # folders to deal with
-$slnFolder = (Get-Item -Path "./$newRoot/aspnet-core/" -Verbose).FullName
-$vueFolder = (Get-Item -Path "./$newRoot/vue/" -Verbose).FullName
+$slnFolder = (Get-Item -Path "./$newRoot/Backend/aspnet-core/" -Verbose).FullName
+$frontendFolder = (Get-Item -Path "./$newRoot/Frontend/nextjs/" -Verbose).FullName
 
 function Rename {
 	param (
@@ -77,5 +77,5 @@ function Rename {
 }
 
 Rename -TargetFolder $slnFolder -PlaceHolderCompanyName $oldCompanyName -PlaceHolderProjectName $oldProjectName -NewCompanyName $newCompanyName -NewProjectName $newProjectName
-Rename -TargetFolder $vueFolder -PlaceHolderCompanyName $oldCompanyName -PlaceHolderProjectName $oldProjectName -NewCompanyName $newCompanyName -NewProjectName $newProjectName
+Rename -TargetFolder $frontendFolder -PlaceHolderCompanyName $oldCompanyName -PlaceHolderProjectName $oldProjectName -NewCompanyName $newCompanyName -NewProjectName $newProjectName
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Next Antd Frontend Standards"
+  short_description: "Standards for Next.js + Ant Design frontend work"
+  default_prompt: "Use $next-antd-frontend-standards to implement clean Next.js + Ant Design frontend changes."
