@@ -52,3 +52,8 @@ next-env.d.ts
 
 
 # appsettings
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+Backend/aspnet-core/src/Fintex.Web.Host/appsettings.json
