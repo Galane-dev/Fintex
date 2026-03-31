@@ -1,37 +1,28 @@
-# Important
+# Fintex
 
-Issues of this repository are tracked on https://github.com/aspnetboilerplate/aspnetboilerplate. Please create your issues on https://github.com/aspnetboilerplate/aspnetboilerplate/issues.
+Fintex is organized as a two-app repository:
 
-# Introduction
+- `Frontend/nextjs`
+- `Backend/aspnet-core`
 
-This is a template to create **ASP.NET Core MVC / Angular** based startup projects for [ASP.NET Boilerplate](https://aspnetboilerplate.com/Pages/Documents). It has 2 different versions:
+## Layout
 
-1. [ASP.NET Core MVC & jQuery](https://aspnetboilerplate.com/Pages/Documents/Zero/Startup-Template-Core) (server rendered multi-page application).
-2. [ASP.NET Core & Angular](https://aspnetboilerplate.com/Pages/Documents/Zero/Startup-Template-Angular) (single page application).
- 
-User Interface is based on [AdminLTE theme](https://github.com/ColorlibHQ/AdminLTE).
- 
-# Download
+```text
+Fintex/
+  Frontend/
+    nextjs/
+  Backend/
+    aspnet-core/
+```
 
-Create & download your project from https://aspnetboilerplate.com/Templates
+## Notes
 
-# Screenshots
+- The Next.js frontend lives under `Frontend/nextjs`.
+- The ASP.NET Core solution lives under `Backend/aspnet-core/Fintex.sln`.
+- Existing screenshots and repo metadata stay at the repository root.
+- CI/CD setup notes live in [docs/deployment-cicd.md](docs/deployment-cicd.md).
+- Backend secret placeholders now live in tracked appsettings files, and the local env variable names are listed in [env.example](Backend/aspnet-core/src/Fintex.Web.Host/env.example).
 
-#### Sample Dashboard Page
-![](_screenshots/module-zero-core-template-ui-home.png)
-
-#### User Creation Modal
-![](_screenshots/module-zero-core-template-ui-user-create-modal.png)
-
-#### Login Page
-
-![](_screenshots/module-zero-core-template-ui-login.png)
-
-# Documentation
-
-* [ASP.NET Core MVC & jQuery version.](https://aspnetboilerplate.com/Pages/Documents/Zero/Startup-Template-Core)
-* [ASP.NET Core & Angular  version.](https://aspnetboilerplate.com/Pages/Documents/Zero/Startup-Template-Angular)
-
-# License
+## License
 
 [MIT](LICENSE).

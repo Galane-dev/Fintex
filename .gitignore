@@ -4,11 +4,11 @@
 .vs/
 obj/
 bin/
-aspnet-core/src/Fintex.Web.Host/App_Data/Logs/
-aspnet-core/src/Fintex.Web.Mvc/App_Data/Logs/
-aspnet-core/src/Fintex.Migrator/Logs/Logs.txt
-aspnet-core/build/outputs/
-aspnet-core/docker/mvc/Mvc-Logs/
+Backend/aspnet-core/src/Fintex.Web.Host/App_Data/Logs/
+Backend/aspnet-core/src/Fintex.Web.Mvc/App_Data/Logs/
+Backend/aspnet-core/src/Fintex.Migrator/Logs/Logs.txt
+Backend/aspnet-core/build/outputs/
+Backend/aspnet-core/docker/mvc/Mvc-Logs/
 
 # dependencies
 node_modules/
@@ -52,11 +52,3 @@ next-env.d.ts
 
 
 # appsettings
-appsettings.json
-appsettings.Development.json
-appsettings.Production.json
-appsettings.Staging.json
-aspnet-core/src/Fintex.Web.Host/appsettings.json
-aspnet-core/src/Fintex.Web.Host/appsettings.json
-aspnet-core/src/Fintex.Web.Host/appsettings.json
-aspnet-core/src/Fintex.Web.Host/appsettings.json
