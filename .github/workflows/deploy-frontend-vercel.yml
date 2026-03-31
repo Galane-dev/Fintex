@@ -3,6 +3,7 @@ name: Deploy Frontend to Vercel
 on:
   push:
     branches:
+      - master
       - main
     paths:
       - "Frontend/nextjs/**"

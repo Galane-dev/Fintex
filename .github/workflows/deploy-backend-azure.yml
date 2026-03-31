@@ -3,6 +3,7 @@ name: Deploy Backend to Azure
 on:
   push:
     branches:
+      - master
       - main
     paths:
       - "Backend/aspnet-core/**"
