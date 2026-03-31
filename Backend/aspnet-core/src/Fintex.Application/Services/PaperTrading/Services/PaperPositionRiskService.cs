@@ -153,6 +153,7 @@ namespace Fintex.Investments.PaperTrading
                         TenantId = position.TenantId,
                         TradeId = order.Id,
                         UserId = position.UserId,
+                        PositionId = position.Id,
                         Symbol = position.Symbol,
                         Provider = position.Provider,
                         Direction = closingDirection,

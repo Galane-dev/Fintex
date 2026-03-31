@@ -23,6 +23,78 @@ const getNullableNumber = (value: unknown) =>
 const getString = (value: unknown, fallback = "") =>
   typeof value === "string" ? value : fallback;
 
+const getTradeDirection = (value: unknown): PaperTradeAssessment["direction"] => {
+  if (value === 2 || value === "Sell") {
+    return "Sell";
+  }
+
+  return "Buy";
+};
+
+const getPaperOrderType = (value: unknown): PaperOrder["orderType"] => {
+  if (value === 2 || value === "Limit") {
+    return "Limit";
+  }
+
+  if (value === 3 || value === "Stop") {
+    return "Stop";
+  }
+
+  return "Market";
+};
+
+const getPaperOrderStatus = (value: unknown): PaperOrder["status"] => {
+  if (value === 2 || value === "Filled") {
+    return "Filled";
+  }
+
+  if (value === 3 || value === "Cancelled") {
+    return "Cancelled";
+  }
+
+  if (value === 4 || value === "Rejected") {
+    return "Rejected";
+  }
+
+  return "Pending";
+};
+
+const getPaperPositionStatus = (value: unknown): PaperPosition["status"] => {
+  if (value === 2 || value === "Closed") {
+    return "Closed";
+  }
+
+  return "Open";
+};
+
+const getPaperTradeRiskLevel = (
+  value: unknown,
+): PaperTradeAssessment["riskLevel"] => {
+  if (value === 3 || value === "High") {
+    return "High";
+  }
+
+  if (value === 2 || value === "Medium") {
+    return "Medium";
+  }
+
+  return "Low";
+};
+
+const getMarketVerdict = (
+  value: unknown,
+): PaperTradeRecommendation["recommendedAction"] => {
+  if (value === 2 || value === "Buy") {
+    return "Buy";
+  }
+
+  if (value === 3 || value === "Sell") {
+    return "Sell";
+  }
+
+  return "Hold";
+};
+
 const normalizeEconomicCalendarEvent = (
   value: Record<string, unknown>,
 ): EconomicCalendarEvent => ({
@@ -56,9 +128,9 @@ export const normalizePaperOrder = (value: Record<string, unknown>): PaperOrder 
   symbol: getString(value.symbol ?? value.Symbol),
   assetClass: getNumber(value.assetClass ?? value.AssetClass),
   provider: getNumber(value.provider ?? value.Provider),
-  direction: getString(value.direction ?? value.Direction) as PaperOrder["direction"],
-  orderType: getString(value.orderType ?? value.OrderType) as PaperOrder["orderType"],
-  status: getString(value.status ?? value.Status) as PaperOrder["status"],
+  direction: getTradeDirection(value.direction ?? value.Direction),
+  orderType: getPaperOrderType(value.orderType ?? value.OrderType),
+  status: getPaperOrderStatus(value.status ?? value.Status),
   quantity: getNumber(value.quantity ?? value.Quantity),
   requestedPrice: getNullableNumber(value.requestedPrice ?? value.RequestedPrice),
   executedPrice: getNullableNumber(value.executedPrice ?? value.ExecutedPrice),
@@ -80,8 +152,8 @@ export const normalizePaperPosition = (
   symbol: getString(value.symbol ?? value.Symbol),
   assetClass: getNumber(value.assetClass ?? value.AssetClass),
   provider: getNumber(value.provider ?? value.Provider),
-  direction: getString(value.direction ?? value.Direction) as PaperPosition["direction"],
-  status: getString(value.status ?? value.Status) as PaperPosition["status"],
+  direction: getTradeDirection(value.direction ?? value.Direction),
+  status: getPaperPositionStatus(value.status ?? value.Status),
   quantity: getNumber(value.quantity ?? value.Quantity),
   averageEntryPrice: getNumber(value.averageEntryPrice ?? value.AverageEntryPrice),
   currentMarketPrice: getNumber(value.currentMarketPrice ?? value.CurrentMarketPrice),
@@ -107,7 +179,7 @@ export const normalizePaperTradeFill = (
   symbol: getString(value.symbol ?? value.Symbol),
   assetClass: getNumber(value.assetClass ?? value.AssetClass),
   provider: getNumber(value.provider ?? value.Provider),
-  direction: getString(value.direction ?? value.Direction) as PaperTradeFill["direction"],
+  direction: getTradeDirection(value.direction ?? value.Direction),
   quantity: getNumber(value.quantity ?? value.Quantity),
   price: getNumber(value.price ?? value.Price),
   realizedProfitLoss: getNumber(value.realizedProfitLoss ?? value.RealizedProfitLoss),
@@ -117,9 +189,9 @@ export const normalizePaperTradeFill = (
 export const normalizePaperTradeAssessment = (
   value: Record<string, unknown>,
 ): PaperTradeAssessment => ({
-  direction: getString(value.direction ?? value.Direction) as PaperTradeAssessment["direction"],
+  direction: getTradeDirection(value.direction ?? value.Direction),
   riskScore: getNumber(value.riskScore ?? value.RiskScore),
-  riskLevel: getString(value.riskLevel ?? value.RiskLevel) as PaperTradeAssessment["riskLevel"],
+  riskLevel: getPaperTradeRiskLevel(value.riskLevel ?? value.RiskLevel),
   shouldBlock: Boolean(value.shouldBlock ?? value.ShouldBlock),
   headline: getString(value.headline ?? value.Headline),
   summary: getString(value.summary ?? value.Summary),
@@ -137,7 +209,7 @@ export const normalizePaperTradeAssessment = (
     value.timeframeAlignmentScore ?? value.TimeframeAlignmentScore,
   ),
   structureLabel: getString(value.structureLabel ?? value.StructureLabel),
-  marketVerdict: getString(value.marketVerdict ?? value.MarketVerdict) as PaperTradeAssessment["marketVerdict"],
+  marketVerdict: getMarketVerdict(value.marketVerdict ?? value.MarketVerdict),
   reasons: Array.isArray(value.reasons ?? value.Reasons)
     ? ((value.reasons ?? value.Reasons) as unknown[]).map((item) => getString(item))
     : [],
@@ -163,11 +235,11 @@ export const normalizePaperTradeExecutionResult = (
 export const normalizePaperTradeRecommendation = (
   value: Record<string, unknown>,
 ): PaperTradeRecommendation => ({
-  recommendedAction: getString(
+  recommendedAction: getMarketVerdict(
     value.recommendedAction ?? value.RecommendedAction,
-  ) as PaperTradeRecommendation["recommendedAction"],
+  ),
   riskScore: getNumber(value.riskScore ?? value.RiskScore),
-  riskLevel: getString(value.riskLevel ?? value.RiskLevel) as PaperTradeRecommendation["riskLevel"],
+  riskLevel: getPaperTradeRiskLevel(value.riskLevel ?? value.RiskLevel),
   headline: getString(value.headline ?? value.Headline),
   summary: getString(value.summary ?? value.Summary),
   referencePrice: getNumber(value.referencePrice ?? value.ReferencePrice),
@@ -183,9 +255,9 @@ export const normalizePaperTradeRecommendation = (
   newsRecommendedAction:
     value.newsRecommendedAction == null && value.NewsRecommendedAction == null
       ? null
-      : (getString(
+      : getMarketVerdict(
           value.newsRecommendedAction ?? value.NewsRecommendedAction,
-        ) as PaperTradeRecommendation["newsRecommendedAction"]),
+        ),
   newsLastUpdatedAt:
     value.newsLastUpdatedAt == null && value.NewsLastUpdatedAt == null
       ? null

@@ -2,10 +2,12 @@ using Abp.Dependency;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -107,38 +109,46 @@ namespace Fintex.Investments.Analytics
                 };
             }
 
-            try
-            {
-                using (var json = JsonDocument.Parse(responseText))
-                {
-                    var riskScore = json.RootElement.TryGetProperty("riskScore", out var riskElement)
-                        ? riskElement.GetDecimal()
-                        : 0m;
-                    var summary = json.RootElement.TryGetProperty("summary", out var summaryElement)
-                        ? summaryElement.GetString()
-                        : responseText;
+            return ParseInsight(responseText, profile, model);
+        }
 
-                    return new UserBehaviorInsight
-                    {
-                        RiskScore = riskScore,
-                        Summary = summary,
-                        Provider = "OpenAI",
-                        Model = model,
-                        WasGenerated = true
-                    };
-                }
-            }
-            catch (JsonException)
+        private static UserBehaviorInsight ParseInsight(string responseText, UserProfile profile, string model)
+        {
+            var fallbackRiskScore = profile == null ? 0m : profile.BehavioralRiskScore;
+            var normalizedResponse = NormalizeJsonText(responseText);
+
+            if (TryParseInsightJson(normalizedResponse, out var riskScore, out var summary))
             {
                 return new UserBehaviorInsight
                 {
-                    RiskScore = profile == null ? 0m : profile.BehavioralRiskScore,
-                    Summary = responseText.Length > 500 ? responseText.Substring(0, 500) : responseText,
+                    RiskScore = riskScore ?? fallbackRiskScore,
+                    Summary = LimitSummary(summary ?? normalizedResponse),
                     Provider = "OpenAI",
                     Model = model,
                     WasGenerated = true
                 };
             }
+
+            if (TryExtractInsightFromLooseText(normalizedResponse, out riskScore, out summary))
+            {
+                return new UserBehaviorInsight
+                {
+                    RiskScore = riskScore ?? fallbackRiskScore,
+                    Summary = LimitSummary(summary ?? normalizedResponse),
+                    Provider = "OpenAI",
+                    Model = model,
+                    WasGenerated = true
+                };
+            }
+
+            return new UserBehaviorInsight
+            {
+                RiskScore = fallbackRiskScore,
+                Summary = LimitSummary(normalizedResponse),
+                Provider = "OpenAI",
+                Model = model,
+                WasGenerated = true
+            };
         }
 
         private static string ExtractResponseText(string responseContent)
@@ -188,6 +198,146 @@ namespace Fintex.Investments.Analytics
             }
 
             return null;
+        }
+
+        private static string NormalizeJsonText(string responseText)
+        {
+            if (string.IsNullOrWhiteSpace(responseText))
+            {
+                return responseText;
+            }
+
+            var trimmed = responseText.Trim();
+            if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+            {
+                return trimmed;
+            }
+
+            var lines = trimmed.Split('\n');
+            if (lines.Length <= 2)
+            {
+                return trimmed;
+            }
+
+            return string.Join("\n", lines[1..^1]).Trim();
+        }
+
+        private static bool TryParseInsightJson(string responseText, out decimal? riskScore, out string summary)
+        {
+            riskScore = null;
+            summary = null;
+
+            if (string.IsNullOrWhiteSpace(responseText))
+            {
+                return false;
+            }
+
+            if (TryParseInsightJsonCandidate(responseText, out riskScore, out summary))
+            {
+                return true;
+            }
+
+            var jsonStart = responseText.IndexOf('{');
+            var jsonEnd = responseText.LastIndexOf('}');
+            if (jsonStart < 0 || jsonEnd <= jsonStart)
+            {
+                return false;
+            }
+
+            var jsonCandidate = responseText.Substring(jsonStart, jsonEnd - jsonStart + 1);
+            return TryParseInsightJsonCandidate(jsonCandidate, out riskScore, out summary);
+        }
+
+        private static bool TryParseInsightJsonCandidate(string jsonCandidate, out decimal? riskScore, out string summary)
+        {
+            riskScore = null;
+            summary = null;
+
+            try
+            {
+                using var json = JsonDocument.Parse(jsonCandidate);
+                riskScore = ReadDecimal(json.RootElement, "riskScore");
+                summary = ReadString(json.RootElement, "summary");
+                return riskScore.HasValue || !string.IsNullOrWhiteSpace(summary);
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        private static bool TryExtractInsightFromLooseText(string responseText, out decimal? riskScore, out string summary)
+        {
+            riskScore = null;
+            summary = null;
+
+            if (string.IsNullOrWhiteSpace(responseText))
+            {
+                return false;
+            }
+
+            var riskMatch = Regex.Match(
+                responseText,
+                "\"riskScore\"\\s*:\\s*(?<value>-?\\d+(?:\\.\\d+)?)",
+                RegexOptions.IgnoreCase);
+            if (riskMatch.Success &&
+                decimal.TryParse(riskMatch.Groups["value"].Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedRiskScore))
+            {
+                riskScore = parsedRiskScore;
+            }
+
+            var summaryMatch = Regex.Match(
+                responseText,
+                "\"summary\"\\s*:\\s*\"(?<value>(?:\\\\.|[^\"\\\\])*)",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (summaryMatch.Success)
+            {
+                summary = Regex.Unescape(summaryMatch.Groups["value"].Value).Trim();
+            }
+
+            return riskScore.HasValue || !string.IsNullOrWhiteSpace(summary);
+        }
+
+        private static decimal? ReadDecimal(JsonElement root, string propertyName)
+        {
+            if (!root.TryGetProperty(propertyName, out var value))
+            {
+                return null;
+            }
+
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var decimalValue))
+            {
+                return decimalValue;
+            }
+
+            if (value.ValueKind == JsonValueKind.String &&
+                decimal.TryParse(value.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimalValue))
+            {
+                return decimalValue;
+            }
+
+            return null;
+        }
+
+        private static string ReadString(JsonElement root, string propertyName)
+        {
+            if (!root.TryGetProperty(propertyName, out var value) || value.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return value.GetString();
+        }
+
+        private static string LimitSummary(string summary)
+        {
+            if (string.IsNullOrWhiteSpace(summary))
+            {
+                return summary;
+            }
+
+            var trimmed = summary.Trim();
+            return trimmed.Length <= 500 ? trimmed : trimmed.Substring(0, 500);
         }
     }
 }

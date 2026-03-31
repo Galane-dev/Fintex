@@ -14,6 +14,8 @@ namespace Fintex.Investments.Events
 
         public long UserId { get; set; }
 
+        public long? PositionId { get; set; }
+
         public string Symbol { get; set; }
 
         public MarketDataProvider Provider { get; set; }

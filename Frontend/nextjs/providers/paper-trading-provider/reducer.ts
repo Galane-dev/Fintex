@@ -49,6 +49,28 @@ export const paperTradingReducer = (
         snapshot: action.payload,
         lastHydratedAt: new Date().toISOString(),
       };
+    case "POSITION_CLOSED": {
+      if (state.snapshot == null) {
+        return state;
+      }
+
+      const positions = state.snapshot.positions.filter(
+        (position) => position.id !== action.payload.positionId,
+      );
+
+      if (positions.length === state.snapshot.positions.length) {
+        return state;
+      }
+
+      return {
+        ...state,
+        snapshot: {
+          ...state.snapshot,
+          positions,
+        },
+        lastHydratedAt: new Date().toISOString(),
+      };
+    }
     case "ASSESSMENT_UPDATED":
       return {
         ...state,
