@@ -61,6 +61,18 @@ export const usePaperTradingProvider = () => {
     };
   }, [refreshSnapshot]);
 
+  useEffect(() => {
+    const handleTradeExecuted = () => {
+      void refreshSnapshot();
+    };
+
+    window.addEventListener("fintex:trade-executed", handleTradeExecuted);
+
+    return () => {
+      window.removeEventListener("fintex:trade-executed", handleTradeExecuted);
+    };
+  }, [refreshSnapshot]);
+
   const createAccount = useCallback(async (input: { name: string; baseCurrency: string; startingBalance: number }) => {
     dispatch(paperTradingActions.submitStart());
 

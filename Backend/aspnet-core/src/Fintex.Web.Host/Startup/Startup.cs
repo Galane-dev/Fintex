@@ -77,19 +77,17 @@ namespace Fintex.Web.Host.Startup
             services.AddTransient<IMetaTraderBridgeService, MetaTraderPythonBridgeService>();
             services.AddHostedService<MarketDataStreamingBackgroundService>();
             services.AddHostedService<AlpacaTradeUpdatesBackgroundService>();
+            services.Configure<HostOptions>(options =>
+            {
+                options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+            });
 
             // Configure CORS for angular2 UI
             services.AddCors(
                 options => options.AddPolicy(
                     _defaultCorsPolicyName,
                     builder => builder
-                        .WithOrigins(
-                            // App:CorsOrigins in appsettings.json can contain more than one address separated by comma.
-                            _appConfiguration["App:CorsOrigins"]
-                                .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                                .Select(o => o.RemovePostFix("/"))
-                                .ToArray()
-                        )
+                        .WithOrigins(GetAllowedCorsOrigins())
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials()
@@ -199,6 +197,32 @@ namespace Fintex.Web.Host.Startup
                     options.IncludeXmlComments(webCoreXmlPath);
                 }
             });
+        }
+
+        private string[] GetAllowedCorsOrigins()
+        {
+            var configuredOrigins = (_appConfiguration["App:CorsOrigins"] ?? string.Empty)
+                .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                .Select(NormalizeOrigin);
+
+            var derivedOrigins = new[]
+            {
+                _appConfiguration["App:ClientRootAddress"],
+                _appConfiguration["App:SelfUrl"]
+            }
+            .Where(x => !x.IsNullOrWhiteSpace())
+            .Select(NormalizeOrigin);
+
+            return configuredOrigins
+                .Concat(derivedOrigins)
+                .Where(x => !x.IsNullOrWhiteSpace())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static string NormalizeOrigin(string origin)
+        {
+            return origin?.Trim().RemovePostFix("/");
         }
     }
 }

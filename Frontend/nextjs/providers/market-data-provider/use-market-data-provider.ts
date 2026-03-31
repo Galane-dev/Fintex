@@ -25,6 +25,18 @@ const buildMarketHubUrl = (encryptedToken: string) =>
   `${getApiBaseUrl()}/signalr/market-data?enc_auth_token=${encodeURIComponent(encryptedToken)}`;
 const MARKET_DATA_EVENT_NAMES = ["marketDataUpdated", "marketdataupdated"] as const;
 const MARKET_VERDICT_EVENT_NAMES = ["marketVerdictUpdated", "marketverdictupdated"] as const;
+const NOTIFICATION_EVENT_NAMES = [
+  "notificationCreated",
+  "notificationcreated",
+] as const;
+const TRADE_EXECUTED_EVENT_NAMES = [
+  "tradeExecuted",
+  "tradeexecuted",
+] as const;
+const PASSIVE_EVENT_NAMES = [
+  "tradeRiskUpdated",
+  "traderiskupdated",
+] as const;
 
 const hasHealthyVerdictSnapshot = (
   verdict: ReturnType<typeof normalizeMarketVerdict> | null,
@@ -181,12 +193,36 @@ export const useMarketDataProvider = () => {
       dispatch(marketDataActions.liveVerdictUpdated({ verdict, timeframeRsi }));
     };
 
+    const handleTradeExecuted = (payload: Record<string, unknown>) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("fintex:trade-executed", {
+          detail: payload,
+        }),
+      );
+    };
+
     MARKET_DATA_EVENT_NAMES.forEach((eventName) => {
       connection.on(eventName, handleMarketDataUpdated);
     });
 
     MARKET_VERDICT_EVENT_NAMES.forEach((eventName) => {
       connection.on(eventName, handleMarketVerdictUpdated);
+    });
+
+    NOTIFICATION_EVENT_NAMES.forEach((eventName) => {
+      connection.on(eventName, () => {});
+    });
+
+    TRADE_EXECUTED_EVENT_NAMES.forEach((eventName) => {
+      connection.on(eventName, handleTradeExecuted);
+    });
+
+    PASSIVE_EVENT_NAMES.forEach((eventName) => {
+      connection.on(eventName, () => {});
     });
 
     connection.onreconnecting(() => {
@@ -223,6 +259,18 @@ export const useMarketDataProvider = () => {
 
       MARKET_VERDICT_EVENT_NAMES.forEach((eventName) => {
         connection.off(eventName, handleMarketVerdictUpdated);
+      });
+
+      NOTIFICATION_EVENT_NAMES.forEach((eventName) => {
+        connection.off(eventName);
+      });
+
+      TRADE_EXECUTED_EVENT_NAMES.forEach((eventName) => {
+        connection.off(eventName, handleTradeExecuted);
+      });
+
+      PASSIVE_EVENT_NAMES.forEach((eventName) => {
+        connection.off(eventName);
       });
 
       const activeConnection = connectionRef.current;

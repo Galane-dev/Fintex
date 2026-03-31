@@ -4,6 +4,8 @@ using Abp.Events.Bus;
 using Fintex.Investments.Analytics;
 using Fintex.Investments.Events;
 using Fintex.Investments.MarketData.Dto;
+using Fintex.Investments.PaperTrading;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,9 +23,11 @@ namespace Fintex.Investments.MarketData
         private readonly ITradeRepository _tradeRepository;
         private readonly IIndicatorCalculator _indicatorCalculator;
         private readonly IMarketDataAppService _marketDataAppService;
+        private readonly IPaperPositionRiskService _paperPositionRiskService;
         private readonly TradeAnalysisService _tradeAnalysisService;
         private readonly IEventBus _eventBus;
         private readonly IUnitOfWorkManager _unitOfWorkManager;
+        private readonly ILogger<MarketDataIngestionService> _logger;
 
         public MarketDataIngestionService(
             IMarketDataPointRepository marketDataPointRepository,
@@ -31,18 +35,22 @@ namespace Fintex.Investments.MarketData
             ITradeRepository tradeRepository,
             IIndicatorCalculator indicatorCalculator,
             IMarketDataAppService marketDataAppService,
+            IPaperPositionRiskService paperPositionRiskService,
             TradeAnalysisService tradeAnalysisService,
             IEventBus eventBus,
-            IUnitOfWorkManager unitOfWorkManager)
+            IUnitOfWorkManager unitOfWorkManager,
+            ILogger<MarketDataIngestionService> logger)
         {
             _marketDataPointRepository = marketDataPointRepository;
             _marketDataTimeframeCandleRepository = marketDataTimeframeCandleRepository;
             _tradeRepository = tradeRepository;
             _indicatorCalculator = indicatorCalculator;
             _marketDataAppService = marketDataAppService;
+            _paperPositionRiskService = paperPositionRiskService;
             _tradeAnalysisService = tradeAnalysisService;
             _eventBus = eventBus;
             _unitOfWorkManager = unitOfWorkManager;
+            _logger = logger;
         }
 
         public async Task<MarketDataPoint> IngestAsync(MarketStreamTick tick, CancellationToken cancellationToken)
@@ -138,7 +146,7 @@ namespace Fintex.Investments.MarketData
                     await _tradeAnalysisService.AnalyzeAndPersistAsync(trade, point, cancellationToken);
                 }
 
-                await _eventBus.TriggerAsync(new MarketDataUpdatedEventData
+                var updatedEventData = new MarketDataUpdatedEventData
                 {
                     TenantId = tick.TenantId,
                     MarketDataPointId = point.Id,
@@ -166,7 +174,22 @@ namespace Fintex.Investments.MarketData
                     Timestamp = point.Timestamp,
                     RealtimeVerdict = realtimeVerdict,
                     TimeframeRsi = timeframeRsi.Items
-                });
+                };
+
+                try
+                {
+                    await _paperPositionRiskService.EvaluateAsync(updatedEventData, cancellationToken);
+                }
+                catch (System.Exception exception)
+                {
+                    _logger.LogWarning(
+                        exception,
+                        "Failed to evaluate paper risk exits during ingestion for {Symbol} from {Provider}.",
+                        updatedEventData.Symbol,
+                        updatedEventData.Provider);
+                }
+
+                await _eventBus.TriggerAsync(updatedEventData);
 
                 await uow.CompleteAsync();
                 return point;

@@ -1,66 +1,62 @@
 # CI/CD Setup
 
-This repository now uses GitHub Actions for automatic deployments:
+This repository now uses:
 
-- `Backend/aspnet-core` deploys to Azure as a Docker container
-- `Frontend/nextjs` deploys to Vercel through the Vercel CLI
+- Azure DevOps YAML pipeline for the backend container build and Azure deploy
+- Vercel native Git integration for the frontend
 
-## Backend to Azure
+## Backend to Azure with Azure DevOps
 
-Workflow: `.github/workflows/deploy-backend-azure.yml`
+Pipeline file:
 
-### Required GitHub secrets
+- `azure-pipelines.yml`
 
-- `AZURE_CLIENT_ID`
-- `AZURE_TENANT_ID`
-- `AZURE_SUBSCRIPTION_ID`
+### What the backend pipeline does
 
-These are used by `azure/login` with OpenID Connect.
+1. Triggers on backend changes to `master` or `main`
+2. Restores, builds, and tests the ASP.NET Core solution
+3. Builds a Docker image from `Backend/aspnet-core/src/Fintex.Web.Host/Dockerfile`
+4. Pushes the image to Azure Container Registry
+5. Updates the Azure Web App for Containers to the new image tag
 
-### Required GitHub variables
+### Azure DevOps service connections you need
 
-- `AZURE_ACR_NAME`
-- `AZURE_WEBAPP_NAME`
+- Azure Resource Manager service connection
+  - example variable value: `fintex-azure-rm-sc`
+- Azure Container Registry service connection
+  - example variable value: `fintex-acr-sc`
+
+### Azure DevOps pipeline variables you need
+
+- `azureServiceConnection`
+- `acrServiceConnection`
+- `acrLoginServer`
+- `webAppName`
+
+You can set these in the pipeline UI or a variable group. They do not need to be committed to the repository.
 
 ### Azure requirements
 
-Before the workflow runs successfully:
+Before the pipeline can deploy successfully:
 
 1. Create or reuse an Azure Container Registry.
-2. Grant the GitHub OIDC principal permission to push to that registry.
-3. Ensure the target Azure Web App is configured to run a custom container.
-4. Ensure the Web App can pull from the registry, ideally with managed identity or pre-configured registry credentials.
-
-The workflow builds the image from:
-
-- `Backend/aspnet-core/src/Fintex.Web.Host/Dockerfile`
-
-and pushes:
-
-- `fintex-backend:${GITHUB_SHA}`
-- `fintex-backend:latest`
+2. Create or reuse an Azure Web App for Containers.
+3. Ensure the Web App can pull from your ACR image, ideally with managed identity or preconfigured registry access.
+4. Add the backend runtime settings in Azure App Service `Environment variables`.
 
 ## Frontend to Vercel
 
-Workflow: `.github/workflows/deploy-frontend-vercel.yml`
+Use Vercel native Git deployment instead of GitHub Actions.
 
-### Required GitHub secrets
+### Recommended setup
 
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
+1. Import the GitHub repository into Vercel
+2. Set the project root to `Frontend/nextjs`
+3. Add `NEXT_PUBLIC_API_BASE_URL`
+4. Let Vercel deploy automatically on pushes to your chosen production branch
 
-### Deployment flow
+## Why this setup works well
 
-1. Install dependencies
-2. Lint the frontend
-3. Validate the frontend Docker image build
-4. Pull Vercel environment settings
-5. Build with `vercel build`
-6. Deploy with `vercel deploy --prebuilt --prod`
-
-## Why Docker is different between Azure and Vercel
-
-Azure Web App for Containers deploys a Docker image directly, so the backend workflow publishes a container image.
-
-Vercel deploys the build output of the app rather than a Docker image. The frontend still has a Dockerfile for consistent local and CI validation, but the actual Vercel deployment is performed with the official Vercel CLI.
+- Azure DevOps gives you a real YAML CI/CD pipeline to present
+- Vercel gives you simple, reliable frontend auto-deploys without GitHub Actions billing
+- Docker is still part of the backend delivery path, so your deployment remains containerized
