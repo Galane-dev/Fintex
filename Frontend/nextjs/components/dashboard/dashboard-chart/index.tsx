@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Alert } from "antd";
 import type { DashboardChartProps } from "./types";
 import { ChartFooter } from "./chart-footer";
@@ -25,6 +26,23 @@ export const DashboardChart = (props: DashboardChartProps) => {
 
   useDashboardChartCanvas(controller);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const handleNativeWheel = (event: WheelEvent) => {
+      handleWheel(event);
+    };
+
+    canvas.addEventListener("wheel", handleNativeWheel, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("wheel", handleNativeWheel);
+    };
+  }, [canvasRef, handleWheel]);
+
   return (
     <div className={styles.terminal}>
       <ChartHeader controller={controller} {...props} />
@@ -34,7 +52,6 @@ export const DashboardChart = (props: DashboardChartProps) => {
           ref={canvasRef}
           className={styles.chartCanvas}
           aria-label="Interactive BTCUSDT chart"
-          onWheel={handleWheel}
           onMouseMove={handleMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}

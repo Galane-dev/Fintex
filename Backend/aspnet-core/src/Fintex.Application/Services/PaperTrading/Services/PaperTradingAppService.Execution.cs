@@ -34,8 +34,9 @@ namespace Fintex.Investments.PaperTrading
 
             var occurredAt = DateTime.UtcNow;
             var fillPrice = marketContext.LatestPoint.Price;
-            var effectiveStopLoss = input.StopLoss ?? assessment.SuggestedStopLoss;
-            var effectiveTakeProfit = input.TakeProfit ?? assessment.SuggestedTakeProfit;
+            var position = await _paperPositionRepository.GetOpenBySymbolAsync(account.Id, input.Symbol, input.Provider);
+            var effectiveStopLoss = input.StopLoss ?? position?.StopLoss ?? assessment.SuggestedStopLoss;
+            var effectiveTakeProfit = input.TakeProfit ?? position?.TakeProfit ?? assessment.SuggestedTakeProfit;
             var order = new PaperOrder(
                 AbpSession.TenantId,
                 userId,
@@ -55,11 +56,10 @@ namespace Fintex.Investments.PaperTrading
             await _paperOrderRepository.InsertAsync(order);
             await CurrentUnitOfWork.SaveChangesAsync();
 
-            var position = await _paperPositionRepository.GetOpenBySymbolAsync(account.Id, input.Symbol, input.Provider);
             var realizedProfitLoss = 0m;
             long? positionId;
 
-            if (position == null || position.Direction == input.Direction)
+            if (position == null)
             {
                 position = new PaperPosition(
                     AbpSession.TenantId,
@@ -77,6 +77,12 @@ namespace Fintex.Investments.PaperTrading
 
                 await _paperPositionRepository.InsertAsync(position);
                 await CurrentUnitOfWork.SaveChangesAsync();
+                positionId = position.Id;
+            }
+            else if (position.Direction == input.Direction)
+            {
+                position.Add(input.Quantity, fillPrice, occurredAt);
+                position.ApplyTradePlan(effectiveStopLoss, effectiveTakeProfit, occurredAt);
                 positionId = position.Id;
             }
             else
@@ -133,6 +139,7 @@ namespace Fintex.Investments.PaperTrading
                 TenantId = AbpSession.TenantId,
                 TradeId = order.Id,
                 UserId = userId,
+                PositionId = positionId,
                 Symbol = input.Symbol,
                 Provider = input.Provider,
                 Direction = input.Direction,
@@ -226,6 +233,7 @@ namespace Fintex.Investments.PaperTrading
                 TenantId = AbpSession.TenantId,
                 TradeId = order.Id,
                 UserId = userId,
+                PositionId = position.Id,
                 Symbol = position.Symbol,
                 Provider = position.Provider,
                 Direction = closingDirection,

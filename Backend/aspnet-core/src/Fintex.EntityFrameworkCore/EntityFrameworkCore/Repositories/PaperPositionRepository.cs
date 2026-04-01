@@ -39,5 +39,18 @@ namespace Fintex.Investments
                 .OrderByDescending(x => x.LastUpdatedAt)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<List<PaperPosition>> GetOpenByMarketAsync(string symbol, MarketDataProvider provider)
+        {
+            var normalized = symbol == null ? string.Empty : symbol.Trim().ToUpperInvariant();
+
+            return await GetAll()
+                .Where(x =>
+                    x.Status == PaperPositionStatus.Open &&
+                    x.Symbol == normalized &&
+                    x.Provider == provider)
+                .OrderByDescending(x => x.LastUpdatedAt)
+                .ToListAsync();
+        }
     }
 }

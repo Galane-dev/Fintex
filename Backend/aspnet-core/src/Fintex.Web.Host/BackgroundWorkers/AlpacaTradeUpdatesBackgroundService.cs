@@ -1,3 +1,4 @@
+using Abp.Domain.Uow;
 using Abp.Runtime.Security;
 using Fintex.Investments;
 using Fintex.Investments.Brokers;
@@ -44,35 +45,42 @@ namespace Fintex.Web.Host.BackgroundWorkers
                 {
                     using (var scope = _serviceScopeFactory.CreateScope())
                     {
+                        var unitOfWorkManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
                         var repository = scope.ServiceProvider.GetRequiredService<IExternalBrokerConnectionRepository>();
-                        var activeConnections = await repository.GetActiveConnectionsAsync(ExternalBrokerProvider.Alpaca);
-                        var activeIds = new HashSet<long>();
 
-                        foreach (var connection in activeConnections)
+                        using (var unitOfWork = unitOfWorkManager.Begin())
                         {
-                            activeIds.Add(connection.Id);
-                            if (_connectionWorkers.ContainsKey(connection.Id))
-                            {
-                                continue;
-                            }
+                            var activeConnections = await repository.GetActiveConnectionsAsync(ExternalBrokerProvider.Alpaca);
+                            var activeIds = new HashSet<long>();
 
-                            var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-                            if (_connectionWorkers.TryAdd(connection.Id, cts))
+                            foreach (var connection in activeConnections)
                             {
-                                _ = Task.Run(() => RunConnectionLoopAsync(connection.Id, cts.Token), cts.Token);
-                            }
-                        }
-
-                        foreach (var item in _connectionWorkers)
-                        {
-                            if (!activeIds.Contains(item.Key))
-                            {
-                                if (_connectionWorkers.TryRemove(item.Key, out var staleCts))
+                                activeIds.Add(connection.Id);
+                                if (_connectionWorkers.ContainsKey(connection.Id))
                                 {
-                                    staleCts.Cancel();
-                                    staleCts.Dispose();
+                                    continue;
+                                }
+
+                                var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                                if (_connectionWorkers.TryAdd(connection.Id, cts))
+                                {
+                                    _ = Task.Run(() => RunConnectionLoopAsync(connection.Id, cts.Token), cts.Token);
                                 }
                             }
+
+                            foreach (var item in _connectionWorkers)
+                            {
+                                if (!activeIds.Contains(item.Key))
+                                {
+                                    if (_connectionWorkers.TryRemove(item.Key, out var staleCts))
+                                    {
+                                        staleCts.Cancel();
+                                        staleCts.Dispose();
+                                    }
+                                }
+                            }
+
+                            await unitOfWork.CompleteAsync();
                         }
                     }
                 }
@@ -110,8 +118,16 @@ namespace Fintex.Web.Host.BackgroundWorkers
                     {
                         using (var scope = _serviceScopeFactory.CreateScope())
                         {
+                            var unitOfWorkManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
                             var repository = scope.ServiceProvider.GetRequiredService<IExternalBrokerConnectionRepository>();
-                            var connection = await repository.FirstOrDefaultAsync(connectionId);
+
+                            ExternalBrokerConnection connection;
+                            using (var unitOfWork = unitOfWorkManager.Begin())
+                            {
+                                connection = await repository.FirstOrDefaultAsync(connectionId);
+                                await unitOfWork.CompleteAsync();
+                            }
+
                             if (connection == null || !connection.IsActive || connection.Status != ExternalBrokerConnectionStatus.Connected)
                             {
                                 return;
@@ -185,8 +201,14 @@ namespace Fintex.Web.Host.BackgroundWorkers
 
                     using (var scope = _serviceScopeFactory.CreateScope())
                     {
+                        var unitOfWorkManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
                         var ingestionService = scope.ServiceProvider.GetRequiredService<IAlpacaTradeUpdateIngestionService>();
-                        await ingestionService.CaptureAsync(connection.Id, update);
+
+                        using (var unitOfWork = unitOfWorkManager.Begin())
+                        {
+                            await ingestionService.CaptureAsync(connection.Id, update);
+                            await unitOfWork.CompleteAsync();
+                        }
                     }
                 }
             }

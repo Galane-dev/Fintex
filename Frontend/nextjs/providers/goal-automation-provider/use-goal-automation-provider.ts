@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
 import type { GoalAutomationActions } from "@/types/goal-automation";
 import {
   cancelGoalTarget,
@@ -12,13 +13,16 @@ import {
 import { goalAutomationActions } from "./actions";
 import { goalAutomationReducer, initialGoalAutomationState } from "./reducer";
 
-const GOAL_REFRESH_MS = 60_000;
+const GOAL_REFRESH_MS = 15_000;
 
 export const useGoalAutomationProvider = () => {
   const [state, dispatch] = useReducer(goalAutomationReducer, initialGoalAutomationState);
+  const notifications = useNotifications();
 
-  const refreshGoals = useCallback(async () => {
-    dispatch(goalAutomationActions.loadStart());
+  const loadGoals = useCallback(async (showLoading: boolean) => {
+    if (showLoading) {
+      dispatch(goalAutomationActions.loadStart());
+    }
 
     try {
       dispatch(goalAutomationActions.loadSuccess(await getMyGoalTargets()));
@@ -30,6 +34,10 @@ export const useGoalAutomationProvider = () => {
       );
     }
   }, []);
+
+  const refreshGoals = useCallback(async () => {
+    await loadGoals(true);
+  }, [loadGoals]);
 
   const runSavingAction = useCallback(async (action: () => Promise<void>) => {
     dispatch(goalAutomationActions.saveStart());
@@ -54,13 +62,26 @@ export const useGoalAutomationProvider = () => {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      void refreshGoals();
+      void loadGoals(false);
     }, GOAL_REFRESH_MS);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [refreshGoals]);
+  }, [loadGoals]);
+
+  const latestGoalNotificationId = useMemo(
+    () => notifications.notifications.find((item) => item.type === "GoalAutomation")?.id ?? null,
+    [notifications.notifications],
+  );
+
+  useEffect(() => {
+    if (latestGoalNotificationId == null) {
+      return;
+    }
+
+    void loadGoals(false);
+  }, [latestGoalNotificationId, loadGoals]);
 
   const actionValues = useMemo<GoalAutomationActions>(
     () => ({

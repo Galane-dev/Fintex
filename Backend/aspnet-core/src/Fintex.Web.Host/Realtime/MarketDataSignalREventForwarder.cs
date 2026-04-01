@@ -194,7 +194,10 @@ namespace Fintex.Web.Host.Realtime
             {
                 eventData.TradeId,
                 eventData.UserId,
+                eventData.PositionId,
                 eventData.Symbol,
+                eventData.Provider,
+                Source = eventData.Source,
                 Status = eventData.Status.ToString(),
                 eventData.RealizedProfitLoss,
                 eventData.OccurredAt

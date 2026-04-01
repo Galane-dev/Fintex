@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace Fintex.Investments.EconomicCalendar
 {
     /// <summary>
-    /// Pulls upcoming CPI, NFP, and FOMC events from official sources and turns them into macro risk shading.
+    /// Pulls upcoming high-impact macro events from official sources and turns them into macro risk shading.
     /// </summary>
     public class EconomicCalendarService : IEconomicCalendarService, ITransientDependency
     {
@@ -43,7 +43,7 @@ namespace Fintex.Investments.EconomicCalendar
             {
                 return new EconomicCalendarInsight
                 {
-                    Summary = "No high-impact CPI, NFP, or FOMC event is currently close enough to materially shade this BTC/USD recommendation.",
+                    Summary = "No high-impact macro event is currently close enough to materially shade this BTC/USD recommendation.",
                     RiskScore = 0m
                 };
             }
@@ -80,6 +80,7 @@ namespace Fintex.Investments.EconomicCalendar
 
                 var events = new List<EconomicCalendarEvent>();
                 events.AddRange(await TryFetchSourceEventsAsync(() => FetchBlsEventsAsync(cancellationToken)));
+                events.AddRange(await TryFetchSourceEventsAsync(() => FetchBeaEventsAsync(cancellationToken)));
                 events.AddRange(await TryFetchSourceEventsAsync(() => FetchFomcEventsAsync(cancellationToken)));
 
                 if (events.Count == 0 && _cachedEvents.Count > 0)
@@ -87,7 +88,7 @@ namespace Fintex.Investments.EconomicCalendar
                     return _cachedEvents;
                 }
 
-                _cachedEvents = events
+                _cachedEvents = DeduplicateEvents(events)
                     .Where(item => item.OccursAtUtc >= DateTime.UtcNow.AddDays(-1))
                     .OrderBy(item => item.OccursAtUtc)
                     .ToList();
@@ -126,6 +127,19 @@ namespace Fintex.Investments.EconomicCalendar
             return ParseFomcHtml(payload);
         }
 
+        private async Task<IEnumerable<EconomicCalendarEvent>> FetchBeaEventsAsync(CancellationToken cancellationToken)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, _configuration["EconomicCalendar:Sources:BeaIcsUrl"] ?? "https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics");
+            request.Headers.UserAgent.Add(new ProductInfoHeaderValue("FintexMacroCalendar", "1.0"));
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/calendar"));
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ParseBeaIcs(payload);
+        }
+
         private static async Task<IEnumerable<EconomicCalendarEvent>> TryFetchSourceEventsAsync(Func<Task<IEnumerable<EconomicCalendarEvent>>> fetch)
         {
             try
@@ -140,7 +154,7 @@ namespace Fintex.Investments.EconomicCalendar
 
         private static IEnumerable<EconomicCalendarEvent> ParseBlsIcs(string payload)
         {
-            var rawEvents = Regex.Split(payload ?? string.Empty, "BEGIN:VEVENT", RegexOptions.IgnoreCase);
+            var rawEvents = Regex.Split(NormalizeIcsPayload(payload), "BEGIN:VEVENT", RegexOptions.IgnoreCase);
             foreach (var rawEvent in rawEvents)
             {
                 var summary = MatchIcsValue(rawEvent, "SUMMARY");
@@ -163,6 +177,43 @@ namespace Fintex.Investments.EconomicCalendar
                 if (summary.Contains("Employment Situation", StringComparison.OrdinalIgnoreCase))
                 {
                     yield return BuildEvent(EconomicCalendarEventType.NonFarmPayrolls, "NFP / Employment Situation", "BLS", occursAtUtc, 80m);
+                }
+
+                if (summary.Contains("Producer Price Index", StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return BuildEvent(EconomicCalendarEventType.ProducerPriceIndex, "PPI", "BLS", occursAtUtc, 68m);
+                }
+            }
+        }
+
+        private static IEnumerable<EconomicCalendarEvent> ParseBeaIcs(string payload)
+        {
+            var rawEvents = Regex.Split(NormalizeIcsPayload(payload), "BEGIN:VEVENT", RegexOptions.IgnoreCase);
+            foreach (var rawEvent in rawEvents)
+            {
+                var summary = MatchIcsValue(rawEvent, "SUMMARY");
+                var startsAt = MatchIcsValue(rawEvent, "DTSTART");
+                if (string.IsNullOrWhiteSpace(summary) || string.IsNullOrWhiteSpace(startsAt))
+                {
+                    continue;
+                }
+
+                if (!TryParseIcsDate(startsAt, out var occursAtUtc))
+                {
+                    continue;
+                }
+
+                if (summary.Contains("Gross Domestic Product", StringComparison.OrdinalIgnoreCase) ||
+                    summary.Contains("GDP (", StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return BuildEvent(EconomicCalendarEventType.GrossDomesticProduct, "GDP release", "BEA", occursAtUtc, 72m);
+                }
+
+                if (summary.Contains("Personal Income and Outlays", StringComparison.OrdinalIgnoreCase) ||
+                    summary.Contains("Personal Consumption Expenditures", StringComparison.OrdinalIgnoreCase) ||
+                    summary.Contains("State PCE", StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return BuildEvent(EconomicCalendarEventType.PersonalConsumptionExpenditures, "PCE / Personal Income", "BEA", occursAtUtc, 78m);
                 }
             }
         }
@@ -203,6 +254,31 @@ namespace Fintex.Investments.EconomicCalendar
                 OccursAtUtc = occursAtUtc,
                 ImpactScore = impactScore
             };
+        }
+
+        private static IEnumerable<EconomicCalendarEvent> DeduplicateEvents(IEnumerable<EconomicCalendarEvent> events)
+        {
+            return events
+                .GroupBy(item => new
+                {
+                    item.Type,
+                    item.Title,
+                    item.Source,
+                    item.OccursAtUtc
+                })
+                .Select(group => group
+                    .OrderByDescending(item => item.ImpactScore)
+                    .First());
+        }
+
+        private static string NormalizeIcsPayload(string payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload))
+            {
+                return string.Empty;
+            }
+
+            return Regex.Replace(payload, @"\r?\n[ \t]", string.Empty);
         }
 
         private static string MatchIcsValue(string content, string key)

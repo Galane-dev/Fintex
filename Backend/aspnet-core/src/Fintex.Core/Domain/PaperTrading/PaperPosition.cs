@@ -154,6 +154,43 @@ namespace Fintex.Investments
             LastUpdatedAt = occurredAt;
         }
 
+        public PaperPositionRiskTrigger GetTriggeredRiskExit(decimal marketPrice)
+        {
+            EnsurePositive(marketPrice, nameof(marketPrice));
+
+            if (Status != PaperPositionStatus.Open)
+            {
+                return PaperPositionRiskTrigger.None;
+            }
+
+            if (Direction == TradeDirection.Buy)
+            {
+                if (StopLoss.HasValue && marketPrice <= StopLoss.Value)
+                {
+                    return PaperPositionRiskTrigger.StopLoss;
+                }
+
+                if (TakeProfit.HasValue && marketPrice >= TakeProfit.Value)
+                {
+                    return PaperPositionRiskTrigger.TakeProfit;
+                }
+
+                return PaperPositionRiskTrigger.None;
+            }
+
+            if (StopLoss.HasValue && marketPrice >= StopLoss.Value)
+            {
+                return PaperPositionRiskTrigger.StopLoss;
+            }
+
+            if (TakeProfit.HasValue && marketPrice <= TakeProfit.Value)
+            {
+                return PaperPositionRiskTrigger.TakeProfit;
+            }
+
+            return PaperPositionRiskTrigger.None;
+        }
+
         private void EnsureOpen()
         {
             if (Status != PaperPositionStatus.Open)
