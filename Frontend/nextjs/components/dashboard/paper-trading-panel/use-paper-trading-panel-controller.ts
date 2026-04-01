@@ -6,6 +6,7 @@ import { useExternalBrokerAccounts } from "@/hooks/useExternalBrokerAccounts";
 import { useLiveTrading } from "@/hooks/useLiveTrading";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
 import { useAcademyStatus } from "@/hooks/use-academy-status";
+import { getActionableRecommendationAction } from "@/utils/paper-trading";
 import {
   EXTERNAL_BROKER_PLATFORM_DIRECT_API,
   EXTERNAL_BROKER_PROVIDER_ALPACA,
@@ -80,11 +81,14 @@ export const usePaperTradingPanelController = ({
     });
 
     if (result) {
+      const suggestedTradeAction = getActionableRecommendationAction(result);
       tradeForm.setFieldsValue({
         stopLoss: values.stopLoss ?? result.suggestedStopLoss ?? undefined,
         takeProfit: values.takeProfit ?? result.suggestedTakeProfit ?? undefined,
       });
-      setTradeDirection(result.recommendedAction === "Sell" ? "Sell" : "Buy");
+      if (suggestedTradeAction) {
+        setTradeDirection(suggestedTradeAction);
+      }
     } else {
       setRecommendationRequestError("We could not load a recommendation right now. Please try again.");
     }
@@ -288,7 +292,8 @@ export const usePaperTradingPanelController = ({
     handlePlaceSuggestedTrade: async () => {
       const recommendation = paperTrading.recommendation;
       if (!recommendation) return;
-      if (recommendation.recommendedAction === "Hold") {
+      const suggestedTradeAction = getActionableRecommendationAction(recommendation);
+      if (!suggestedTradeAction) {
         message.info("This recommendation is a hold, so there is no trade to place yet.");
         return;
       }
@@ -305,7 +310,7 @@ export const usePaperTradingPanelController = ({
         message.info("Create your paper account before placing the suggested trade.");
         return;
       }
-      await submitTrade(recommendation.recommendedAction);
+      await submitTrade(suggestedTradeAction);
       setIsRecommendationOpen(false);
     },
     isAccountsOpen,

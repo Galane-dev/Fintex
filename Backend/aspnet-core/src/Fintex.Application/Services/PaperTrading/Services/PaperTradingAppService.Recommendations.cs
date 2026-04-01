@@ -26,12 +26,17 @@ namespace Fintex.Investments.PaperTrading
                 marketContext.LatestPoint.Price,
                 marketContext.RealtimeVerdict?.Atr,
                 marketContext.RealtimeVerdict?.Verdict == MarketVerdict.Sell ? TradeDirection.Sell : TradeDirection.Buy);
+            var suggestedTradeAction = marketContext.RealtimeVerdict?.Verdict == MarketVerdict.Buy ||
+                marketContext.RealtimeVerdict?.Verdict == MarketVerdict.Sell
+                    ? marketContext.RealtimeVerdict.Verdict
+                    : (MarketVerdict?)null;
 
             if (_recommendationGuardService.ShouldHold(marketContext.RealtimeVerdict))
             {
                 var holdRecommendation = new PaperTradeRecommendationDto
                 {
                     RecommendedAction = MarketVerdict.Hold,
+                    SuggestedTradeAction = null,
                     RiskScore = 82m,
                     RiskLevel = PaperTradeRiskLevel.High,
                     Headline = "Best move is to wait for a cleaner setup.",
@@ -70,6 +75,7 @@ namespace Fintex.Investments.PaperTrading
             var recommendation = new PaperTradeRecommendationDto
             {
                 RecommendedAction = marketContext.RealtimeVerdict.Verdict,
+                SuggestedTradeAction = suggestedTradeAction,
                 RiskScore = assessment.RiskScore,
                 RiskLevel = assessment.RiskLevel,
                 Headline = marketContext.RealtimeVerdict.Verdict == MarketVerdict.Buy

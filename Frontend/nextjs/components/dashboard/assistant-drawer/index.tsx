@@ -3,7 +3,8 @@
 import { MessageOutlined, SendOutlined } from "@ant-design/icons";
 import { Alert, Button, Input, Space, Tabs, Typography } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
-import type { AssistantMessage } from "@/types/assistant";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
+import type { AssistantMessage, AssistantVoiceStatus } from "@/types/assistant";
 import { MessageList } from "./message-list";
 import { VoicePanel } from "./voice-panel";
 
@@ -11,28 +12,29 @@ type AssistantDrawerProps = {
   isOpen: boolean;
   isSending: boolean;
   isListening: boolean;
+  isVoiceConnecting: boolean;
+  voiceStatus: AssistantVoiceStatus;
   error: string | null;
   draft: string;
   transcript: string;
-  speakReplies: boolean;
   messages: AssistantMessage[];
   suggestedPrompts: string[];
   onClose: () => void;
   onDraftChange: (value: string) => void;
-  onSubmit: (value: string, voiceMode?: boolean) => void;
+  onSubmit: (value: string) => void;
   onStartListening: () => void;
   onStopListening: () => void;
-  onToggleSpeakReplies: (value: boolean) => void;
 };
 
 export function AssistantDrawer({
   isOpen,
   isSending,
   isListening,
+  isVoiceConnecting,
+  voiceStatus,
   error,
   draft,
   transcript,
-  speakReplies,
   messages,
   suggestedPrompts,
   onClose,
@@ -40,7 +42,6 @@ export function AssistantDrawer({
   onSubmit,
   onStartListening,
   onStopListening,
-  onToggleSpeakReplies,
 }: AssistantDrawerProps) {
   return (
     <DashboardDrawerShell
@@ -52,7 +53,7 @@ export function AssistantDrawer({
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         {error ? <Alert type="warning" showIcon message={error} /> : null}
         <Typography.Text type="secondary">
-          Ask about the market, your trades, alerts, recommendations, or ask me to create and manage BTC target goals for you.
+          Ask about the market, your paper or live trades, alerts, automation rules, goals, behavior analysis, or strategy validation. Voice chat now runs as a direct realtime audio session.
         </Typography.Text>
         <Space wrap>
           {suggestedPrompts.map((prompt) => (
@@ -74,13 +75,13 @@ export function AssistantDrawer({
                   <Input.TextArea
                     value={draft}
                     onChange={(event) => onDraftChange(event.target.value)}
-                    placeholder="Ask me to explain the verdict, set an alert, place a trade, or create a BTC target goal."
+                    placeholder="Ask me to explain the verdict, manage alerts, place trades, review automation, or create and manage BTC goals."
                     autoSize={{ minRows: 4, maxRows: 8 }}
                   />
                   <Button
                     type="primary"
                     icon={<SendOutlined />}
-                    loading={isSending}
+                    loading={getFintexButtonLoading(isSending)}
                     onClick={() => onSubmit(draft)}
                   >
                     Send
@@ -93,11 +94,12 @@ export function AssistantDrawer({
               label: "Voice chat",
               children: (
                 <VoicePanel
+                  messages={messages}
                   isListening={isListening}
-                  isSending={isSending}
+                  isConnecting={isVoiceConnecting}
+                  isBusy={isSending}
+                  voiceStatus={voiceStatus}
                   transcript={transcript}
-                  speakReplies={speakReplies}
-                  onToggleSpeakReplies={onToggleSpeakReplies}
                   onStartListening={onStartListening}
                   onStopListening={onStopListening}
                 />

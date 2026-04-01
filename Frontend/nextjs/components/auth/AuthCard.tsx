@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Checkbox, Form, Input, Space, Typography } from "antd";
 import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import type { SignInValues, SignUpValues } from "@/types/auth";
@@ -151,7 +152,12 @@ export function AuthCard({ mode }: AuthCardProps) {
             ) : null}
 
             <Form.Item style={{ marginBottom: 12 }}>
-              <Button htmlType="submit" type="primary" block loading={isSubmitting}>
+              <Button
+                htmlType="submit"
+                type="primary"
+                block
+                loading={getFintexButtonLoading(isSubmitting)}
+              >
                 {copy.button}
               </Button>
             </Form.Item>

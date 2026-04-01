@@ -6,12 +6,12 @@ import {
   ApartmentOutlined,
   CheckCircleOutlined,
   DashboardOutlined,
-  HomeOutlined,
   LogoutOutlined,
   ReloadOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Space, Tag, Typography } from "antd";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { ActivityFeedCard } from "./activity-feed-card";
@@ -77,12 +77,22 @@ export function InsightsContent() {
           </div>
 
           <div className={styles.actions}>
-            <Button icon={<ReloadOutlined />} loading={isLoading} onClick={() => void refresh()} />
+            <Button
+              icon={<ReloadOutlined />}
+              loading={getFintexButtonLoading(isLoading)}
+              onClick={() => void refresh()}
+            />
             <Link href={ROUTES.dashboard}>
               <Button icon={<DashboardOutlined />} />
             </Link>
             <Link href={ROUTES.home}>
-              <Button icon={<HomeOutlined />} />
+              <Button
+                className={styles.brandHomeButton}
+                aria-label="Fintex home"
+                title="Fintex home"
+              >
+                F
+              </Button>
             </Link>
             <Button type="primary" icon={<LogoutOutlined />} onClick={signOut} />
           </div>

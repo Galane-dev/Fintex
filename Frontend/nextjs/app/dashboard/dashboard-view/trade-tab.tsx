@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Empty, Space, Tag, Typography } from "antd";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import type { ClosedTradeReview, LiveTrade } from "@/types/live-trading";
 import type { PaperPosition, PaperTradeFill } from "@/types/paper-trading";
 import { formatPrice, formatTime } from "@/utils/market-data";
@@ -61,7 +62,13 @@ export function TradeTab({
                   <Space wrap>
                     <Tag color="default">Paper academy</Tag>
                     <Tag color={position.direction === "Buy" ? "green" : "red"}>{position.quantity.toFixed(4)}</Tag>
-                    <Button size="small" loading={isPaperSubmitting} onClick={() => onClosePaperPosition?.(position.id)}>Close</Button>
+                    <Button
+                      size="small"
+                      loading={getFintexButtonLoading(isPaperSubmitting)}
+                      onClick={() => onClosePaperPosition?.(position.id)}
+                    >
+                      Close
+                    </Button>
                   </Space>
                 </div>
 

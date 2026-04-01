@@ -1,11 +1,14 @@
 using Abp.Authorization;
 using Fintex.Investments.Assistant.Dto;
+using Fintex.Investments.Automation;
 using Fintex.Investments.Brokers;
+using Fintex.Investments.EconomicCalendar;
 using Fintex.Investments.Goals.Services;
 using Fintex.Investments.MarketData;
 using Fintex.Investments.Notifications;
 using Fintex.Investments.PaperTrading;
 using Fintex.Investments.Profiles;
+using Fintex.Investments.Strategies;
 using Fintex.Investments.Trading;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
@@ -31,6 +34,9 @@ namespace Fintex.Investments.Assistant
         private readonly IExternalBrokerAppService _externalBrokerAppService;
         private readonly IExternalBrokerTradingAppService _externalBrokerTradingAppService;
         private readonly IGoalAutomationAppService _goalAutomationAppService;
+        private readonly ITradeAutomationAppService _tradeAutomationAppService;
+        private readonly IStrategyValidationAppService _strategyValidationAppService;
+        private readonly IEconomicCalendarAppService _economicCalendarAppService;
 
         public AssistantAppService(
             HttpClient httpClient,
@@ -42,7 +48,10 @@ namespace Fintex.Investments.Assistant
             ITradeAppService tradeAppService,
             IExternalBrokerAppService externalBrokerAppService,
             IExternalBrokerTradingAppService externalBrokerTradingAppService,
-            IGoalAutomationAppService goalAutomationAppService)
+            IGoalAutomationAppService goalAutomationAppService,
+            ITradeAutomationAppService tradeAutomationAppService,
+            IStrategyValidationAppService strategyValidationAppService,
+            IEconomicCalendarAppService economicCalendarAppService)
         {
             _httpClient = httpClient;
             _configuration = configuration;
@@ -54,6 +63,9 @@ namespace Fintex.Investments.Assistant
             _externalBrokerAppService = externalBrokerAppService;
             _externalBrokerTradingAppService = externalBrokerTradingAppService;
             _goalAutomationAppService = goalAutomationAppService;
+            _tradeAutomationAppService = tradeAutomationAppService;
+            _strategyValidationAppService = strategyValidationAppService;
+            _economicCalendarAppService = economicCalendarAppService;
         }
 
         public async Task<AssistantChatResponseDto> SendMessageAsync(AssistantChatInput input)
@@ -83,6 +95,7 @@ namespace Fintex.Investments.Assistant
                 "Explain the current verdict and confidence.",
                 "Set a BTC alert at 70000 and email me.",
                 "Give me a trade recommendation right now.",
+                "Summarize my active automation rules and goals.",
                 snapshot.Goals.Any() ? "List my active BTC goals." : "Create a BTC growth goal for my paper account by tomorrow afternoon.",
             };
         }

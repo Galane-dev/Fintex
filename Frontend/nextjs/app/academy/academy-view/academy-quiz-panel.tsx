@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Alert, Button, Card, Flex, Form, Radio, Space, Statistic, Typography } from "antd";
 import type { FormInstance } from "antd";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import type { AcademyCourse, AcademyQuizSubmissionResult, AcademyStatus } from "@/types/academy";
 import { useStyles } from "./style";
 
@@ -102,7 +103,11 @@ export const AcademyQuizPanel = ({
 
       <Flex justify="space-between" align="center" gap={16} wrap="wrap" className={styles.lessonFooter}>
         <Button onClick={onBackToLessons}>Review lessons again</Button>
-        <Button type="primary" loading={isSubmitting || isStatusLoading} onClick={() => void onSubmit()}>
+        <Button
+          type="primary"
+          loading={getFintexButtonLoading(isSubmitting || isStatusLoading)}
+          onClick={() => void onSubmit()}
+        >
           Submit quiz
         </Button>
       </Flex>

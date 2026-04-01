@@ -8,13 +8,13 @@ export const useStyles = createStyles(({ css, token }) => ({
     background:
       radial-gradient(circle at top right, rgba(155, 242, 177, 0.08), transparent 18%),
       #020303;
-    padding: 24px 0 36px;
+    padding: 8px 0 24px;
     overflow-x: hidden;
 
     @media (min-width: 1181px) {
       height: 100vh;
       overflow: hidden;
-      padding: 24px 0;
+      padding: 8px 0;
     }
   `,
   shell: css`
@@ -30,8 +30,8 @@ export const useStyles = createStyles(({ css, token }) => ({
     }
   `,
   header: css`
-    margin-bottom: 18px;
-    padding: 10px 0 0;
+    margin-bottom: 6px;
+    padding: 0;
     border-radius: 22px;
     display: flex;
     align-items: center;
@@ -85,6 +85,49 @@ export const useStyles = createStyles(({ css, token }) => ({
       height: 100%;
       display: flex;
       flex-direction: column;
+    }
+  `,
+  brandHomeButton: css`
+    min-width: 36px !important;
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.08em;
+    color: #eaffef !important;
+    border-color: rgba(155, 242, 177, 0.2) !important;
+    background:
+      radial-gradient(circle at 28% 24%, rgba(155, 242, 177, 0.22), transparent 42%),
+      linear-gradient(180deg, rgba(18, 26, 21, 0.98), rgba(7, 10, 8, 0.98)) !important;
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    text-shadow: 0 0 16px rgba(155, 242, 177, 0.16);
+    overflow: hidden;
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 55%);
+      pointer-events: none;
+    }
+
+    &:hover,
+    &:focus {
+      color: #9bf2b1 !important;
+      border-color: rgba(155, 242, 177, 0.38) !important;
+      background:
+        radial-gradient(circle at 28% 24%, rgba(155, 242, 177, 0.28), transparent 44%),
+        linear-gradient(180deg, rgba(21, 31, 25, 0.98), rgba(8, 12, 9, 0.98)) !important;
+      transform: translateY(-1px);
     }
   `,
   sideColumn: css`

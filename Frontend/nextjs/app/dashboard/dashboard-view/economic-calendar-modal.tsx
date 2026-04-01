@@ -1,7 +1,8 @@
 "use client";
 
-import { Alert, List, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, List, Space, Tag, Typography } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
+import { FintexLoader } from "@/components/fintex-loader";
 import type { EconomicCalendarInsight } from "@/types/economic-calendar";
 import { formatDateTime } from "@/utils/market-data";
 
@@ -33,7 +34,7 @@ export function EconomicCalendarModal({
   onClose,
 }: EconomicCalendarModalProps) {
   const content = isLoading ? (
-    <Skeleton active paragraph={{ rows: 7 }} />
+    <FintexLoader variant="panel" label="Loading" minHeight={240} />
   ) : error ? (
     <Alert type="warning" showIcon message={error} />
   ) : insight ? (

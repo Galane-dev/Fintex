@@ -43,7 +43,7 @@ namespace Fintex.Investments.Assistant
             var builder = new StringBuilder();
             builder.AppendLine("You are Fintex Copilot, a trading assistant inside the Fintex dashboard.");
             builder.AppendLine("Return strict JSON with properties: reply, voiceReply, suggestedPrompts, actions.");
-            builder.AppendLine("Allowed action types: create_price_alert, get_recommendation, place_paper_trade, place_live_trade, refresh_behavior_analysis, sync_live_trades, create_goal_target, list_goal_targets, pause_goal_target, cancel_goal_target.");
+            builder.AppendLine("Allowed action types: create_price_alert, delete_alert_rule, mark_notification_read, mark_all_notifications_read, send_test_alert, get_recommendation, create_paper_account, place_paper_trade, close_paper_position, place_live_trade, refresh_behavior_analysis, sync_live_trades, validate_strategy, create_trade_automation_rule, delete_trade_automation_rule, create_goal_target, list_goal_targets, pause_goal_target, resume_goal_target, cancel_goal_target.");
             builder.AppendLine("Only create actions when the user explicitly asks you to do something.");
             builder.AppendLine("If trade quantity or destination is missing, ask a follow-up in reply and leave actions empty.");
             builder.AppendLine("Goal automation is best-effort only. Never promise guaranteed returns.");
@@ -56,16 +56,29 @@ namespace Fintex.Investments.Assistant
             builder.AppendLine($"Unread notifications={snapshot.Notifications?.UnreadCount}, activeAlerts={snapshot.Notifications?.AlertRules?.Items?.Count ?? 0}");
             builder.AppendLine($"Behavior score={snapshot.Profile?.BehavioralRiskScore}, summary={snapshot.Profile?.BehavioralSummary}");
             builder.AppendLine($"Tracked trades={snapshot.Trades.Count}");
+            builder.AppendLine($"Automation rules={snapshot.AutomationRules.Count}");
+            builder.AppendLine($"Macro risk={snapshot.MacroInsight?.RiskScore}, nextMacroEventUtc={snapshot.MacroInsight?.NextEventAtUtc}");
+            builder.AppendLine($"Recent strategy validations={snapshot.StrategyValidations.Count}");
             builder.AppendLine("Current goals:");
             foreach (var goal in snapshot.Goals.Take(4))
             {
                 builder.AppendLine($"- id={goal.Id}, name={goal.Name}, status={goal.Status}, accountType={goal.AccountType}, progress={goal.ProgressPercent}, deadlineUtc={goal.DeadlineUtc}");
+            }
+            builder.AppendLine("Current automation rules:");
+            foreach (var rule in snapshot.AutomationRules.Take(4))
+            {
+                builder.AppendLine($"- id={rule.Id}, name={rule.Name}, trigger={rule.TriggerType}, destination={rule.Destination}, direction={rule.TradeDirection}, quantity={rule.Quantity}, active={rule.IsActive}");
             }
             builder.AppendLine("Connected brokers:");
 
             foreach (var connection in snapshot.Connections.Where(x => x.IsActive))
             {
                 builder.AppendLine($"- id={connection.Id}, name={connection.DisplayName}, provider={connection.Provider}, status={connection.Status}");
+            }
+            builder.AppendLine("Recent strategy validations:");
+            foreach (var validation in snapshot.StrategyValidations.Take(3))
+            {
+                builder.AppendLine($"- id={validation.Id}, name={validation.StrategyName}, outcome={validation.Outcome}, score={validation.ValidationScore}, summary={validation.Summary}");
             }
 
             builder.AppendLine("Recent conversation:");
@@ -75,7 +88,7 @@ namespace Fintex.Investments.Assistant
             }
 
             builder.AppendLine($"user: {input.Message}");
-            builder.AppendLine("Each action item may include: type, symbol, direction, quantity, targetPrice, stopLoss, takeProfit, connectionId, notifyEmail, notifyInApp, notes, goalId, goalName, accountType, targetType, targetPercent, targetAmount, deadlineUtc, maxAcceptableRisk, maxDrawdownPercent, maxPositionSizePercent, tradingSession, allowOvernightPositions.");
+            builder.AppendLine("Each action item may include: type, symbol, direction, quantity, targetPrice, stopLoss, takeProfit, connectionId, ruleId, notificationId, positionId, notifyEmail, notifyInApp, notes, goalId, goalName, baseCurrency, startingBalance, accountType, targetType, triggerType, triggerValue, destination, targetVerdict, minimumConfidenceScore, targetPercent, targetAmount, deadlineUtc, maxAcceptableRisk, maxDrawdownPercent, maxPositionSizePercent, tradingSession, allowOvernightPositions, strategyName, strategyText, timeframe, directionPreference.");
             builder.AppendLine("Keep reply concise and directly useful.");
             return builder.ToString();
         }
@@ -126,10 +139,20 @@ namespace Fintex.Investments.Assistant
                             StopLoss = ReadDecimal(action, "stopLoss"),
                             TakeProfit = ReadDecimal(action, "takeProfit"),
                             ConnectionId = ReadLong(action, "connectionId"),
+                            RuleId = ReadLong(action, "ruleId"),
+                            NotificationId = ReadLong(action, "notificationId"),
+                            PositionId = ReadLong(action, "positionId"),
                             GoalId = ReadLong(action, "goalId"),
                             GoalName = ReadString(action, "goalName"),
+                            BaseCurrency = ReadString(action, "baseCurrency"),
+                            StartingBalance = ReadDecimal(action, "startingBalance"),
                             AccountType = ReadString(action, "accountType"),
                             TargetType = ReadString(action, "targetType"),
+                            TriggerType = ReadString(action, "triggerType"),
+                            Destination = ReadString(action, "destination"),
+                            TargetVerdict = ReadString(action, "targetVerdict"),
+                            TriggerValue = ReadDecimal(action, "triggerValue"),
+                            MinimumConfidenceScore = ReadDecimal(action, "minimumConfidenceScore"),
                             TargetPercent = ReadDecimal(action, "targetPercent"),
                             TargetAmount = ReadDecimal(action, "targetAmount"),
                             DeadlineUtc = ReadDateTime(action, "deadlineUtc"),
@@ -140,6 +163,10 @@ namespace Fintex.Investments.Assistant
                             AllowOvernightPositions = ReadBool(action, "allowOvernightPositions"),
                             NotifyEmail = ReadBool(action, "notifyEmail"),
                             NotifyInApp = ReadBool(action, "notifyInApp"),
+                            StrategyName = ReadString(action, "strategyName"),
+                            StrategyText = ReadString(action, "strategyText"),
+                            Timeframe = ReadString(action, "timeframe"),
+                            DirectionPreference = ReadString(action, "directionPreference"),
                             Notes = ReadString(action, "notes")
                         });
                     }
