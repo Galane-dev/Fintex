@@ -1,7 +1,8 @@
 "use client";
 
-import { Alert, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, Space, Tag, Typography } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
+import { FintexLoader } from "@/components/fintex-loader";
 import type { UserProfile } from "@/types/user-profile";
 import { formatTime } from "@/utils/market-data";
 import { useStyles } from "../style";
@@ -24,7 +25,7 @@ export function BehaviorAnalysisModal({
   const { styles } = useStyles();
 
   const content = isLoading ? (
-    <Skeleton active paragraph={{ rows: 7 }} />
+    <FintexLoader variant="panel" label="Loading" minHeight={240} />
   ) : error ? (
     <Alert type="warning" showIcon title={error} />
   ) : profile ? (

@@ -1,8 +1,11 @@
+using Fintex.Investments.Automation.Dto;
 using Fintex.Investments.Brokers.Dto;
+using Fintex.Investments.EconomicCalendar.Dto;
 using Fintex.Investments.Goals.Dto;
 using Fintex.Investments.MarketData.Dto;
 using Fintex.Investments.Notifications.Dto;
 using Fintex.Investments.PaperTrading.Dto;
+using Fintex.Investments.Strategies.Dto;
 using Fintex.Investments.Trading.Dto;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,6 +43,9 @@ namespace Fintex.Investments.Assistant
             var trades = await _tradeAppService.GetMyTradesAsync();
             var connections = await _externalBrokerAppService.GetMyConnectionsAsync();
             var goals = await _goalAutomationAppService.GetMyGoalsAsync();
+            var automationRules = await _tradeAutomationAppService.GetMyRulesAsync();
+            var strategyValidations = await _strategyValidationAppService.GetMyHistoryAsync();
+            var macroInsight = await _economicCalendarAppService.GetBitcoinUsdRiskInsightAsync();
 
             return new AssistantContextSnapshot
             {
@@ -50,7 +56,10 @@ namespace Fintex.Investments.Assistant
                 Profile = profile,
                 Trades = trades.Items?.ToList() ?? new List<TradeDto>(),
                 Connections = connections.Items?.ToList() ?? new List<ExternalBrokerConnectionDto>(),
-                Goals = goals.Items?.ToList() ?? new List<GoalTargetDto>()
+                Goals = goals.Items?.ToList() ?? new List<GoalTargetDto>(),
+                AutomationRules = automationRules.Items?.ToList() ?? new List<TradeAutomationRuleDto>(),
+                StrategyValidations = strategyValidations.Items?.ToList() ?? new List<StrategyValidationResultDto>(),
+                MacroInsight = macroInsight
             };
         }
     }

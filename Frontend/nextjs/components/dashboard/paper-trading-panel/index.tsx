@@ -1,6 +1,7 @@
 "use client";
 
-import { Alert, Skeleton } from "antd";
+import { Alert } from "antd";
+import { FintexLoader } from "@/components/fintex-loader";
 import type { PaperTradingPanelProps } from "./types";
 import { AssessmentModal } from "./assessment-modal";
 import { AccountsModal } from "./accounts-modal";
@@ -27,7 +28,7 @@ export const PaperTradingPanel = ({
     controller.positions.length === 0;
 
   if (shouldShowInitialSkeleton) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return <FintexLoader variant="panel" label="Loading" minHeight={280} />;
   }
 
   return (

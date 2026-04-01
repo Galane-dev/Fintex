@@ -2,10 +2,11 @@
 
 import { ComponentType, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Alert, Flex, Spin } from "antd";
+import { Alert, Flex } from "antd";
 import { useAuth } from "@/hooks/useAuth";
 import { useAcademyStatus } from "@/hooks/use-academy-status";
 import { ROUTES } from "@/constants/routes";
+import { FintexLoader } from "@/components/fintex-loader";
 
 interface WithAuthOptions {
   requireAcademyAccess?: boolean;
@@ -49,9 +50,7 @@ export const withAuth = <P extends object>(
 
     if (!isReady || !isAuthenticated || (requireAcademyAccess && academy.isLoading)) {
       return (
-        <Flex align="center" justify="center" style={{ minHeight: "100vh" }}>
-          <Spin size="large" />
-        </Flex>
+        <FintexLoader variant="fullscreen" label="Loading" />
       );
     }
 
@@ -65,9 +64,7 @@ export const withAuth = <P extends object>(
 
     if (requireAcademyAccess && academy.status && !academy.status.hasTradeAcademyAccess) {
       return (
-        <Flex align="center" justify="center" style={{ minHeight: "100vh" }}>
-          <Spin size="large" />
-        </Flex>
+        <FintexLoader variant="fullscreen" label="Loading" />
       );
     }
 

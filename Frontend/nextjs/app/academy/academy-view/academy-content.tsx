@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Empty, Result, Skeleton } from "antd";
+import { Card, Empty, Result } from "antd";
 import type { FormInstance } from "antd";
 import type { AcademyQuizAnswerInput } from "@/types/academy";
 import { ROUTES } from "@/constants/routes";
 import { getAcademyCourse, saveAcademyLessonProgress, submitAcademyQuiz } from "@/utils/academy-api";
 import { useAcademyStatus } from "@/hooks/use-academy-status";
+import { FintexLoader } from "@/components/fintex-loader";
 import { AcademyHeroStrip } from "./academy-hero-strip";
 import { AcademyLessonsPanel } from "./academy-lessons-panel";
 import { AcademyProgressPanel } from "./academy-progress-panel";
@@ -184,7 +185,7 @@ export const AcademyContent = () => {
       <div className={styles.shell}>
         {isCourseLoading ? (
           <Card className={styles.workspaceCard}>
-            <Skeleton active paragraph={{ rows: 12 }} />
+            <FintexLoader variant="panel" label="Loading" minHeight={420} />
           </Card>
         ) : !course ? (
           <Card className={styles.workspaceCard}>

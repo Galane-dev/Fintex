@@ -117,6 +117,7 @@ export interface PaperTradeExecutionResult {
 
 export interface PaperTradeRecommendation {
   recommendedAction: RecommendationAction;
+  suggestedTradeAction: TradeDirection | null;
   riskScore: number;
   riskLevel: PaperTradeRiskLevel;
   headline: string;

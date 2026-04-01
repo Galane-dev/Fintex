@@ -3,6 +3,7 @@
 import { DeleteOutlined } from "@ant-design/icons";
 import { Alert, Button, Collapse, Empty, Form, Input, InputNumber, List, Select, Space, Switch, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import type { TradeAutomationRule, TradeAutomationTriggerType } from "@/types/trade-automation";
 import { formatPrice } from "@/utils/market-data";
 
@@ -209,7 +210,12 @@ export function NotificationsAutomationTab({
                     <Form.Item name="notes" label="Notes" style={{ flex: 1, minWidth: 240 }}>
                       <Input placeholder="Optional automation context" />
                     </Form.Item>
-                    <Button type="primary" htmlType="submit" loading={isSaving} disabled={!hasExecutionTarget}>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={getFintexButtonLoading(isSaving)}
+                      disabled={!hasExecutionTarget}
+                    >
                       Save auto execution
                     </Button>
                   </Space>

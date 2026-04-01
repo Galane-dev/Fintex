@@ -3,6 +3,7 @@
 import { DeleteOutlined } from "@ant-design/icons";
 import { Alert, Button, Collapse, Empty, Form, Input, InputNumber, List, Space, Switch, Typography } from "antd";
 import { useEffect, useState } from "react";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import type { NotificationAlertRule } from "@/types/notifications";
 import { formatPrice } from "@/utils/market-data";
 
@@ -85,7 +86,10 @@ export function NotificationsAlertsTab({
                   <Typography.Text type="secondary">
                     Use a test alert to verify in-app notifications and email delivery before debugging market-crossing rules.
                   </Typography.Text>
-                  <Button loading={isSaving} onClick={() => void onSendTestAlert()}>
+                  <Button
+                    loading={getFintexButtonLoading(isSaving)}
+                    onClick={() => void onSendTestAlert()}
+                  >
                     Send alert test
                   </Button>
                 </Space>
@@ -113,7 +117,12 @@ export function NotificationsAlertsTab({
                     <Form.Item name="notes" label="Notes" style={{ marginBottom: 0 }}>
                       <Input placeholder="Optional context" style={{ width: 220 }} />
                     </Form.Item>
-                    <Button type="primary" htmlType="submit" loading={isSaving} style={{ marginTop: 30 }}>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={getFintexButtonLoading(isSaving)}
+                      style={{ marginTop: 30 }}
+                    >
                       Create alert
                     </Button>
                   </Space>

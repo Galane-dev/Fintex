@@ -1,10 +1,13 @@
 using Abp.Application.Services.Dto;
 using Fintex.Investments.Assistant.Dto;
+using Fintex.Investments.Automation;
+using Fintex.Investments.Automation.Dto;
 using Fintex.Investments.Brokers.Dto;
 using Fintex.Investments.Goals;
 using Fintex.Investments.Goals.Dto;
 using Fintex.Investments.Notifications.Dto;
 using Fintex.Investments.PaperTrading.Dto;
+using Fintex.Investments.Strategies.Dto;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -32,14 +35,24 @@ namespace Fintex.Investments.Assistant
                 return action.Type switch
                 {
                     "create_price_alert" => await CreatePriceAlertAsync(action),
+                    "delete_alert_rule" => await DeleteAlertRuleAsync(action),
+                    "mark_notification_read" => await MarkNotificationReadAsync(action),
+                    "mark_all_notifications_read" => await MarkAllNotificationsReadAsync(),
+                    "send_test_alert" => await SendTestAlertAsync(),
                     "get_recommendation" => await GetRecommendationAsync(action),
+                    "create_paper_account" => await CreatePaperAccountAsync(action),
                     "place_paper_trade" => await PlacePaperTradeAsync(action),
+                    "close_paper_position" => await ClosePaperPositionAsync(action),
                     "place_live_trade" => await PlaceLiveTradeAsync(action),
                     "refresh_behavior_analysis" => await RefreshBehaviorAsync(),
                     "sync_live_trades" => await SyncLiveTradesAsync(),
+                    "validate_strategy" => await ValidateStrategyAsync(action),
+                    "create_trade_automation_rule" => await CreateTradeAutomationRuleAsync(action),
+                    "delete_trade_automation_rule" => await DeleteTradeAutomationRuleAsync(action),
                     "create_goal_target" => await CreateGoalTargetAsync(action),
                     "list_goal_targets" => await ListGoalTargetsAsync(),
                     "pause_goal_target" => await PauseGoalTargetAsync(action),
+                    "resume_goal_target" => await ResumeGoalTargetAsync(action),
                     "cancel_goal_target" => await CancelGoalTargetAsync(action),
                     _ => BuildActionResult(action.Type, "ignored", "Action skipped", "I left that action untouched because it is not supported yet.")
                 };
@@ -71,6 +84,40 @@ namespace Fintex.Investments.Assistant
             return BuildActionResult(action.Type, "completed", "Alert created", $"I created a {rule.Symbol} alert at {rule.TargetPrice:0.00}.");
         }
 
+        private async Task<AssistantActionResultDto> DeleteAlertRuleAsync(AssistantPlannedAction action)
+        {
+            if (!action.RuleId.HasValue)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Alert rule needed", "Tell me which alert rule you want me to delete.");
+            }
+
+            await _notificationAppService.DeleteAlertRuleAsync(new EntityDto<long>(action.RuleId.Value));
+            return BuildActionResult(action.Type, "completed", "Alert deleted", "I deleted that alert rule.");
+        }
+
+        private async Task<AssistantActionResultDto> MarkNotificationReadAsync(AssistantPlannedAction action)
+        {
+            if (!action.NotificationId.HasValue)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Notification needed", "Tell me which notification should be marked as read.");
+            }
+
+            await _notificationAppService.MarkAsReadAsync(new EntityDto<long>(action.NotificationId.Value));
+            return BuildActionResult(action.Type, "completed", "Notification marked read", "I marked that notification as read.");
+        }
+
+        private async Task<AssistantActionResultDto> MarkAllNotificationsReadAsync()
+        {
+            await _notificationAppService.MarkAllAsReadAsync();
+            return BuildActionResult("mark_all_notifications_read", "completed", "Inbox cleared", "I marked all unread notifications as read.");
+        }
+
+        private async Task<AssistantActionResultDto> SendTestAlertAsync()
+        {
+            await _notificationAppService.SendTestAlertAsync();
+            return BuildActionResult("send_test_alert", "completed", "Test alert sent", "I sent a test in-app and email notification.");
+        }
+
         private async Task<AssistantActionResultDto> GetRecommendationAsync(AssistantPlannedAction action)
         {
             var recommendation = await _paperTradingAppService.GetRecommendationAsync(new GetPaperTradeRecommendationInput
@@ -84,6 +131,23 @@ namespace Fintex.Investments.Assistant
             });
 
             return BuildActionResult(action.Type, "completed", "Recommendation ready", $"{recommendation.Headline} Risk {recommendation.RiskScore:0.0}. {recommendation.Summary}");
+        }
+
+        private async Task<AssistantActionResultDto> CreatePaperAccountAsync(AssistantPlannedAction action)
+        {
+            if (!action.StartingBalance.HasValue || action.StartingBalance.Value <= 0m)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Starting balance needed", "Tell me the starting balance you want for the paper account.");
+            }
+
+            await _paperTradingAppService.CreateMyAccountAsync(new CreatePaperTradingAccountInput
+            {
+                Name = string.IsNullOrWhiteSpace(action.Notes) ? (string.IsNullOrWhiteSpace(action.GoalName) ? "Fintex Paper" : action.GoalName) : action.Notes,
+                BaseCurrency = string.IsNullOrWhiteSpace(action.BaseCurrency) ? "USD" : action.BaseCurrency.Trim().ToUpperInvariant(),
+                StartingBalance = action.StartingBalance.Value
+            });
+
+            return BuildActionResult(action.Type, "completed", "Paper account created", "I created your paper trading account.");
         }
 
         private async Task<AssistantActionResultDto> PlacePaperTradeAsync(AssistantPlannedAction action)
@@ -108,6 +172,23 @@ namespace Fintex.Investments.Assistant
             return result.WasExecuted
                 ? BuildActionResult(action.Type, "completed", "Paper trade placed", $"Paper {result.Order.Direction} {result.Order.Quantity:0.########} {result.Order.Symbol} at {result.Order.ExecutedPrice:0.00}.")
                 : BuildActionResult(action.Type, "blocked", "Paper trade blocked", result.Assessment?.Summary ?? "The simulator blocked that trade.");
+        }
+
+        private async Task<AssistantActionResultDto> ClosePaperPositionAsync(AssistantPlannedAction action)
+        {
+            if (!action.PositionId.HasValue)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Position needed", "Tell me the paper position id you want me to close.");
+            }
+
+            var order = await _paperTradingAppService.ClosePositionAsync(new ClosePaperPositionInput
+            {
+                PositionId = action.PositionId.Value,
+                Quantity = action.Quantity,
+                ExitPrice = action.TargetPrice
+            });
+
+            return BuildActionResult(action.Type, "completed", "Paper position closed", $"I closed the paper position at {order.ExecutedPrice:0.00}.");
         }
 
         private async Task<AssistantActionResultDto> PlaceLiveTradeAsync(AssistantPlannedAction action)
@@ -149,6 +230,72 @@ namespace Fintex.Investments.Assistant
         {
             var result = await _externalBrokerTradingAppService.SyncMyConnectionsAsync();
             return BuildActionResult("sync_live_trades", "completed", "Broker sync finished", $"Imported {result.ImportedTrades} trades and updated {result.UpdatedTrades}.");
+        }
+
+        private async Task<AssistantActionResultDto> ValidateStrategyAsync(AssistantPlannedAction action)
+        {
+            if (string.IsNullOrWhiteSpace(action.StrategyText))
+            {
+                return BuildActionResult(action.Type, "needs_input", "Strategy text needed", "Tell me the exact strategy you want me to validate.");
+            }
+
+            var result = await _strategyValidationAppService.ValidateMyStrategyAsync(new ValidateStrategyInput
+            {
+                StrategyName = action.StrategyName,
+                Symbol = NormalizeAlertSymbol(action.Symbol),
+                Provider = MarketDataProvider.Binance,
+                Timeframe = string.IsNullOrWhiteSpace(action.Timeframe) ? "1m" : action.Timeframe,
+                DirectionPreference = action.DirectionPreference,
+                StrategyText = action.StrategyText
+            });
+
+            return BuildActionResult(action.Type, "completed", "Strategy validated", $"{result.Outcome}: {result.Summary}");
+        }
+
+        private async Task<AssistantActionResultDto> CreateTradeAutomationRuleAsync(AssistantPlannedAction action)
+        {
+            if (!action.Quantity.HasValue || action.Quantity.Value <= 0m || string.IsNullOrWhiteSpace(action.Direction) || string.IsNullOrWhiteSpace(action.TriggerType))
+            {
+                return BuildActionResult(action.Type, "needs_input", "Automation details needed", "Tell me the trigger type, side, and quantity for the automation rule.");
+            }
+
+            var destination = ParseAutomationDestination(action.Destination);
+            var connectionId = destination == TradeAutomationDestination.ExternalBroker
+                ? action.ConnectionId ?? await ResolveDefaultConnectionIdAsync()
+                : null;
+
+            var rule = await _tradeAutomationAppService.CreateRuleAsync(new CreateTradeAutomationRuleInput
+            {
+                Name = string.IsNullOrWhiteSpace(action.Notes) ? "Assistant automation rule" : action.Notes,
+                Symbol = NormalizeAlertSymbol(action.Symbol),
+                Provider = MarketDataProvider.Binance,
+                TriggerType = ParseAutomationTriggerType(action.TriggerType),
+                TriggerValue = action.TriggerValue,
+                TargetVerdict = ParseOptionalVerdict(action.TargetVerdict),
+                MinimumConfidenceScore = action.MinimumConfidenceScore,
+                Destination = destination,
+                ExternalConnectionId = connectionId,
+                TradeDirection = ParseDirection(action.Direction),
+                Quantity = action.Quantity.Value,
+                StopLoss = action.StopLoss,
+                TakeProfit = action.TakeProfit,
+                NotifyInApp = action.NotifyInApp ?? true,
+                NotifyEmail = action.NotifyEmail ?? true,
+                Notes = action.Notes
+            });
+
+            return BuildActionResult(action.Type, "completed", "Automation rule created", $"{rule.Name} will watch {rule.TriggerType} and trade {rule.TradeDirection}.");
+        }
+
+        private async Task<AssistantActionResultDto> DeleteTradeAutomationRuleAsync(AssistantPlannedAction action)
+        {
+            if (!action.RuleId.HasValue)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Automation rule needed", "Tell me which automation rule you want me to delete.");
+            }
+
+            await _tradeAutomationAppService.DeleteRuleAsync(new EntityDto<long>(action.RuleId.Value));
+            return BuildActionResult(action.Type, "completed", "Automation rule deleted", "I deleted that automation rule.");
         }
 
         private async Task<AssistantActionResultDto> CreateGoalTargetAsync(AssistantPlannedAction action)
@@ -204,6 +351,18 @@ namespace Fintex.Investments.Assistant
 
             var result = await _goalAutomationAppService.PauseGoalAsync(new EntityDto<long>(goal.Id));
             return BuildActionResult(action.Type, "completed", "Goal paused", $"{result.Name}: {result.StatusReason}");
+        }
+
+        private async Task<AssistantActionResultDto> ResumeGoalTargetAsync(AssistantPlannedAction action)
+        {
+            var goal = await ResolveGoalAsync(action);
+            if (goal == null)
+            {
+                return BuildActionResult(action.Type, "needs_input", "Goal not found", "Tell me which goal you want me to resume.");
+            }
+
+            var result = await _goalAutomationAppService.ResumeGoalAsync(new EntityDto<long>(goal.Id));
+            return BuildActionResult(action.Type, "completed", "Goal resumed", $"{result.Name}: {result.StatusReason}");
         }
 
         private async Task<AssistantActionResultDto> CancelGoalTargetAsync(AssistantPlannedAction action)
@@ -309,6 +468,40 @@ namespace Fintex.Investments.Assistant
                 "europeusoverlap" => GoalTradingSession.EuropeUsOverlap,
                 "overlap" => GoalTradingSession.EuropeUsOverlap,
                 _ => GoalTradingSession.AnyTime
+            };
+        }
+
+        private static TradeAutomationDestination ParseAutomationDestination(string value)
+        {
+            return string.Equals(value, "external", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "externalbroker", StringComparison.OrdinalIgnoreCase)
+                ? TradeAutomationDestination.ExternalBroker
+                : TradeAutomationDestination.PaperTrading;
+        }
+
+        private static TradeAutomationTriggerType ParseAutomationTriggerType(string value)
+        {
+            return value?.Trim().ToLowerInvariant() switch
+            {
+                "relativestrengthindex" => TradeAutomationTriggerType.RelativeStrengthIndex,
+                "rsi" => TradeAutomationTriggerType.RelativeStrengthIndex,
+                "macdhistogram" => TradeAutomationTriggerType.MacdHistogram,
+                "momentum" => TradeAutomationTriggerType.Momentum,
+                "trendscore" => TradeAutomationTriggerType.TrendScore,
+                "confidencescore" => TradeAutomationTriggerType.ConfidenceScore,
+                "verdict" => TradeAutomationTriggerType.Verdict,
+                _ => TradeAutomationTriggerType.PriceTarget
+            };
+        }
+
+        private static MarketVerdict? ParseOptionalVerdict(string value)
+        {
+            return value?.Trim().ToLowerInvariant() switch
+            {
+                "buy" => MarketVerdict.Buy,
+                "sell" => MarketVerdict.Sell,
+                "hold" => MarketVerdict.Hold,
+                _ => null
             };
         }
     }

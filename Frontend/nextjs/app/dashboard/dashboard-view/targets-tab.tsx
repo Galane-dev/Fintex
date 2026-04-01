@@ -2,6 +2,7 @@
 
 import { Alert, Button, Empty, Form, Input, InputNumber, List, Progress, Select, Space, Switch, Tag, Typography } from "antd";
 import { useEffect } from "react";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import type { GoalStatus, GoalTarget, GoalTradingSession } from "@/types/goal-automation";
 
 export type GoalExecutionTargetOption = {
@@ -155,7 +156,12 @@ export function TargetsTab({
           </Form.Item>
         </Space>
 
-        <Button type="primary" htmlType="submit" loading={isSaving} disabled={executionTargets.length === 0}>
+        <Button
+          type="primary"
+          htmlType="submit"
+          loading={getFintexButtonLoading(isSaving)}
+          disabled={executionTargets.length === 0}
+        >
           Create BTC goal
         </Button>
       </Form>

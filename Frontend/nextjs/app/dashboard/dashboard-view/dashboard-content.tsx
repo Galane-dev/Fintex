@@ -7,7 +7,6 @@ import {
   BellOutlined,
   BarChartOutlined,
   CalendarOutlined,
-  HomeOutlined,
   LogoutOutlined,
   MessageOutlined,
   ReloadOutlined,
@@ -16,6 +15,7 @@ import { Badge, Button, Card, Space, Tabs } from "antd";
 import { AssistantDrawer } from "@/components/dashboard/assistant-drawer";
 import { DashboardChart, type ChartTradeOverlay } from "@/components/dashboard/DashboardChart";
 import { PaperTradingPanel, type DashboardPaperTradingActions } from "@/components/dashboard/PaperTradingPanel";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardAssistant } from "@/hooks/use-dashboard-assistant";
@@ -160,6 +160,8 @@ export function DashboardContent() {
         refreshTrades(),
         notifications.refreshInbox(),
         goalAutomation.refreshGoals(),
+        tradeAutomation.refreshRules(),
+        externalBrokers.refreshConnections(),
       ]);
     },
   });
@@ -250,7 +252,7 @@ export function DashboardContent() {
               onClick={() => {
                 void handleManualSnapshotRefresh();
               }}
-              loading={isManualSnapshotRefreshing}
+              loading={getFintexButtonLoading(isManualSnapshotRefreshing)}
             />
             <Badge count={notifications.unreadCount} size="small">
               <Button
@@ -289,10 +291,12 @@ export function DashboardContent() {
             </Link>
             <Link href={ROUTES.home}>
               <Button
+                className={styles.brandHomeButton}
                 aria-label="Landing page"
-                title="Landing page"
-                icon={<HomeOutlined />}
-              />
+                title="Fintex home"
+              >
+                F
+              </Button>
             </Link>
             <Button
               type="primary"
@@ -500,10 +504,11 @@ export function DashboardContent() {
         isOpen={assistant.isOpen}
         isSending={assistant.isSending}
         isListening={assistant.isListening}
+        isVoiceConnecting={assistant.isVoiceConnecting}
+        voiceStatus={assistant.voiceStatus}
         error={assistant.error}
         draft={assistant.draft}
         transcript={assistant.transcript}
-        speakReplies={assistant.speakReplies}
         messages={assistant.messages}
         suggestedPrompts={assistant.suggestedPrompts}
         onClose={assistant.close}
@@ -511,7 +516,6 @@ export function DashboardContent() {
         onSubmit={assistant.submitMessage}
         onStartListening={assistant.startListening}
         onStopListening={assistant.stopListening}
-        onToggleSpeakReplies={assistant.setSpeakReplies}
       />
     </div>
   );

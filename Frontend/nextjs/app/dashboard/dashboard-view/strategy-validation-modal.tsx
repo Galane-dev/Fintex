@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { Alert, Button, Form, Input, Segmented, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, Button, Form, Input, Segmented, Space, Tag, Typography } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
+import { FintexLoader, getFintexButtonLoading } from "@/components/fintex-loader";
 import type { StrategyValidationResult, ValidateStrategyInput } from "@/types/strategy-validation";
 import { formatPrice, formatTime } from "@/utils/market-data";
 
@@ -80,13 +81,19 @@ export function StrategyValidationModal({
                 autoSize={{ minRows: 6, maxRows: 12 }}
               />
             </Form.Item>
-            <Button type="primary" htmlType="submit" loading={isSubmitting}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={getFintexButtonLoading(isSubmitting)}
+            >
               Validate strategy
             </Button>
           </Space>
         </Form>
 
-        {isLoadingHistory && !latestResult ? <Skeleton active paragraph={{ rows: 8 }} /> : null}
+        {isLoadingHistory && !latestResult ? (
+          <FintexLoader variant="panel" label="Loading" minHeight={260} />
+        ) : null}
         {latestResult ? <ValidationResultCard result={latestResult} /> : null}
         {history.length > 0 ? (
           <div>

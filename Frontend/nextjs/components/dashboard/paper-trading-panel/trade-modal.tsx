@@ -2,6 +2,7 @@
 
 import { Button, Form, Input, InputNumber, Select, Space, Typography } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import type { PaperTradingPanelController } from "./types";
 import { usePaperTradingStyles } from "../paper-trading-style";
 
@@ -26,7 +27,7 @@ export const TradeModal = ({ controller }: TradeModalProps) => {
           <Button
             type="primary"
             danger={controller.tradeDirection === "Sell"}
-            loading={controller.isBusy}
+            loading={getFintexButtonLoading(controller.isBusy)}
             className={styles.actionButton}
             onClick={() => void controller.submitTrade(controller.tradeDirection)}
           >

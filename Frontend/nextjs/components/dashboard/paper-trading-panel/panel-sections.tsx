@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Empty, Space, Tag, Typography } from "antd";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import { formatPrice, formatTime } from "@/utils/market-data";
 import type { PaperTradingPanelController } from "./types";
 import { usePaperTradingStyles } from "../paper-trading-style";
@@ -31,13 +32,13 @@ export const PanelSections = ({ controller, currentPrice }: PanelSectionsProps) 
       <div className={styles.section}>
         <div className={styles.sectionHeader}><span className={styles.sectionTitle}>{controller.account.name}</span><Tag color="green">{controller.account.baseCurrency}</Tag></div>
         <Typography.Paragraph className={styles.helper}>Latest Binance reference price: {currentPrice != null ? formatPrice(currentPrice) : "-"}. Account marked to market at {formatTime(controller.account.lastMarkedToMarketAt)}.</Typography.Paragraph>
-        <div className={styles.inlineActions}><Button className={styles.actionButton} onClick={controller.openAccountsModal}>Manage account</Button><Button className={styles.actionButton} loading={controller.isBusy} onClick={() => void controller.openRecommendationModal()}>Get recommendation</Button></div>
+        <div className={styles.inlineActions}><Button className={styles.actionButton} onClick={controller.openAccountsModal}>Manage account</Button><Button className={styles.actionButton} loading={getFintexButtonLoading(controller.isBusy)} onClick={() => void controller.openRecommendationModal()}>Get recommendation</Button></div>
         <div className={styles.metrics}>{controller.accountMetrics.map((metric) => <div key={metric.label} className={styles.metricCard}><div className={styles.metricLabel}>{metric.label}</div><div className={cx(styles.metricValue, metric.tone === "positive" ? styles.green : undefined, metric.tone === "negative" ? styles.red : undefined)}>{metric.value}</div></div>)}<div className={styles.metricCard}><div className={styles.metricLabel}>Live trades</div><div className={styles.metricValue}>{controller.liveTrades.filter((trade) => trade.status === "Open").length}</div></div></div>
       </div>
 
       <div className={styles.section}>
         <div className={styles.sectionHeader}><span className={styles.sectionTitle}>Open positions</span><Tag color="blue">{controller.positions.length}</Tag></div>
-        {controller.positions.length === 0 ? <div className={styles.empty}><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No paper positions are open yet." /></div> : <div className={styles.list}>{controller.positions.map((position) => <div key={position.id} className={styles.item}><div className={styles.itemTop}><span className={styles.itemTitle}>{position.symbol} {position.direction}</span><Space><Tag color={position.direction === "Buy" ? "green" : "red"}>{position.quantity.toFixed(4)}</Tag><Button size="small" loading={controller.isSubmitting} onClick={() => void controller.handleClosePaperPosition(position.id)}>Close</Button></Space></div><div className={styles.itemMeta}><span>Entry {formatPrice(position.averageEntryPrice)}</span><span>Mark {formatPrice(position.currentMarketPrice)}</span><span className={cx(position.unrealizedProfitLoss >= 0 ? styles.green : styles.red)}>U/P&amp;L {formatPrice(position.unrealizedProfitLoss)}</span></div></div>)}</div>}
+        {controller.positions.length === 0 ? <div className={styles.empty}><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No paper positions are open yet." /></div> : <div className={styles.list}>{controller.positions.map((position) => <div key={position.id} className={styles.item}><div className={styles.itemTop}><span className={styles.itemTitle}>{position.symbol} {position.direction}</span><Space><Tag color={position.direction === "Buy" ? "green" : "red"}>{position.quantity.toFixed(4)}</Tag><Button size="small" loading={getFintexButtonLoading(controller.isSubmitting)} onClick={() => void controller.handleClosePaperPosition(position.id)}>Close</Button></Space></div><div className={styles.itemMeta}><span>Entry {formatPrice(position.averageEntryPrice)}</span><span>Mark {formatPrice(position.currentMarketPrice)}</span><span className={cx(position.unrealizedProfitLoss >= 0 ? styles.green : styles.red)}>U/P&amp;L {formatPrice(position.unrealizedProfitLoss)}</span></div></div>)}</div>}
       </div>
 
       <div className={styles.section}>
