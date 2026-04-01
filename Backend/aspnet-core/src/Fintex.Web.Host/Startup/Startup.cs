@@ -77,6 +77,7 @@ namespace Fintex.Web.Host.Startup
             services.AddTransient<IMetaTraderBridgeService, MetaTraderPythonBridgeService>();
             services.AddHostedService<MarketDataStreamingBackgroundService>();
             services.AddHostedService<AlpacaTradeUpdatesBackgroundService>();
+            services.AddHostedService<GoalAutomationMonitoringBackgroundService>();
             services.Configure<HostOptions>(options =>
             {
                 options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;

@@ -7,6 +7,9 @@ namespace Fintex.Investments.EconomicCalendar
     {
         ConsumerPriceIndex = 1,
         NonFarmPayrolls = 2,
-        Fomc = 3
+        Fomc = 3,
+        ProducerPriceIndex = 4,
+        PersonalConsumptionExpenditures = 5,
+        GrossDomesticProduct = 6
     }
 }

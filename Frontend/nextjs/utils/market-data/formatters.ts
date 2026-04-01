@@ -121,6 +121,17 @@ export const formatTime = (value: string | null | undefined) =>
       }).format(new Date(value))
     : EMPTY;
 
+export const formatDateTime = (value: string | null | undefined) =>
+  value
+    ? new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(value))
+    : EMPTY;
+
 export const getConnectionTone = (status: MarketConnectionStatus) => {
   switch (status) {
     case "connected":

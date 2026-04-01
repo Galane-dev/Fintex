@@ -3,7 +3,7 @@
 import { Alert, List, Skeleton, Space, Tag, Typography } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
 import type { EconomicCalendarInsight } from "@/types/economic-calendar";
-import { formatTime } from "@/utils/market-data";
+import { formatDateTime } from "@/utils/market-data";
 
 interface EconomicCalendarModalProps {
   isOpen: boolean;
@@ -50,14 +50,18 @@ export function EconomicCalendarModal({
           Risk {insight.riskScore.toFixed(1)}
         </Tag>
         {insight.nextEventAtUtc ? (
-          <Tag color="gold">Next event {formatTime(insight.nextEventAtUtc)}</Tag>
+          <Tag color="gold">
+            Next event {formatDateTime(insight.nextEventAtUtc)}
+          </Tag>
         ) : null}
       </Space>
 
       <List
         bordered
         dataSource={insight.upcomingEvents}
-        locale={{ emptyText: "No nearby CPI, NFP, or FOMC events are currently queued." }}
+        locale={{
+          emptyText: "No nearby high-impact macro events are currently queued.",
+        }}
         renderItem={(item) => (
           <List.Item>
             <List.Item.Meta
@@ -67,14 +71,18 @@ export function EconomicCalendarModal({
                   <Tag color="blue">{item.source}</Tag>
                 </Space>
               }
-              description={`${formatTime(item.occursAtUtc)} · impact ${item.impactScore.toFixed(0)}`}
+              description={`${formatDateTime(item.occursAtUtc)} · impact ${item.impactScore.toFixed(0)}`}
             />
           </List.Item>
         )}
       />
     </Space>
   ) : (
-    <Alert type="info" showIcon message="No economic calendar insight is available yet." />
+    <Alert
+      type="info"
+      showIcon
+      message="No economic calendar insight is available yet."
+    />
   );
 
   return (
