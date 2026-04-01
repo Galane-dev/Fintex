@@ -196,7 +196,7 @@ namespace Fintex.Investments.PaperTrading
                 recommendation.RiskLevel = GetRiskLevel(recommendation.RiskScore);
                 recommendation.RecommendedAction = MarketVerdict.Hold;
                 recommendation.Headline = "Macro-event risk is too close, so patience is safer right now.";
-                recommendation.Summary = "A high-impact CPI, NFP, or FOMC release is too close to justify forcing a fresh trade before the event clears.";
+                recommendation.Summary = "A high-impact macro release is too close to justify forcing a fresh trade before the event clears.";
                 AddUnique(recommendation.Reasons, economicCalendarInsight.Summary);
             }
         }

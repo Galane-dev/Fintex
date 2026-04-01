@@ -12,5 +12,7 @@ namespace Fintex.Investments
         Task<List<PaperPosition>> GetOpenPositionsAsync(long accountId);
 
         Task<PaperPosition> GetOpenBySymbolAsync(long accountId, string symbol, MarketDataProvider provider);
+
+        Task<List<PaperPosition>> GetOpenByMarketAsync(string symbol, MarketDataProvider provider);
     }
 }

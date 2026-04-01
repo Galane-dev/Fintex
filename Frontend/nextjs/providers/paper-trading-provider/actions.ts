@@ -16,6 +16,7 @@ export type PaperTradingReducerAction =
   | { type: "LOAD_FAILURE"; payload: string }
   | { type: "SUBMIT_START" }
   | { type: "SUBMIT_SUCCESS"; payload: PaperTradingSnapshot }
+  | { type: "POSITION_CLOSED"; payload: { positionId: number } }
   | { type: "ASSESSMENT_UPDATED"; payload: PaperTradeExecutionResult }
   | { type: "RECOMMENDATION_UPDATED"; payload: PaperTradeRecommendation }
   | { type: "CLEAR_ERROR" }
@@ -45,6 +46,10 @@ export const paperTradingActions = {
   submitSuccess: (payload: PaperTradingSnapshot): PaperTradingReducerAction => ({
     type: "SUBMIT_SUCCESS",
     payload,
+  }),
+  positionClosed: (positionId: number): PaperTradingReducerAction => ({
+    type: "POSITION_CLOSED",
+    payload: { positionId },
   }),
   assessmentUpdated: (
     payload: PaperTradeExecutionResult,

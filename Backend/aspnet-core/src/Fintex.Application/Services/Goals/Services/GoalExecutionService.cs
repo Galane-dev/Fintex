@@ -1,9 +1,11 @@
 using Abp.Dependency;
 using Abp.Runtime.Session;
+using Abp.UI;
 using Fintex.Investments.Brokers;
 using Fintex.Investments.Brokers.Dto;
 using Fintex.Investments.PaperTrading;
 using Fintex.Investments.PaperTrading.Dto;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,13 +38,43 @@ namespace Fintex.Investments.Goals.Services
                 };
             }
 
-            using (_abpSession.Use(goal.TenantId, goal.UserId))
+            try
             {
-                if (goal.AccountType == GoalAccountType.PaperTrading)
+                using (_abpSession.Use(goal.TenantId, goal.UserId))
                 {
-                    var result = await _paperTradingAppService.PlaceMarketOrderAsync(new PlacePaperOrderInput
+                    if (goal.AccountType == GoalAccountType.PaperTrading)
                     {
-                        Symbol = plan.ExecutionSymbol ?? goal.MarketSymbol,
+                        var result = await _paperTradingAppService.PlaceMarketOrderAsync(new PlacePaperOrderInput
+                        {
+                            Symbol = plan.ExecutionSymbol ?? goal.MarketSymbol,
+                            AssetClass = AssetClass.Crypto,
+                            Provider = MarketDataProvider.Binance,
+                            Direction = plan.SuggestedDirection.Value,
+                            Quantity = plan.SuggestedQuantity.Value,
+                            StopLoss = plan.SuggestedStopLoss,
+                            TakeProfit = plan.SuggestedTakeProfit,
+                            Notes = $"Goal autopilot: {goal.Name}"
+                        });
+
+                        return result.WasExecuted
+                            ? new GoalExecutionResult
+                            {
+                                WasExecuted = true,
+                                TradeId = result.Order?.Id,
+                                Summary = $"Fintex auto-executed a paper {result.Order?.Direction.ToString().ToLowerInvariant()} for goal '{goal.Name}'."
+                            }
+                            : new GoalExecutionResult
+                            {
+                                WasExecuted = false,
+                                Error = result.Assessment?.Summary ?? result.Assessment?.Headline,
+                                Summary = result.Assessment?.Headline ?? "The goal paper trade was blocked."
+                            };
+                    }
+
+                    var execution = await _externalBrokerTradingAppService.PlaceMarketOrderAsync(new PlaceExternalBrokerMarketOrderInput
+                    {
+                        ConnectionId = goal.ExternalConnectionId ?? 0,
+                        Symbol = plan.ExecutionSymbol ?? "BTCUSD",
                         AssetClass = AssetClass.Crypto,
                         Provider = MarketDataProvider.Binance,
                         Direction = plan.SuggestedDirection.Value,
@@ -52,39 +84,25 @@ namespace Fintex.Investments.Goals.Services
                         Notes = $"Goal autopilot: {goal.Name}"
                     });
 
-                    return result.WasExecuted
-                        ? new GoalExecutionResult
-                        {
-                            WasExecuted = true,
-                            TradeId = result.Order?.Id,
-                            Summary = $"Fintex auto-executed a paper {result.Order?.Direction.ToString().ToLowerInvariant()} for goal '{goal.Name}'."
-                        }
-                        : new GoalExecutionResult
-                        {
-                            WasExecuted = false,
-                            Error = result.Assessment?.Summary ?? result.Assessment?.Headline,
-                            Summary = result.Assessment?.Headline ?? "The goal paper trade was blocked."
-                        };
+                    return new GoalExecutionResult
+                    {
+                        WasExecuted = true,
+                        TradeId = execution.Trade?.Id,
+                        Summary = execution.Summary
+                    };
                 }
-
-                var execution = await _externalBrokerTradingAppService.PlaceMarketOrderAsync(new PlaceExternalBrokerMarketOrderInput
-                {
-                    ConnectionId = goal.ExternalConnectionId ?? 0,
-                    Symbol = plan.ExecutionSymbol ?? "BTCUSD",
-                    AssetClass = AssetClass.Crypto,
-                    Provider = MarketDataProvider.Binance,
-                    Direction = plan.SuggestedDirection.Value,
-                    Quantity = plan.SuggestedQuantity.Value,
-                    StopLoss = plan.SuggestedStopLoss,
-                    TakeProfit = plan.SuggestedTakeProfit,
-                    Notes = $"Goal autopilot: {goal.Name}"
-                });
-
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
                 return new GoalExecutionResult
                 {
-                    WasExecuted = true,
-                    TradeId = execution.Trade?.Id,
-                    Summary = execution.Summary
+                    WasExecuted = false,
+                    Error = exception is UserFriendlyException ? exception.Message : "Fintex could not execute the goal trade right now.",
+                    Summary = exception is UserFriendlyException ? exception.Message : "Fintex could not execute the goal trade right now."
                 };
             }
         }

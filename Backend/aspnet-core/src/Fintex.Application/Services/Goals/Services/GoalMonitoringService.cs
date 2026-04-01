@@ -3,6 +3,7 @@ using Abp.Domain.Repositories;
 using Abp.Domain.Uow;
 using Abp.Runtime.Session;
 using Fintex.Investments.Brokers;
+using Fintex.Investments.MarketData;
 using Fintex.Investments.Notifications;
 using Fintex.Investments.PaperTrading;
 using Fintex.Investments.PaperTrading.Dto;
@@ -18,11 +19,13 @@ namespace Fintex.Investments.Goals.Services
     public class GoalMonitoringService : IGoalMonitoringService, ITransientDependency
     {
         private static readonly TimeSpan ExecutionCooldown = TimeSpan.FromMinutes(45);
+        private static readonly SemaphoreSlim EvaluationLock = new SemaphoreSlim(1, 1);
 
         private readonly IGoalTargetRepository _goalTargetRepository;
         private readonly IRepository<GoalEvaluationRun, long> _goalEvaluationRepository;
         private readonly IRepository<GoalExecutionPlan, long> _goalPlanRepository;
         private readonly IRepository<GoalExecutionEvent, long> _goalEventRepository;
+        private readonly IMarketDataPointRepository _marketDataPointRepository;
         private readonly IPaperTradingAppService _paperTradingAppService;
         private readonly IRecommendationSnapshotCache _recommendationSnapshotCache;
         private readonly IExternalBrokerConnectionRepository _externalBrokerConnectionRepository;
@@ -40,6 +43,7 @@ namespace Fintex.Investments.Goals.Services
             IRepository<GoalEvaluationRun, long> goalEvaluationRepository,
             IRepository<GoalExecutionPlan, long> goalPlanRepository,
             IRepository<GoalExecutionEvent, long> goalEventRepository,
+            IMarketDataPointRepository marketDataPointRepository,
             IPaperTradingAppService paperTradingAppService,
             IRecommendationSnapshotCache recommendationSnapshotCache,
             IExternalBrokerConnectionRepository externalBrokerConnectionRepository,
@@ -56,6 +60,7 @@ namespace Fintex.Investments.Goals.Services
             _goalEvaluationRepository = goalEvaluationRepository;
             _goalPlanRepository = goalPlanRepository;
             _goalEventRepository = goalEventRepository;
+            _marketDataPointRepository = marketDataPointRepository;
             _paperTradingAppService = paperTradingAppService;
             _recommendationSnapshotCache = recommendationSnapshotCache;
             _externalBrokerConnectionRepository = externalBrokerConnectionRepository;
@@ -71,12 +76,56 @@ namespace Fintex.Investments.Goals.Services
 
         public async Task EvaluateAsync(NotificationMarketSnapshot snapshot, CancellationToken cancellationToken)
         {
+            await RunLockedAsync(
+                () => EvaluateCoreAsync(snapshot, cancellationToken),
+                cancellationToken);
+        }
+
+        public async Task EvaluateLatestAsync(string symbol, MarketDataProvider provider, CancellationToken cancellationToken)
+        {
+            await RunLockedAsync(
+                () => EvaluateLatestCoreAsync(symbol, provider, cancellationToken),
+                cancellationToken);
+        }
+
+        private async Task RunLockedAsync(Func<Task> action, CancellationToken cancellationToken)
+        {
+            await EvaluationLock.WaitAsync(cancellationToken);
+
+            try
+            {
+                await action();
+            }
+            finally
+            {
+                EvaluationLock.Release();
+            }
+        }
+
+        private async Task EvaluateLatestCoreAsync(string symbol, MarketDataProvider provider, CancellationToken cancellationToken)
+        {
+            var latestPoint = await _marketDataPointRepository.GetLatestAsync(symbol, provider);
+            if (latestPoint == null)
+            {
+                return;
+            }
+
+            await EvaluateCoreAsync(BuildSnapshot(latestPoint), cancellationToken);
+        }
+
+        private async Task EvaluateCoreAsync(NotificationMarketSnapshot snapshot, CancellationToken cancellationToken)
+        {
             if (snapshot == null || !string.Equals(snapshot.Symbol, "BTCUSDT", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
-            var goals = await _goalTargetRepository.GetActiveGoalsAsync("BTCUSDT");
+            System.Collections.Generic.List<GoalTarget> goals;
+            using (_unitOfWorkManager.Current.DisableFilter(AbpDataFilters.MayHaveTenant))
+            {
+                goals = await _goalTargetRepository.GetActiveGoalsAsync("BTCUSDT");
+            }
+
             foreach (var goal in goals)
             {
                 await EvaluateGoalAsync(goal, cancellationToken);
@@ -166,7 +215,30 @@ namespace Fintex.Investments.Goals.Services
                 }
 
                 goal.RecordExecutionAttempt(nowUtc);
-                var execution = await _goalExecutionService.ExecuteAsync(goal, plan, cancellationToken);
+
+                GoalExecutionResult execution;
+                try
+                {
+                    execution = await _goalExecutionService.ExecuteAsync(goal, plan, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (System.Exception exception)
+                {
+                    var error = "Fintex could not execute the goal trade right now.";
+                    goal.RecordExecutionFailure(error, nowUtc);
+                    await PersistEventAsync(goal, "trade-blocked", "blocked", error, progress.CurrentEquity, null, nowUtc);
+                    _logger.LogWarning(
+                        exception,
+                        "Goal {GoalId} failed during execution. Symbol={Symbol}",
+                        goal.Id,
+                        goal.MarketSymbol);
+                    await _goalTargetRepository.UpdateAsync(goal);
+                    return;
+                }
+
                 if (execution.WasExecuted)
                 {
                     goal.RecordExecutionSuccess(execution.TradeId, execution.Summary, nowUtc);
@@ -297,6 +369,24 @@ namespace Fintex.Investments.Goals.Services
                 connection != null && connection.IsActive,
                 connection?.LastKnownEquity ?? connection?.LastKnownBalance,
                 openTrades.Any(x => string.Equals(x.Symbol, "BTCUSD", StringComparison.OrdinalIgnoreCase) || string.Equals(x.Symbol, goal.MarketSymbol, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static NotificationMarketSnapshot BuildSnapshot(MarketDataPoint point)
+        {
+            return new NotificationMarketSnapshot
+            {
+                Symbol = point.Symbol,
+                Provider = point.Provider,
+                Price = point.Price,
+                Bid = point.Bid,
+                Ask = point.Ask,
+                Rsi = point.Rsi,
+                MacdHistogram = point.MacdHistogram,
+                Momentum = point.Momentum,
+                Verdict = point.Verdict,
+                ConfidenceScore = point.ConfidenceScore,
+                TrendScore = point.TrendScore
+            };
         }
     }
 }

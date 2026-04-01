@@ -42,6 +42,8 @@ yarn-error.log*
 
 # env files
 .env*
+!Frontend/nextjs/.env.example
+!Frontend/nextjs/.env.production
 
 # vercel
 .vercel
@@ -52,3 +54,9 @@ next-env.d.ts
 
 
 # appsettings
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+Backend/aspnet-core/src/Fintex.Web.Host/appsettings.json
+Backend/aspnet-core/src/Fintex.Web.Host/appsettings.json

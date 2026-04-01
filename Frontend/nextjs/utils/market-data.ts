@@ -6,6 +6,7 @@ export {
   formatSigned,
   formatSignedPoints,
   formatTime,
+  formatDateTime,
   getConnectionTone,
   getProviderLabel,
   getVerdictLabel,

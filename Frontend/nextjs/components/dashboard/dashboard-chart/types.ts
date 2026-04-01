@@ -46,7 +46,7 @@ export interface DashboardChartController {
   handleMouseMove: (event: React.MouseEvent<HTMLCanvasElement>) => void;
   handleMouseLeave: () => void;
   handleMouseUp: () => void;
-  handleWheel: (event: React.WheelEvent<HTMLCanvasElement>) => void;
+  handleWheel: (event: WheelEvent) => void;
   interval: BinanceInterval;
   isPositive: boolean;
   lastVisibleCandle: BinanceCandle | null;
