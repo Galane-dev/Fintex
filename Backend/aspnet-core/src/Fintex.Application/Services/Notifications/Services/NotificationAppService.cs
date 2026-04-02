@@ -273,7 +273,9 @@ namespace Fintex.Investments.Notifications
 
         private static string BuildTestAlertEmailBody(NotificationItem notification)
         {
-            return $"<h2>{notification.Title}</h2><p>{notification.Message}</p><p><strong>Occurred:</strong> {notification.OccurredAt:O}</p>";
+            return NotificationEmailTemplateBuilder.Build(
+                notification,
+                "This is a test alert to confirm your Fintex email notification delivery is working correctly.");
         }
     }
 }
