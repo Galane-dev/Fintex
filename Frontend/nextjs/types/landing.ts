@@ -28,15 +28,21 @@ export interface MarketSnapshot {
   verdict: "Buy" | "Sell" | "Hold";
 }
 
-export interface PlatformShowcase {
-  key: "web" | "mobile" | "api";
+export interface SubscriptionPlan {
+  key: "starter" | "pro" | "elite";
   title: string;
+  price: string;
+  cadence: string;
   description: string;
   bullets: string[];
-  accent: string;
+}
+
+export interface FooterLink {
+  label: string;
+  href: string;
 }
 
 export interface FooterGroup {
   title: string;
-  links: string[];
+  links: FooterLink[];
 }

@@ -36,6 +36,7 @@ import {
   formatSigned,
   formatSignedPoints,
 } from "@/utils/market-data";
+import { isLiveTradeClosed, isLiveTradeOpen } from "@/utils/live-trading";
 import { AnalysisTab } from "./analysis-tab";
 import { AutomationDeskCard } from "./automation-desk-card";
 import { BehaviorAnalysisModal } from "./behavior-analysis-modal";
@@ -186,8 +187,14 @@ export function DashboardContent() {
   const nextFiveMinuteProjection = resolvedVerdict?.nextFiveMinuteProjection ?? null;
   const openPositions = useMemo(() => snapshot?.positions ?? [], [snapshot?.positions]);
   const closedFills = useMemo(() => snapshot?.recentFills ?? [], [snapshot?.recentFills]);
-  const openLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status === "Open"), [liveTrades]);
-  const closedLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status !== "Open"), [liveTrades]);
+  const openLiveTrades = useMemo(
+    () => liveTrades.filter((trade) => isLiveTradeOpen(trade)),
+    [liveTrades],
+  );
+  const closedLiveTrades = useMemo(
+    () => liveTrades.filter((trade) => isLiveTradeClosed(trade)),
+    [liveTrades],
+  );
   const automationExecutionTargets = useMemo(
     () => buildAutomationExecutionTargets(snapshot?.account != null, externalBrokers.connections),
     [externalBrokers.connections, snapshot?.account],

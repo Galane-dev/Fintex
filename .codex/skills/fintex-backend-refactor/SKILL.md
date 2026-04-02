@@ -9,6 +9,13 @@ description: Refactor custom Fintex ASP.NET Core backend code under `Backend/asp
 
 Refactor only the custom backend code added for Fintex trading features. Keep ABP defaults intact unless a custom feature directly depends on them.
 
+## Mandatory Issue Tracking
+
+- Create a GitHub issue for every user request before or alongside implementation.
+- Use the user-specified bug/feature template whenever one applies.
+- If issue creation tooling is unavailable, provide a ready-to-paste issue body and clearly state the blocker.
+- Include the created issue number/link in the delivery update.
+
 ## Structure Rules
 
 - Keep domain entities and enums under `Fintex.Core/Investments/...` in clear subfolders such as:

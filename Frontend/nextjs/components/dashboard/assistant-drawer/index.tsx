@@ -6,7 +6,6 @@ import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-sh
 import { getFintexButtonLoading } from "@/components/fintex-loader";
 import type { AssistantMessage, AssistantVoiceStatus } from "@/types/assistant";
 import { MessageList } from "./message-list";
-import { VoicePanel } from "./voice-panel";
 
 type AssistantDrawerProps = {
   isOpen: boolean;
@@ -29,19 +28,13 @@ type AssistantDrawerProps = {
 export function AssistantDrawer({
   isOpen,
   isSending,
-  isListening,
-  isVoiceConnecting,
-  voiceStatus,
   error,
   draft,
-  transcript,
   messages,
   suggestedPrompts,
   onClose,
   onDraftChange,
   onSubmit,
-  onStartListening,
-  onStopListening,
 }: AssistantDrawerProps) {
   return (
     <DashboardDrawerShell
@@ -53,7 +46,7 @@ export function AssistantDrawer({
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         {error ? <Alert type="warning" showIcon message={error} /> : null}
         <Typography.Text type="secondary">
-          Ask about the market, your paper or live trades, alerts, automation rules, goals, behavior analysis, or strategy validation. Voice chat now runs as a direct realtime audio session.
+          Ask about the market, your paper or live trades, alerts, automation rules, goals, behavior analysis, or strategy validation.
         </Typography.Text>
         <Space wrap>
           {suggestedPrompts.map((prompt) => (
@@ -87,22 +80,6 @@ export function AssistantDrawer({
                     Send
                   </Button>
                 </Space>
-              ),
-            },
-            {
-              key: "voice",
-              label: "Voice chat",
-              children: (
-                <VoicePanel
-                  messages={messages}
-                  isListening={isListening}
-                  isConnecting={isVoiceConnecting}
-                  isBusy={isSending}
-                  voiceStatus={voiceStatus}
-                  transcript={transcript}
-                  onStartListening={onStartListening}
-                  onStopListening={onStopListening}
-                />
               ),
             },
           ]}

@@ -13,7 +13,7 @@ import { paperTradingActions } from "./actions";
 import { initialPaperTradingState, paperTradingReducer } from "./reducer";
 
 const SNAPSHOT_REFRESH_MS = 15_000;
-const PAPER_TRADE_RECONCILE_DELAYS_MS = [500, 1_500, 4_000] as const;
+const PAPER_TRADE_RECONCILE_DELAYS_MS = [0, 250, 900, 2_000] as const;
 const EMPTY_SNAPSHOT = {
   account: null,
   positions: [],
@@ -151,6 +151,10 @@ export const usePaperTradingProvider = () => {
       const positionId = readEventNumber(detail?.PositionId ?? detail?.positionId);
       const isPaperTrade = source?.includes("paper") ?? positionId != null;
 
+      if (!isPaperTrade) {
+        return;
+      }
+
       if (isPaperTrade && status === "closed" && positionId != null) {
         dispatch(paperTradingActions.positionClosed(positionId));
       }
@@ -213,7 +217,11 @@ export const usePaperTradingProvider = () => {
     dispatch(paperTradingActions.submitStart());
 
     try {
-      await closePaperTradingPosition(input);
+      const order = await closePaperTradingPosition(input);
+      if (order.positionId != null) {
+        dispatch(paperTradingActions.positionClosed(order.positionId));
+      }
+
       await fetchLatestSnapshot({ mode: "submit" });
     } catch (error) {
       dispatch(paperTradingActions.loadFailure(error instanceof Error ? error.message : "We could not close the paper position."));

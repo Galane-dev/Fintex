@@ -1,7 +1,7 @@
 "use client";
 
+import Link from "next/link";
 import { Col, Row, Space, Typography } from "antd";
-import { InstagramFilled, LinkedinFilled, XOutlined, YoutubeFilled } from "@ant-design/icons";
 import { footerGroups } from "@/constants/landing";
 import { useStyles } from "./style";
 
@@ -22,23 +22,17 @@ export function Footer() {
                 FinteX is designed for traders who want decisive information, disciplined access control,
                 and a premium experience from the first visit through the authenticated workspace.
               </Typography.Paragraph>
-              <Space size="middle">
-                <LinkedinFilled />
-                <XOutlined />
-                <InstagramFilled />
-                <YoutubeFilled />
-              </Space>
             </Space>
           </Col>
 
           {footerGroups.map((group) => (
-            <Col key={group.title} xs={12} lg={4}>
+            <Col key={group.title} xs={24} md={12} lg={8}>
               <Typography.Title level={5}>{group.title}</Typography.Title>
               <Space orientation="vertical" size="small">
                 {group.links.map((link) => (
-                  <Typography.Text key={link} type="secondary">
-                    {link}
-                  </Typography.Text>
+                  <Link key={link.label} href={link.href}>
+                    <Typography.Text type="secondary">{link.label}</Typography.Text>
+                  </Link>
                 ))}
               </Space>
             </Col>
