@@ -108,7 +108,7 @@ namespace Fintex.Investments.Notifications
                     recipientName,
                     recipientEmail,
                     notification.Title,
-                    $"<h2>{notification.Title}</h2><p>{notification.Message}</p><p><strong>Symbol:</strong> {notification.Symbol}</p><p><strong>Occurred:</strong> {notification.OccurredAt:O}</p>");
+                    NotificationEmailTemplateBuilder.Build(notification));
                 notification.MarkEmailSent(DateTime.UtcNow);
             }
             catch (Exception exception)
