@@ -5,7 +5,7 @@ using System;
 namespace Fintex.Investments
 {
     /// <summary>
-    /// Netted simulated position for an account and market instrument.
+    /// Simulated position leg for an account and market instrument.
     /// </summary>
     public class PaperPosition : FullAuditedAggregateRoot<long>, IMayHaveTenant
     {

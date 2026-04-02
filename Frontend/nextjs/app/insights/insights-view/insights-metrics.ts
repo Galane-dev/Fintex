@@ -20,6 +20,20 @@ const sortByDateDesc = <T>(items: T[], getValue: (item: T) => string) =>
       new Date(getValue(right)).getTime() - new Date(getValue(left)).getTime(),
   );
 
+const normalizeOutcome = (
+  outcome: StrategyValidationResult["outcome"] | number | string,
+): StrategyValidationResult["outcome"] => {
+  if (outcome === "Validated" || outcome === 2 || outcome === "2") {
+    return "Validated";
+  }
+
+  if (outcome === "Caution" || outcome === 1 || outcome === "1") {
+    return "Caution";
+  }
+
+  return "Fail";
+};
+
 const buildOverview = (
   closedPaperFills: PaperTradeFill[],
   closedLiveTrades: LiveTrade[],
@@ -111,7 +125,7 @@ const buildStrategyScores = (
       id: item.id,
       label: item.strategyName || "Unnamed strategy",
       timeframe: item.timeframe || "1m",
-      outcome: item.outcome,
+      outcome: normalizeOutcome(item.outcome as StrategyValidationResult["outcome"] | number | string),
       score: item.validationScore,
       createdAt: item.creationTime,
     }));
@@ -157,7 +171,9 @@ const buildRecentActivity = (
     value > 0 ? "positive" : value < 0 ? "negative" : "neutral";
   const severityTone = (value: NotificationItem["severity"]): ActivityItem["tone"] =>
     value === "Success" ? "positive" : value === "Danger" ? "negative" : "neutral";
-  const outcomeTone = (value: StrategyValidationResult["outcome"]): ActivityItem["tone"] =>
+  const outcomeTone = (
+    value: StrategyValidationResult["outcome"] | number | string,
+  ): ActivityItem["tone"] =>
     value === "Validated" ? "positive" : value === "Fail" ? "negative" : "neutral";
 
   const activities: ActivityItem[] = [
@@ -188,7 +204,7 @@ const buildRecentActivity = (
       description: item.summary,
       provider: "Validator",
       occurredAt: item.creationTime,
-      tone: outcomeTone(item.outcome),
+      tone: outcomeTone(normalizeOutcome(item.outcome as StrategyValidationResult["outcome"] | number | string)),
       valueLabel: `${item.validationScore.toFixed(1)} / 100`,
     })),
     ...notifications.map((item) => ({
@@ -203,7 +219,7 @@ const buildRecentActivity = (
     })),
   ];
 
-  return sortByDateDesc(activities, (item) => item.occurredAt).slice(0, 10);
+  return sortByDateDesc(activities, (item) => item.occurredAt).slice(0, 40);
 };
 
 export const buildInsightsDataset = ({

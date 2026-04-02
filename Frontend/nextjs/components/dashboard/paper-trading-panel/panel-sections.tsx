@@ -3,6 +3,7 @@
 import { Button, Empty, Space, Tag, Typography } from "antd";
 import { getFintexButtonLoading } from "@/components/fintex-loader";
 import { formatPrice, formatTime } from "@/utils/market-data";
+import { isLiveTradeOpen } from "@/utils/live-trading";
 import type { PaperTradingPanelController } from "./types";
 import { usePaperTradingStyles } from "../paper-trading-style";
 
@@ -33,7 +34,7 @@ export const PanelSections = ({ controller, currentPrice }: PanelSectionsProps) 
         <div className={styles.sectionHeader}><span className={styles.sectionTitle}>{controller.account.name}</span><Tag color="green">{controller.account.baseCurrency}</Tag></div>
         <Typography.Paragraph className={styles.helper}>Latest Binance reference price: {currentPrice != null ? formatPrice(currentPrice) : "-"}. Account marked to market at {formatTime(controller.account.lastMarkedToMarketAt)}.</Typography.Paragraph>
         <div className={styles.inlineActions}><Button className={styles.actionButton} onClick={controller.openAccountsModal}>Manage account</Button><Button className={styles.actionButton} loading={getFintexButtonLoading(controller.isBusy)} onClick={() => void controller.openRecommendationModal()}>Get recommendation</Button></div>
-        <div className={styles.metrics}>{controller.accountMetrics.map((metric) => <div key={metric.label} className={styles.metricCard}><div className={styles.metricLabel}>{metric.label}</div><div className={cx(styles.metricValue, metric.tone === "positive" ? styles.green : undefined, metric.tone === "negative" ? styles.red : undefined)}>{metric.value}</div></div>)}<div className={styles.metricCard}><div className={styles.metricLabel}>Live trades</div><div className={styles.metricValue}>{controller.liveTrades.filter((trade) => trade.status === "Open").length}</div></div></div>
+        <div className={styles.metrics}>{controller.accountMetrics.map((metric) => <div key={metric.label} className={styles.metricCard}><div className={styles.metricLabel}>{metric.label}</div><div className={cx(styles.metricValue, metric.tone === "positive" ? styles.green : undefined, metric.tone === "negative" ? styles.red : undefined)}>{metric.value}</div></div>)}<div className={styles.metricCard}><div className={styles.metricLabel}>Live trades</div><div className={styles.metricValue}>{controller.liveTrades.filter((trade) => isLiveTradeOpen(trade)).length}</div></div></div>
       </div>
 
       <div className={styles.section}>

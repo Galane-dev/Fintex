@@ -337,6 +337,7 @@ export const useStyles = createStyles(({ css, token }) => ({
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
+    background: rgba(10, 12, 14, 0.82);
   `,
   platformMini: css`
     width: 100%;

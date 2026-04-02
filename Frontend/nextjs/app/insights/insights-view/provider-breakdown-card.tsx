@@ -31,7 +31,7 @@ export function ProviderBreakdownCard({
               <Progress
                 percent={(item.count / maxCount) * 100}
                 showInfo={false}
-                strokeColor={item.label === "Alpaca" ? "#7dc7ff" : "#9bf2b1"}
+                strokeColor={item.label === "Alpaca" ? "#66c786" : "#9bf2b1"}
                 trailColor="rgba(255,255,255,0.08)"
                 size="small"
               />

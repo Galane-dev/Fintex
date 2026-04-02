@@ -16,6 +16,13 @@ Use this skill for any frontend work inside `Frontend/nextjs`.
 - Use `axios` through the shared instance in [utils/axios-instance.ts](../../../../Frontend/nextjs/utils/axios-instance.ts).
 - Prefer modular feature folders over large one-file screens.
 
+## Mandatory Issue Tracking
+
+- Create a GitHub issue for every user request before or alongside implementation.
+- Use the user-specified bug/feature template whenever one applies.
+- If issue creation tooling is unavailable, provide a ready-to-paste issue body and clearly state the blocker.
+- Include the created issue number/link in the delivery update.
+
 ## Structure rules
 
 - Shared UI goes in `components/`.

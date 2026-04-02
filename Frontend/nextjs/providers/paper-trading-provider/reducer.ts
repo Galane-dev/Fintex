@@ -64,6 +64,7 @@ export const paperTradingReducer = (
 
       return {
         ...state,
+        isSubmitting: false,
         snapshot: {
           ...state.snapshot,
           positions,

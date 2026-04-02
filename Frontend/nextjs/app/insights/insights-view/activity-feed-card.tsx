@@ -15,6 +15,7 @@ const toneToColor = (tone: ActivityItem["tone"]) => {
 
 export function ActivityFeedCard({ items }: { items: ActivityItem[] }) {
   const { styles } = useInsightsStyles();
+  const visibleItems = items.slice(0, 10);
 
   return (
     <Card className={styles.panel}>
@@ -25,11 +26,11 @@ export function ActivityFeedCard({ items }: { items: ActivityItem[] }) {
         A compact stream of trade closures, strategy validations, and notification events stored in Fintex.
       </Typography.Paragraph>
 
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Activity will appear here as you use the platform." />
       ) : (
         <div className={styles.list}>
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <div key={item.id} className={styles.timelineItem}>
               <div className={styles.timelineDot} />
               <div className={styles.itemHeader}>

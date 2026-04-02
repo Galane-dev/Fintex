@@ -4,13 +4,13 @@ import type {
   LandingFeature,
   MarketSnapshot,
   NavLink,
-  PlatformShowcase,
+  SubscriptionPlan,
 } from "@/types/landing";
 
 export const navLinks: NavLink[] = [
   { label: "Markets", href: "#markets" },
   { label: "Features", href: "#features" },
-  { label: "Platforms", href: "#platforms" },
+  { label: "Plans", href: "#plans" },
   { label: "Security", href: "#security" },
 ];
 
@@ -68,45 +68,49 @@ export const marketSnapshots: MarketSnapshot[] = [
   { symbol: "USD/JPY", price: "149.82", change: "-0.12%", verdict: "Sell" },
 ];
 
-export const platformShowcases: PlatformShowcase[] = [
+export const subscriptionPlans: SubscriptionPlan[] = [
   {
-    key: "web",
-    title: "Web platform",
-    description: "A desktop-grade trading surface in the browser with deep charting, watchlists, and instant execution.",
-    bullets: ["Workspace layouts", "Live indicator cards", "Zero-install access"],
-    accent: "rgba(77, 187, 119, 0.12)",
+    key: "starter",
+    title: "Starter",
+    price: "$0",
+    cadence: "/month",
+    description: "A demo-friendly entry plan for exploring FinteX workflows and UI.",
+    bullets: ["Watchlists and snapshots", "Landing + dashboard preview", "Community support"],
   },
   {
-    key: "mobile",
-    title: "Mobile app flow",
-    description: "Stay in sync with alerts, quick order tickets, and biometric-ready access patterns for trading on the move.",
-    bullets: ["Push alerts", "Compact trade tickets", "Fast re-entry"],
-    accent: "rgba(97, 146, 111, 0.14)",
+    key: "pro",
+    title: "Pro",
+    price: "$29",
+    cadence: "/month",
+    description: "For active traders who want richer analytics and automation-ready workflows.",
+    bullets: ["Advanced analytics cards", "Rule-based automation", "Priority feature releases"],
   },
   {
-    key: "api",
-    title: "API and automation",
-    description: "Connect real-time feeds and strategy tooling through a modular backend and future-ready trading workflows.",
-    bullets: ["Market streaming", "Signal consumption", "Strategy extensibility"],
-    accent: "rgba(73, 124, 86, 0.14)",
+    key: "elite",
+    title: "Elite",
+    price: "$99",
+    cadence: "/month",
+    description: "A premium plan for teams and power users who need top-tier execution visibility.",
+    bullets: ["Multi-account oversight", "Automation + risk desk tooling", "Dedicated support channel"],
   },
 ];
 
 export const footerGroups: FooterGroup[] = [
   {
     title: "Platform",
-    links: ["Markets", "Trade Center", "Signals", "Research"],
+    links: [
+      { label: "Markets", href: "#markets" },
+      { label: "Features", href: "#features" },
+      { label: "Plans", href: "#plans" },
+      { label: "Security", href: "#security" },
+    ],
   },
   {
-    title: "Company",
-    links: ["About", "Security", "Careers", "Contact"],
-  },
-  {
-    title: "Resources",
-    links: ["Help Center", "Trading Guide", "API Docs", "Status"],
-  },
-  {
-    title: "Legal",
-    links: ["Terms", "Privacy", "Risk Disclosure", "Compliance"],
+    title: "Account",
+    links: [
+      { label: "Sign in", href: "/auth/sign-in" },
+      { label: "Create account", href: "/auth/sign-up" },
+      { label: "Dashboard", href: "/dashboard" },
+    ],
   },
 ];

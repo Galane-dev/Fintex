@@ -108,6 +108,47 @@ namespace Fintex.Investments.MarketData
                 await _marketDataPointRepository.InsertAsync(point);
                 await _unitOfWorkManager.Current.SaveChangesAsync();
 
+                var riskEvaluationEventData = new MarketDataUpdatedEventData
+                {
+                    TenantId = tick.TenantId,
+                    MarketDataPointId = point.Id,
+                    Symbol = point.Symbol,
+                    AssetClass = point.AssetClass,
+                    Provider = point.Provider,
+                    Price = point.Price,
+                    Bid = point.Bid,
+                    Ask = point.Ask,
+                    Volume = point.Volume,
+                    Sma = point.Sma,
+                    Ema = point.Ema,
+                    Rsi = point.Rsi,
+                    StdDev = point.StdDev,
+                    Macd = point.Macd,
+                    MacdSignal = point.MacdSignal,
+                    MacdHistogram = point.MacdHistogram,
+                    Momentum = point.Momentum,
+                    RateOfChange = point.RateOfChange,
+                    BollingerUpper = point.BollingerUpper,
+                    BollingerLower = point.BollingerLower,
+                    TrendScore = point.TrendScore,
+                    ConfidenceScore = point.ConfidenceScore,
+                    Verdict = point.Verdict,
+                    Timestamp = point.Timestamp
+                };
+
+                try
+                {
+                    await _paperPositionRiskService.EvaluateAsync(riskEvaluationEventData, cancellationToken);
+                }
+                catch (System.Exception exception)
+                {
+                    _logger.LogWarning(
+                        exception,
+                        "Failed to evaluate paper risk exits during ingestion for {Symbol} from {Provider}.",
+                        riskEvaluationEventData.Symbol,
+                        riskEvaluationEventData.Provider);
+                }
+
                 var realtimeInput = new GetMarketDataHistoryInput
                 {
                     Symbol = point.Symbol,
@@ -175,19 +216,6 @@ namespace Fintex.Investments.MarketData
                     RealtimeVerdict = realtimeVerdict,
                     TimeframeRsi = timeframeRsi.Items
                 };
-
-                try
-                {
-                    await _paperPositionRiskService.EvaluateAsync(updatedEventData, cancellationToken);
-                }
-                catch (System.Exception exception)
-                {
-                    _logger.LogWarning(
-                        exception,
-                        "Failed to evaluate paper risk exits during ingestion for {Symbol} from {Provider}.",
-                        updatedEventData.Symbol,
-                        updatedEventData.Provider);
-                }
 
                 await _eventBus.TriggerAsync(updatedEventData);
 
