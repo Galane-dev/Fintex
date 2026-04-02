@@ -7,9 +7,9 @@ import { ROUTES } from "@/constants/routes";
 import { useStyles } from "./style";
 
 const highlights = [
-  "Realtime trend and confidence calculations",
-  "Protected dashboards with auth-first access",
-  "A premium dark interface designed for focus",
+  "Realtime market context and confidence scoring",
+  "Protected dashboards with role-safe access",
+  "A focused interface tuned for active decision making",
 ];
 
 export function AuthHighlights() {
@@ -28,21 +28,21 @@ export function AuthHighlights() {
         <div className={styles.miniCard}>
           <Space orientation="vertical" size="large">
             <div>
-              <Typography.Text type="success">
+              <Typography.Text className={styles.overline}>
                 <ThunderboltFilled /> Premium access
               </Typography.Text>
-              <Typography.Title className={styles.title}>
-                Enter a trading workspace that stays sharp under pressure.
+              <Typography.Title className={styles.highlightTitle}>
+                Authenticate once and step into a workspace built for signal clarity.
               </Typography.Title>
               <Typography.Paragraph className={styles.copy}>
-                The auth flow uses the same visual language as the landing page, so the public product story and secure app experience feel like one system.
+                Fintex authentication uses the same black-and-green brand language as the core platform, so public onboarding and secured trading feel like one seamless product.
               </Typography.Paragraph>
             </div>
 
             <Space orientation="vertical" size="middle">
               {highlights.map((item) => (
                 <Space key={item} align="start">
-                  <CheckCircleFilled style={{ color: "#34f5c5", marginTop: 4 }} />
+                  <CheckCircleFilled style={{ color: "#73e996", marginTop: 4 }} />
                   <Typography.Text>{item}</Typography.Text>
                 </Space>
               ))}
