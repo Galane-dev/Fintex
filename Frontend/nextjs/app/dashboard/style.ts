@@ -30,7 +30,8 @@ export const useStyles = createStyles(({ css, token }) => ({
     }
   `,
   header: css`
-    margin-bottom: 6px;
+    margin-bottom: 2px;
+    margin-top: 12px;
     padding: 0;
     border-radius: 22px;
     display: flex;
@@ -79,12 +80,17 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   chartColumn: css`
     min-width: 0;
+    margin-top: -44px;
 
     @media (min-width: 1181px) {
       min-height: 0;
-      height: 100%;
+      height: 106%;
       display: flex;
       flex-direction: column;
+    }
+
+    @media (max-width: 1180px) {
+      margin-top: 0;
     }
   `,
   brandHomeButton: css`
@@ -134,8 +140,9 @@ export const useStyles = createStyles(({ css, token }) => ({
     display: grid;
     grid-auto-rows: max-content;
     align-content: start;
-    gap: 10px;
+    gap: 20px;
     min-width: 0;
+    margin-top: 12px;
 
     @media (min-width: 1181px) {
       min-height: 0;
@@ -151,6 +158,10 @@ export const useStyles = createStyles(({ css, token }) => ({
         background: rgba(255, 255, 255, 0.12);
         border-radius: 999px;
       }
+    }
+
+    @media (max-width: 1180px) {
+      margin-top: 0;
     }
   `,
   sideSection: css`

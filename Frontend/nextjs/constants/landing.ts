@@ -11,7 +11,6 @@ export const navLinks: NavLink[] = [
   { label: "Markets", href: "#markets" },
   { label: "Features", href: "#features" },
   { label: "Plans", href: "#plans" },
-  { label: "Security", href: "#security" },
 ];
 
 export const heroMetrics: HeroMetric[] = [
