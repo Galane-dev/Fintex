@@ -2,6 +2,7 @@
 
 import { Alert, Button, Space, Tag } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import { formatPrice } from "@/utils/market-data";
 import { getRiskTone } from "./helpers";
 import type { PaperTradingPanelController } from "./types";
@@ -29,7 +30,7 @@ export const AssessmentModal = ({ controller }: AssessmentModalProps) => {
           <Button
             type="primary"
             className={styles.actionButton}
-            loading={controller.isBusy}
+            loading={getFintexButtonLoading(controller.isBusy)}
             onClick={() => void controller.handleApplyAssessmentSuggestions()}
           >
             Apply suggested setup

@@ -7,6 +7,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePaperTrading } from "@/hooks/usePaperTrading";
 import type { StrategyValidationResult } from "@/types/strategy-validation";
 import type { UserProfile } from "@/types/user-profile";
+import { isLiveTradeClosed, isLiveTradeOpen } from "@/utils/live-trading";
 import { getMyStrategyValidationHistory } from "@/utils/strategy-validation-api";
 import { getMyUserProfile } from "@/utils/user-profile-api";
 import { buildInsightsDataset } from "./insights-metrics";
@@ -62,8 +63,8 @@ export const useInsightsPageData = () => {
         profile,
         openPaperPositions: snapshot?.positions ?? [],
         closedPaperFills: snapshot?.recentFills ?? [],
-        openLiveTrades: trades.filter((trade) => trade.status === "Open"),
-        closedLiveTrades: trades.filter((trade) => trade.status !== "Open"),
+        openLiveTrades: trades.filter((trade) => isLiveTradeOpen(trade)),
+        closedLiveTrades: trades.filter((trade) => isLiveTradeClosed(trade)),
         strategyHistory,
         notifications: inboxNotifications,
       }),

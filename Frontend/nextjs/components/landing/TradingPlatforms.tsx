@@ -1,57 +1,63 @@
 "use client";
 
-import { ApiOutlined, DesktopOutlined, MobileOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Row, Space, Statistic, Typography } from "antd";
-import { platformShowcases } from "@/constants/landing";
+import { CheckCircleOutlined, CrownOutlined, RocketOutlined } from "@ant-design/icons";
+import { Button, Card, Col, Row, Space, Tag, Typography } from "antd";
+import { subscriptionPlans } from "@/constants/landing";
 import { useStyles } from "./style";
 
-const platformIcons = {
-  web: <DesktopOutlined />,
-  mobile: <MobileOutlined />,
-  api: <ApiOutlined />,
+const planIcons = {
+  starter: <RocketOutlined />,
+  pro: <CheckCircleOutlined />,
+  elite: <CrownOutlined />,
 } as const;
 
 export function TradingPlatforms() {
   const { styles } = useStyles();
 
   return (
-    <section id="platforms" className={styles.sectionMuted}>
+    <section id="plans" className={styles.sectionMuted}>
       <div className={styles.shell}>
         <div className={styles.sectionHeader}>
-          <div className={styles.pill}>Multi-platform</div>
+          <div className={styles.pill}>Subscription plans</div>
           <Typography.Title className={styles.sectionTitle}>
-            One trading brand, flexible across web, mobile, and automation.
+            Pick the plan view that fits your trading journey.
           </Typography.Title>
           <Typography.Paragraph className={styles.sectionCopy}>
-            The same visual system and confidence-driven data model can scale from public marketing pages to secure application flows.
+            This section is a simple preview-only pricing layout for the landing page.
+            It is intentionally non-functional and does not connect to billing.
           </Typography.Paragraph>
         </div>
 
         <Row gutter={[18, 18]}>
-          {platformShowcases.map((platform) => (
-            <Col key={platform.key} xs={24} lg={8}>
+          {subscriptionPlans.map((plan) => (
+            <Col key={plan.key} xs={24} lg={8}>
               <Card className={styles.platformCard}>
-                <div className={styles.platformVisual} style={{ background: platform.accent }}>
+                <div className={styles.platformVisual}>
                   <div className={styles.platformMini}>
                     <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-                      <Typography.Text>{platformIcons[platform.key]}</Typography.Text>
-                      <Statistic title="Execution speed" value={platform.key === "api" ? "19ms" : platform.key === "mobile" ? "41ms" : "24ms"} />
-                      <Statistic title="Session verdict" value={platform.key === "mobile" ? "Hold" : "Buy"} />
+                      <Typography.Text>{planIcons[plan.key]}</Typography.Text>
+                      <Tag color="green">Dummy plan</Tag>
+                      <Typography.Title level={2} style={{ margin: 0 }}>
+                        {plan.price}
+                        <Typography.Text type="secondary" style={{ marginLeft: 4 }}>
+                          {plan.cadence}
+                        </Typography.Text>
+                      </Typography.Title>
                     </Space>
                   </div>
                 </div>
-                <Typography.Title level={3}>{platform.title}</Typography.Title>
-                <Typography.Paragraph>{platform.description}</Typography.Paragraph>
+                <Typography.Title level={3}>{plan.title}</Typography.Title>
+                <Typography.Paragraph>{plan.description}</Typography.Paragraph>
                 <div className={styles.bulletList}>
-                  {platform.bullets.map((bullet) => (
+                  {plan.bullets.map((bullet) => (
                     <div key={bullet} className={styles.bulletItem}>
                       <span className={styles.bulletDot} />
                       <span>{bullet}</span>
                     </div>
                   ))}
                 </div>
-                <Button block style={{ marginTop: 24 }}>
-                  Learn more
+                <Button block style={{ marginTop: 24 }} disabled>
+                  Choose plan
                 </Button>
               </Card>
             </Col>

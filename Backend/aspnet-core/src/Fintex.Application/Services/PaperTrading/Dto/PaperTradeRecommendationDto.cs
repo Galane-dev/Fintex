@@ -11,6 +11,8 @@ namespace Fintex.Investments.PaperTrading.Dto
     {
         public MarketVerdict RecommendedAction { get; set; }
 
+        public MarketVerdict? SuggestedTradeAction { get; set; }
+
         public decimal RiskScore { get; set; }
 
         public PaperTradeRiskLevel RiskLevel { get; set; }

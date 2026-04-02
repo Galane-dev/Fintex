@@ -71,9 +71,13 @@ const normalizeDirection = (value: unknown): LiveTrade["direction"] => {
 
 const normalizeStatus = (value: unknown): LiveTrade["status"] => {
   if (typeof value === "string") {
-    const normalized = value.toLowerCase();
+    const normalized = value.trim().toLowerCase();
 
     if (normalized === "open") {
+      return "Open";
+    }
+
+    if (normalized === "pending") {
       return "Open";
     }
 
@@ -97,6 +101,24 @@ const normalizeStatus = (value: unknown): LiveTrade["status"] => {
 
   return "Open";
 };
+
+export const isLiveTradeClosed = (
+  trade: Pick<LiveTrade, "status" | "closedAt" | "exitPrice">,
+) => {
+  if (trade.status === "Closed" || trade.status === "Cancelled") {
+    return true;
+  }
+
+  if (typeof trade.closedAt === "string" && trade.closedAt.trim().length > 0) {
+    return true;
+  }
+
+  return trade.exitPrice != null;
+};
+
+export const isLiveTradeOpen = (
+  trade: Pick<LiveTrade, "status" | "closedAt" | "exitPrice">,
+) => !isLiveTradeClosed(trade);
 
 export const normalizeLiveTrade = (value: Record<string, unknown>): LiveTrade => ({
   id: getNumber(value.id ?? value.Id),

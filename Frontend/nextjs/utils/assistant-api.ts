@@ -1,6 +1,14 @@
-import type { AssistantMessage, AssistantResponse } from "@/types/assistant";
+import type {
+  AssistantMessage,
+  AssistantRealtimeSession,
+  AssistantResponse,
+} from "@/types/assistant";
 import { getAxiosInstance } from "./axios-instance";
-import { normalizeAssistantResponse } from "./assistant";
+import { unwrapAbpResponse } from "./abp-response";
+import {
+  normalizeAssistantRealtimeSession,
+  normalizeAssistantResponse,
+} from "./assistant";
 
 export const sendAssistantMessage = async (
   message: string,
@@ -22,4 +30,19 @@ export const sendAssistantMessage = async (
   });
 
   return normalizeAssistantResponse(response.data.result ?? response.data);
+};
+
+export const createAssistantRealtimeSession = async (): Promise<AssistantRealtimeSession> => {
+  const clientTimeZone =
+    typeof window === "undefined" ? null : Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const clientNowIso = new Date().toISOString();
+  const result = await unwrapAbpResponse<Record<string, unknown>>(
+    getAxiosInstance().post("/api/services/app/Assistant/CreateRealtimeVoiceSession", {
+      clientTimeZone,
+      clientNowIso,
+    }),
+    "We could not start a realtime voice session.",
+  );
+
+  return normalizeAssistantRealtimeSession(result);
 };

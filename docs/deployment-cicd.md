@@ -2,8 +2,43 @@
 
 This repository now uses:
 
-- Azure DevOps YAML pipeline for the backend container build and Azure deploy
+- GitHub Actions pipeline for backend CI/CD to Azure App Service
+- Azure DevOps YAML pipeline (optional/legacy path kept for reference)
 - Vercel native Git integration for the frontend
+
+## Backend to Azure with GitHub Actions
+
+Workflow file:
+
+- `.github/workflows/backend-azure-appservice.yml`
+
+### What the GitHub Actions backend pipeline does
+
+1. Triggers on backend changes to `master` and `dev` (and supports manual runs)
+2. Runs restore + build + publish for `Fintex.Web.Host`
+3. Deploys to Azure App Service on pushes to `master` and `dev` (including merges)
+4. Runs build validation on pull requests to `master` and `dev` without deploying
+
+### GitHub Secrets required
+
+Add these in GitHub repository settings:
+
+- `AZURE_WEBAPP_NAME`
+  - Example: `fintex`
+- `AZURE_WEBAPP_PUBLISH_PROFILE`
+  - Value is the full XML from Azure App Service "Get publish profile"
+
+### How to get the publish profile
+
+1. Azure Portal -> App Service (`fintex`)
+2. Select `Overview`
+3. Click `Get publish profile`
+4. Copy XML contents and paste into GitHub secret `AZURE_WEBAPP_PUBLISH_PROFILE`
+
+### Trigger behavior
+
+- Merge into `master` or `dev` -> automatic deploy to Azure App Service
+- PR to `master` or `dev` -> CI build only
 
 ## Backend to Azure with Azure DevOps
 

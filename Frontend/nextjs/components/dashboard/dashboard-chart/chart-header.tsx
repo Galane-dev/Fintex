@@ -1,7 +1,7 @@
 "use client";
 
 import { BulbOutlined, FundProjectionScreenOutlined, RadarChartOutlined, WalletOutlined } from "@ant-design/icons";
-import { Button, Segmented, Space, Tag, Typography } from "antd";
+import { Button, Segmented, Space, Tag, Tooltip, Typography } from "antd";
 import { formatPrice, formatSigned, formatTime } from "@/utils/market-data";
 import { intervals } from "./types";
 import type { DashboardChartController, DashboardChartProps } from "./types";
@@ -42,9 +42,30 @@ export const ChartHeader = ({
           <Button type="primary" className={cx(styles.actionButton, styles.buyButton)} onClick={() => onOpenTrade("Buy")}>Buy</Button>
           <Button danger className={cx(styles.actionButton, styles.sellButton)} onClick={() => onOpenTrade("Sell")}>Sell</Button>
           <Button icon={<WalletOutlined />} className={styles.actionButton} onClick={onOpenAccounts}>Accounts</Button>
-          <Button icon={<BulbOutlined />} className={styles.actionButton} onClick={onOpenRecommendation}>Get recommendation</Button>
-          <Button icon={<FundProjectionScreenOutlined />} className={styles.actionButton} onClick={onOpenStrategyValidation}>Validate strategy</Button>
-          <Button icon={<RadarChartOutlined />} className={styles.actionButton} onClick={onOpenBehaviorAnalysis}>My behavior analysis</Button>
+          <Tooltip title="Get recommendation">
+            <Button
+              aria-label="Get recommendation"
+              icon={<BulbOutlined />}
+              className={cx(styles.actionButton, styles.iconActionButton)}
+              onClick={onOpenRecommendation}
+            />
+          </Tooltip>
+          <Tooltip title="Validate strategy">
+            <Button
+              aria-label="Validate strategy"
+              icon={<FundProjectionScreenOutlined />}
+              className={cx(styles.actionButton, styles.iconActionButton)}
+              onClick={onOpenStrategyValidation}
+            />
+          </Tooltip>
+          <Tooltip title="My behavior analysis">
+            <Button
+              aria-label="My behavior analysis"
+              icon={<RadarChartOutlined />}
+              className={cx(styles.actionButton, styles.iconActionButton)}
+              onClick={onOpenBehaviorAnalysis}
+            />
+          </Tooltip>
         </Space>
       </div>
 

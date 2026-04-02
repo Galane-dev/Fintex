@@ -34,9 +34,8 @@ namespace Fintex.Investments.PaperTrading
 
             var occurredAt = DateTime.UtcNow;
             var fillPrice = marketContext.LatestPoint.Price;
-            var position = await _paperPositionRepository.GetOpenBySymbolAsync(account.Id, input.Symbol, input.Provider);
-            var effectiveStopLoss = input.StopLoss ?? position?.StopLoss ?? assessment.SuggestedStopLoss;
-            var effectiveTakeProfit = input.TakeProfit ?? position?.TakeProfit ?? assessment.SuggestedTakeProfit;
+            var effectiveStopLoss = input.StopLoss ?? assessment.SuggestedStopLoss;
+            var effectiveTakeProfit = input.TakeProfit ?? assessment.SuggestedTakeProfit;
             var order = new PaperOrder(
                 AbpSession.TenantId,
                 userId,
@@ -56,64 +55,25 @@ namespace Fintex.Investments.PaperTrading
             await _paperOrderRepository.InsertAsync(order);
             await CurrentUnitOfWork.SaveChangesAsync();
 
+            var position = new PaperPosition(
+                AbpSession.TenantId,
+                userId,
+                account.Id,
+                input.Symbol,
+                input.AssetClass,
+                input.Provider,
+                input.Direction,
+                input.Quantity,
+                fillPrice,
+                effectiveStopLoss,
+                effectiveTakeProfit,
+                occurredAt);
+
+            await _paperPositionRepository.InsertAsync(position);
+            await CurrentUnitOfWork.SaveChangesAsync();
+
+            var positionId = position.Id;
             var realizedProfitLoss = 0m;
-            long? positionId;
-
-            if (position == null)
-            {
-                position = new PaperPosition(
-                    AbpSession.TenantId,
-                    userId,
-                    account.Id,
-                    input.Symbol,
-                    input.AssetClass,
-                    input.Provider,
-                    input.Direction,
-                    input.Quantity,
-                    fillPrice,
-                    effectiveStopLoss,
-                    effectiveTakeProfit,
-                    occurredAt);
-
-                await _paperPositionRepository.InsertAsync(position);
-                await CurrentUnitOfWork.SaveChangesAsync();
-                positionId = position.Id;
-            }
-            else if (position.Direction == input.Direction)
-            {
-                position.Add(input.Quantity, fillPrice, occurredAt);
-                position.ApplyTradePlan(effectiveStopLoss, effectiveTakeProfit, occurredAt);
-                positionId = position.Id;
-            }
-            else
-            {
-                var closingQuantity = decimal.Min(position.Quantity, input.Quantity);
-                realizedProfitLoss = position.Reduce(closingQuantity, fillPrice, occurredAt);
-                account.ApplyRealizedProfitLoss(realizedProfitLoss, occurredAt);
-
-                var remainingQuantity = input.Quantity - closingQuantity;
-                if (remainingQuantity > 0m)
-                {
-                    position = new PaperPosition(
-                        AbpSession.TenantId,
-                        userId,
-                        account.Id,
-                        input.Symbol,
-                        input.AssetClass,
-                        input.Provider,
-                        input.Direction,
-                        remainingQuantity,
-                        fillPrice,
-                        effectiveStopLoss,
-                        effectiveTakeProfit,
-                        occurredAt);
-
-                    await _paperPositionRepository.InsertAsync(position);
-                    await CurrentUnitOfWork.SaveChangesAsync();
-                }
-
-                positionId = position.Id;
-            }
 
             order.MarkFilled(fillPrice, occurredAt, positionId);
             await _paperTradeFillRepository.InsertAsync(new PaperTradeFill(

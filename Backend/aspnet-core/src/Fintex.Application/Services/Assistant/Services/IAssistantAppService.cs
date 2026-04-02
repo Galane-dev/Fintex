@@ -10,5 +10,7 @@ namespace Fintex.Investments.Assistant
     public interface IAssistantAppService : IApplicationService
     {
         Task<AssistantChatResponseDto> SendMessageAsync(AssistantChatInput input);
+
+        Task<AssistantRealtimeSessionDto> CreateRealtimeVoiceSessionAsync(AssistantRealtimeSessionInput input);
     }
 }

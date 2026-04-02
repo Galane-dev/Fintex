@@ -7,7 +7,6 @@ import {
   BellOutlined,
   BarChartOutlined,
   CalendarOutlined,
-  HomeOutlined,
   LogoutOutlined,
   MessageOutlined,
   ReloadOutlined,
@@ -16,6 +15,7 @@ import { Badge, Button, Card, Space, Tabs } from "antd";
 import { AssistantDrawer } from "@/components/dashboard/assistant-drawer";
 import { DashboardChart, type ChartTradeOverlay } from "@/components/dashboard/DashboardChart";
 import { PaperTradingPanel, type DashboardPaperTradingActions } from "@/components/dashboard/PaperTradingPanel";
+import { getFintexButtonLoading } from "@/components/fintex-loader";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardAssistant } from "@/hooks/use-dashboard-assistant";
@@ -36,6 +36,7 @@ import {
   formatSigned,
   formatSignedPoints,
 } from "@/utils/market-data";
+import { isLiveTradeClosed, isLiveTradeOpen } from "@/utils/live-trading";
 import { AnalysisTab } from "./analysis-tab";
 import { AutomationDeskCard } from "./automation-desk-card";
 import { BehaviorAnalysisModal } from "./behavior-analysis-modal";
@@ -160,6 +161,8 @@ export function DashboardContent() {
         refreshTrades(),
         notifications.refreshInbox(),
         goalAutomation.refreshGoals(),
+        tradeAutomation.refreshRules(),
+        externalBrokers.refreshConnections(),
       ]);
     },
   });
@@ -184,8 +187,14 @@ export function DashboardContent() {
   const nextFiveMinuteProjection = resolvedVerdict?.nextFiveMinuteProjection ?? null;
   const openPositions = useMemo(() => snapshot?.positions ?? [], [snapshot?.positions]);
   const closedFills = useMemo(() => snapshot?.recentFills ?? [], [snapshot?.recentFills]);
-  const openLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status === "Open"), [liveTrades]);
-  const closedLiveTrades = useMemo(() => liveTrades.filter((trade) => trade.status !== "Open"), [liveTrades]);
+  const openLiveTrades = useMemo(
+    () => liveTrades.filter((trade) => isLiveTradeOpen(trade)),
+    [liveTrades],
+  );
+  const closedLiveTrades = useMemo(
+    () => liveTrades.filter((trade) => isLiveTradeClosed(trade)),
+    [liveTrades],
+  );
   const automationExecutionTargets = useMemo(
     () => buildAutomationExecutionTargets(snapshot?.account != null, externalBrokers.connections),
     [externalBrokers.connections, snapshot?.account],
@@ -250,7 +259,7 @@ export function DashboardContent() {
               onClick={() => {
                 void handleManualSnapshotRefresh();
               }}
-              loading={isManualSnapshotRefreshing}
+              loading={getFintexButtonLoading(isManualSnapshotRefreshing)}
             />
             <Badge count={notifications.unreadCount} size="small">
               <Button
@@ -289,10 +298,12 @@ export function DashboardContent() {
             </Link>
             <Link href={ROUTES.home}>
               <Button
+                className={styles.brandHomeButton}
                 aria-label="Landing page"
-                title="Landing page"
-                icon={<HomeOutlined />}
-              />
+                title="Fintex home"
+              >
+                F
+              </Button>
             </Link>
             <Button
               type="primary"
@@ -500,10 +511,11 @@ export function DashboardContent() {
         isOpen={assistant.isOpen}
         isSending={assistant.isSending}
         isListening={assistant.isListening}
+        isVoiceConnecting={assistant.isVoiceConnecting}
+        voiceStatus={assistant.voiceStatus}
         error={assistant.error}
         draft={assistant.draft}
         transcript={assistant.transcript}
-        speakReplies={assistant.speakReplies}
         messages={assistant.messages}
         suggestedPrompts={assistant.suggestedPrompts}
         onClose={assistant.close}
@@ -511,7 +523,6 @@ export function DashboardContent() {
         onSubmit={assistant.submitMessage}
         onStartListening={assistant.startListening}
         onStopListening={assistant.stopListening}
-        onToggleSpeakReplies={assistant.setSpeakReplies}
       />
     </div>
   );

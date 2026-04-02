@@ -1,4 +1,8 @@
-import type { AssistantActionResult, AssistantResponse } from "@/types/assistant";
+import type {
+  AssistantActionResult,
+  AssistantRealtimeSession,
+  AssistantResponse,
+} from "@/types/assistant";
 
 const normalizeActionResult = (
   payload: Record<string, unknown>,
@@ -32,5 +36,19 @@ export const normalizeAssistantResponse = (
           normalizeActionResult(item as Record<string, unknown>),
         )
       : [],
+  };
+};
+
+export const normalizeAssistantRealtimeSession = (
+  payload: Record<string, unknown>,
+): AssistantRealtimeSession => {
+  const expiresAtUtc = payload.expiresAtUtc ?? payload.ExpiresAtUtc;
+
+  return {
+    clientSecret: String(payload.clientSecret ?? payload.ClientSecret ?? ""),
+    expiresAtUtc: typeof expiresAtUtc === "string" ? expiresAtUtc : null,
+    model: String(payload.model ?? payload.Model ?? "gpt-realtime"),
+    voice: String(payload.voice ?? payload.Voice ?? "marin"),
+    instructions: String(payload.instructions ?? payload.Instructions ?? ""),
   };
 };

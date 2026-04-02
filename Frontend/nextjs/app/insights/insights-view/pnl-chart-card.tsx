@@ -11,43 +11,64 @@ import { formatPrice, formatTime } from "@/utils/market-data";
 import type { ChartPoint, InsightsChartMode } from "./types";
 import { useInsightsStyles } from "../style";
 
-const buildPath = (points: ChartPoint[]) => {
+type ChartBar = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+const buildBarGeometry = (points: ChartPoint[]) => {
   if (points.length === 0) {
-    return "";
+    return { bars: [] as ChartBar[], baselineY: 92 };
   }
 
   const values = points.map((point) => point.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
+  const leftPad = 6;
+  const rightPad = 96;
+  const topPad = 8;
+  const bottomPad = 92;
+  const drawableHeight = bottomPad - topPad;
+  const slot = (rightPad - leftPad) / points.length;
+  const width = Math.max(Math.min(6.2, slot - 0.7), 1.2);
 
-  return points
-    .map((point, index) => {
-      const x = (index / Math.max(points.length - 1, 1)) * 100;
-      const y = 100 - ((point.value - min) / range) * 100;
-      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
-    })
-    .join(" ");
+  const bars = points.map((point, index) => {
+    const x = leftPad + index * slot + (slot - width) / 2;
+    const height = Math.max(((point.value - min) / range) * drawableHeight, 2);
+    const y = bottomPad - height;
+
+    return {
+      x,
+      y,
+      width,
+      height,
+    };
+  });
+
+  return { bars, baselineY: bottomPad };
 };
 
 const chartMeta = {
   equity: {
-    title: "Equity curve",
-    eyebrow: "Performance curve",
+    title: "Equity bars",
+    eyebrow: "Performance distribution",
     icon: <AreaChartOutlined />,
-    empty: "Closed trades will draw the equity curve here.",
+    empty: "Closed trades will draw equity bars here.",
   },
   "strategy-score": {
-    title: "Strategy score trend",
-    eyebrow: "Validation trend",
+    title: "Strategy score bars",
+    eyebrow: "Validation distribution",
     icon: <FundProjectionScreenOutlined />,
-    empty: "Validated strategies will start drawing a score trend here.",
+    empty: "Validated strategies will start drawing score bars here.",
   },
   "alert-hits": {
-    title: "Alert hit timeline",
-    eyebrow: "Alert flow",
+    title: "Alert hit bars",
+    eyebrow: "Alert distribution",
     icon: <AlertOutlined />,
-    empty: "Triggered price alerts will appear as a running hit timeline here.",
+    empty: "Triggered price alerts will appear as running bars here.",
   },
 } as const;
 
@@ -75,6 +96,8 @@ export function PnlChartCard({
   const firstValue = points[0]?.value ?? null;
   const delta = latestValue != null && firstValue != null ? latestValue - firstValue : null;
   const meta = chartMeta[mode];
+  const chartGeometry = buildBarGeometry(points);
+  const latestIndex = Math.max(points.length - 1, 0);
 
   return (
     <Card className={styles.panel}>
@@ -110,12 +133,36 @@ export function PnlChartCard({
         <div className={styles.chartWrap}>
           <svg viewBox="0 0 100 100" width="100%" height="100%" preserveAspectRatio="none">
             <defs>
-              <linearGradient id="insights-line" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#4be16b" />
-                <stop offset="100%" stopColor="#9bf2b1" />
+              <linearGradient id="insights-bar" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#93ebaa" />
+                <stop offset="100%" stopColor="#4ecf72" />
+              </linearGradient>
+              <linearGradient id="insights-bar-active" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#c2f7cf" />
+                <stop offset="100%" stopColor="#67dc89" />
               </linearGradient>
             </defs>
-            <path d={buildPath(points)} fill="none" stroke="url(#insights-line)" strokeWidth="2.6" />
+            <path d="M 0 25 L 100 25" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6" fill="none" />
+            <path d="M 0 50 L 100 50" stroke="rgba(255,255,255,0.06)" strokeWidth="0.6" fill="none" />
+            <path d="M 0 75 L 100 75" stroke="rgba(255,255,255,0.05)" strokeWidth="0.6" fill="none" />
+            <path
+              d={`M 6 ${chartGeometry.baselineY} L 96 ${chartGeometry.baselineY}`}
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth="0.8"
+              fill="none"
+            />
+            {chartGeometry.bars.map((bar, index) => (
+              <rect
+                key={`${points[index]?.label ?? "bar"}-${index}`}
+                x={bar.x}
+                y={bar.y}
+                width={bar.width}
+                height={bar.height}
+                rx="1.2"
+                fill={index === latestIndex ? "url(#insights-bar-active)" : "url(#insights-bar)"}
+                opacity={index === latestIndex ? 1 : 0.86}
+              />
+            ))}
           </svg>
         </div>
       )}
@@ -137,3 +184,4 @@ export function PnlChartCard({
     </Card>
   );
 }
+

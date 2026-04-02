@@ -1,7 +1,12 @@
 "use client";
 
-import { Alert, Button, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, Button, Space, Tag, Typography } from "antd";
 import { DashboardDrawerShell } from "@/components/dashboard/dashboard-drawer-shell";
+import { FintexLoader, getFintexButtonLoading } from "@/components/fintex-loader";
+import {
+  getActionableRecommendationAction,
+  hasSuggestedRecommendationTrade,
+} from "@/utils/paper-trading";
 import { formatDateTime, formatPrice, formatTime } from "@/utils/market-data";
 import { getRecommendationActionTone, getRiskTone } from "./helpers";
 import type { PaperTradingPanelController } from "./types";
@@ -14,12 +19,11 @@ interface RecommendationModalProps {
 export const RecommendationModal = ({ controller }: RecommendationModalProps) => {
   const { styles } = usePaperTradingStyles();
   const recommendation = controller.recommendation;
-  const hasSuggestedTrade =
-    recommendation?.recommendedAction === "Buy" ||
-    recommendation?.recommendedAction === "Sell";
+  const suggestedTradeAction = getActionableRecommendationAction(recommendation);
+  const hasSuggestedTrade = hasSuggestedRecommendationTrade(recommendation);
 
   const renderSuggestedTrade = () => {
-    if (!recommendation || recommendation.recommendedAction === "Hold") {
+    if (!recommendation || !suggestedTradeAction) {
       return (
         <Typography.Paragraph className={styles.helper}>
           Stand aside for now. The model does not see a clean buy or sell
@@ -33,7 +37,7 @@ export const RecommendationModal = ({ controller }: RecommendationModalProps) =>
         <div className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Action</span>
           <span className={styles.summaryValue}>
-            {recommendation.recommendedAction} BTCUSDT
+            {suggestedTradeAction} BTCUSDT
           </span>
         </div>
         <div className={styles.summaryCard}>
@@ -90,11 +94,15 @@ export const RecommendationModal = ({ controller }: RecommendationModalProps) =>
             type="primary"
             danger={recommendation?.riskLevel === "High"}
             disabled={controller.isRecommendationLoading || !hasSuggestedTrade}
-            loading={controller.isBusy || controller.isRecommendationLoading}
+            loading={getFintexButtonLoading(
+              controller.isBusy || controller.isRecommendationLoading,
+            )}
             className={styles.actionButton}
             onClick={() => void controller.handlePlaceSuggestedTrade()}
           >
-            {hasSuggestedTrade ? "Place suggested trade" : "No trade suggested"}
+            {hasSuggestedTrade && suggestedTradeAction
+              ? `Place suggested ${suggestedTradeAction.toLowerCase()}`
+              : "No trade suggested"}
           </Button>
         </Space>
       }
@@ -107,7 +115,7 @@ export const RecommendationModal = ({ controller }: RecommendationModalProps) =>
             title="Building your recommendation"
             description="Fintex is checking the technical setup, refreshing cached headlines if needed, and blending the market read with the latest Bitcoin and US Dollar news."
           />
-          <Skeleton active paragraph={{ rows: 8 }} />
+          <FintexLoader variant="panel" label="Loading" minHeight={240} />
         </div>
       ) : controller.recommendationRequestError ? (
         <Alert type="warning" showIcon title={controller.recommendationRequestError} />

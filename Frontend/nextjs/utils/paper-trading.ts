@@ -95,6 +95,20 @@ const getMarketVerdict = (
   return "Hold";
 };
 
+const getSuggestedTradeAction = (
+  value: unknown,
+): PaperTradeRecommendation["suggestedTradeAction"] => {
+  if (value === 2 || value === "Buy") {
+    return "Buy";
+  }
+
+  if (value === 3 || value === "Sell") {
+    return "Sell";
+  }
+
+  return null;
+};
+
 const normalizeEconomicCalendarEvent = (
   value: Record<string, unknown>,
 ): EconomicCalendarEvent => ({
@@ -234,68 +248,102 @@ export const normalizePaperTradeExecutionResult = (
 
 export const normalizePaperTradeRecommendation = (
   value: Record<string, unknown>,
-): PaperTradeRecommendation => ({
-  recommendedAction: getMarketVerdict(
+): PaperTradeRecommendation => {
+  const recommendedAction = getMarketVerdict(
     value.recommendedAction ?? value.RecommendedAction,
-  ),
-  riskScore: getNumber(value.riskScore ?? value.RiskScore),
-  riskLevel: getPaperTradeRiskLevel(value.riskLevel ?? value.RiskLevel),
-  headline: getString(value.headline ?? value.Headline),
-  summary: getString(value.summary ?? value.Summary),
-  referencePrice: getNumber(value.referencePrice ?? value.ReferencePrice),
-  spread: getNullableNumber(value.spread ?? value.Spread),
-  spreadPercent: getNullableNumber(value.spreadPercent ?? value.SpreadPercent),
-  suggestedStopLoss: getNullableNumber(value.suggestedStopLoss ?? value.SuggestedStopLoss),
-  suggestedTakeProfit: getNullableNumber(value.suggestedTakeProfit ?? value.SuggestedTakeProfit),
-  confidenceScore: getNullableNumber(value.confidenceScore ?? value.ConfidenceScore),
-  trendScore: getNullableNumber(value.trendScore ?? value.TrendScore),
-  newsSummary: getString(value.newsSummary ?? value.NewsSummary),
-  newsImpactScore: getNullableNumber(value.newsImpactScore ?? value.NewsImpactScore),
-  newsSentiment: getString(value.newsSentiment ?? value.NewsSentiment),
-  newsRecommendedAction:
-    value.newsRecommendedAction == null && value.NewsRecommendedAction == null
-      ? null
-      : getMarketVerdict(
-          value.newsRecommendedAction ?? value.NewsRecommendedAction,
-        ),
-  newsLastUpdatedAt:
-    value.newsLastUpdatedAt == null && value.NewsLastUpdatedAt == null
-      ? null
-      : getString(value.newsLastUpdatedAt ?? value.NewsLastUpdatedAt),
-  newsHeadlines: Array.isArray(value.newsHeadlines ?? value.NewsHeadlines)
-    ? ((value.newsHeadlines ?? value.NewsHeadlines) as unknown[]).map((item) =>
-        getString(item),
-      )
-    : [],
-  economicCalendarSummary: getString(
-    value.economicCalendarSummary ?? value.EconomicCalendarSummary,
-  ),
-  economicCalendarRiskScore: getNullableNumber(
-    value.economicCalendarRiskScore ?? value.EconomicCalendarRiskScore,
-  ),
-  economicCalendarNextEventAtUtc:
-    value.economicCalendarNextEventAtUtc == null &&
-    value.EconomicCalendarNextEventAtUtc == null
-      ? null
-      : getString(
-          value.economicCalendarNextEventAtUtc ??
-            value.EconomicCalendarNextEventAtUtc,
-        ),
-  economicCalendarEvents: Array.isArray(
-    value.economicCalendarEvents ?? value.EconomicCalendarEvents,
-  )
-    ? (
-        (value.economicCalendarEvents ??
-          value.EconomicCalendarEvents) as Record<string, unknown>[]
-      ).map(normalizeEconomicCalendarEvent)
-    : [],
-  reasons: Array.isArray(value.reasons ?? value.Reasons)
-    ? ((value.reasons ?? value.Reasons) as unknown[]).map((item) => getString(item))
-    : [],
-  suggestions: Array.isArray(value.suggestions ?? value.Suggestions)
-    ? ((value.suggestions ?? value.Suggestions) as unknown[]).map((item) => getString(item))
-    : [],
-});
+  );
+  const suggestedTradeAction =
+    getSuggestedTradeAction(value.suggestedTradeAction ?? value.SuggestedTradeAction) ??
+    (recommendedAction === "Hold" ? null : recommendedAction);
+
+  return {
+    recommendedAction,
+    suggestedTradeAction,
+    riskScore: getNumber(value.riskScore ?? value.RiskScore),
+    riskLevel: getPaperTradeRiskLevel(value.riskLevel ?? value.RiskLevel),
+    headline: getString(value.headline ?? value.Headline),
+    summary: getString(value.summary ?? value.Summary),
+    referencePrice: getNumber(value.referencePrice ?? value.ReferencePrice),
+    spread: getNullableNumber(value.spread ?? value.Spread),
+    spreadPercent: getNullableNumber(value.spreadPercent ?? value.SpreadPercent),
+    suggestedStopLoss: getNullableNumber(value.suggestedStopLoss ?? value.SuggestedStopLoss),
+    suggestedTakeProfit: getNullableNumber(value.suggestedTakeProfit ?? value.SuggestedTakeProfit),
+    confidenceScore: getNullableNumber(value.confidenceScore ?? value.ConfidenceScore),
+    trendScore: getNullableNumber(value.trendScore ?? value.TrendScore),
+    newsSummary: getString(value.newsSummary ?? value.NewsSummary),
+    newsImpactScore: getNullableNumber(value.newsImpactScore ?? value.NewsImpactScore),
+    newsSentiment: getString(value.newsSentiment ?? value.NewsSentiment),
+    newsRecommendedAction:
+      value.newsRecommendedAction == null && value.NewsRecommendedAction == null
+        ? null
+        : getMarketVerdict(
+            value.newsRecommendedAction ?? value.NewsRecommendedAction,
+          ),
+    newsLastUpdatedAt:
+      value.newsLastUpdatedAt == null && value.NewsLastUpdatedAt == null
+        ? null
+        : getString(value.newsLastUpdatedAt ?? value.NewsLastUpdatedAt),
+    newsHeadlines: Array.isArray(value.newsHeadlines ?? value.NewsHeadlines)
+      ? ((value.newsHeadlines ?? value.NewsHeadlines) as unknown[]).map((item) =>
+          getString(item),
+        )
+      : [],
+    economicCalendarSummary: getString(
+      value.economicCalendarSummary ?? value.EconomicCalendarSummary,
+    ),
+    economicCalendarRiskScore: getNullableNumber(
+      value.economicCalendarRiskScore ?? value.EconomicCalendarRiskScore,
+    ),
+    economicCalendarNextEventAtUtc:
+      value.economicCalendarNextEventAtUtc == null &&
+      value.EconomicCalendarNextEventAtUtc == null
+        ? null
+        : getString(
+            value.economicCalendarNextEventAtUtc ??
+              value.EconomicCalendarNextEventAtUtc,
+          ),
+    economicCalendarEvents: Array.isArray(
+      value.economicCalendarEvents ?? value.EconomicCalendarEvents,
+    )
+      ? (
+          (value.economicCalendarEvents ??
+            value.EconomicCalendarEvents) as Record<string, unknown>[]
+        ).map(normalizeEconomicCalendarEvent)
+      : [],
+    reasons: Array.isArray(value.reasons ?? value.Reasons)
+      ? ((value.reasons ?? value.Reasons) as unknown[]).map((item) => getString(item))
+      : [],
+    suggestions: Array.isArray(value.suggestions ?? value.Suggestions)
+      ? ((value.suggestions ?? value.Suggestions) as unknown[]).map((item) => getString(item))
+      : [],
+  };
+};
+
+export const getActionableRecommendationAction = (
+  recommendation:
+    | Pick<PaperTradeRecommendation, "recommendedAction" | "suggestedTradeAction">
+    | null
+    | undefined,
+): PaperTradeRecommendation["suggestedTradeAction"] => {
+  if (!recommendation) {
+    return null;
+  }
+
+  if (recommendation.suggestedTradeAction) {
+    return recommendation.suggestedTradeAction;
+  }
+
+  return recommendation.recommendedAction === "Hold"
+    ? null
+    : recommendation.recommendedAction;
+};
+
+export const hasSuggestedRecommendationTrade = (
+  recommendation:
+    | Pick<PaperTradeRecommendation, "recommendedAction" | "suggestedTradeAction">
+    | null
+    | undefined,
+) => getActionableRecommendationAction(recommendation) != null;
 
 export const normalizePaperTradingSnapshot = (
   value: Record<string, unknown>,

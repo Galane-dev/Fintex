@@ -54,8 +54,8 @@ namespace Fintex.Investments.PaperTrading
             {
                 Account = markedToMarket.Account,
                 Positions = markedToMarket.Positions,
-                RecentOrders = ObjectMapper.Map<List<PaperOrderDto>>(orders.Take(20).ToList()),
-                RecentFills = ObjectMapper.Map<List<PaperTradeFillDto>>(fills.Take(20).ToList())
+                RecentOrders = ObjectMapper.Map<List<PaperOrderDto>>(orders),
+                RecentFills = ObjectMapper.Map<List<PaperTradeFillDto>>(fills)
             };
         }
 

@@ -14,10 +14,10 @@ export const useStyles = createStyles(({ css, token }) => ({
     flex-direction: column;
   `,
   header: css`
-    padding: 18px 20px 14px;
+    padding: 14px 18px 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     display: grid;
-    gap: 14px;
+    gap: 10px;
   `,
   symbolRow: css`
     display: flex;
@@ -58,10 +58,18 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   actionButton: css`
     min-width: 132px;
-    height: 40px;
+    height: 38px;
     border-radius: 8px !important;
     font-weight: 600;
     box-shadow: none;
+  `,
+  iconActionButton: css`
+    min-width: 38px;
+    width: 38px;
+    padding-inline: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   `,
   buyButton: css`
     background: #4be16b !important;
@@ -88,7 +96,7 @@ export const useStyles = createStyles(({ css, token }) => ({
   canvasWrap: css`
     position: relative;
     flex: 1;
-    min-height: 560px;
+    min-height: 600px;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)),
       #050607;

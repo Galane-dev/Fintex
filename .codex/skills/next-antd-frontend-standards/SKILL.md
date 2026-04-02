@@ -10,6 +10,13 @@ description: Build or refactor frontend features in this repo's Next.js app usin
 Follow these standards whenever building or refactoring frontend code in the `nextjs` app.
 Prefer clean, modular, composable React code that matches the repo's existing `antd` and `antd-style` patterns.
 
+## Mandatory Issue Tracking
+
+- Create a GitHub issue for every user request before or alongside implementation.
+- Use the user-specified bug/feature template whenever one applies.
+- If issue creation tooling is unavailable, provide a ready-to-paste issue body and clearly state the blocker.
+- Include the created issue number/link in the delivery update.
+
 ## Core stack
 
 - Use Next.js conventions and preserve the app's existing structure.

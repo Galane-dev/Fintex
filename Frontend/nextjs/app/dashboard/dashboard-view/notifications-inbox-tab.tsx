@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Empty, List, Space, Tag, Typography } from "antd";
+import { FintexLoaderMark, getFintexButtonLoading } from "@/components/fintex-loader";
 import type { NotificationItem } from "@/types/notifications";
 
 type NotificationsInboxTabProps = {
@@ -39,7 +40,11 @@ export function NotificationsInboxTab({
         <Typography.Text type="secondary">
           Triggered alerts, trade fills, automation runs, and goal updates arrive here.
         </Typography.Text>
-        <Button onClick={() => onMarkAllAsRead()} disabled={unreadCount === 0}>
+        <Button
+          onClick={() => onMarkAllAsRead()}
+          disabled={unreadCount === 0}
+          loading={getFintexButtonLoading(isLoading && unreadCount > 0)}
+        >
           Mark all as read
         </Button>
       </Space>
@@ -48,7 +53,7 @@ export function NotificationsInboxTab({
         <Empty description="No notifications yet." />
       ) : (
         <List
-          loading={isLoading}
+          loading={isLoading ? { indicator: <FintexLoaderMark size={18} /> } : false}
           dataSource={notifications}
           renderItem={(item) => (
             <List.Item
