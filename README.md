@@ -18,6 +18,9 @@ The project is opinionated around a very specific user journey:
 
 This README is intentionally exhaustive. It is designed to be the main technical and product reference for the repository.
 
+Domain Model: https://drive.google.com/file/d/1bY37iGFGhMYyN-WLzoLy-kBOuDzqLFCG/view?usp=sharing
+Figma: https://www.figma.com/design/97l0hfe6ogeRn0mjbfe4Gy/Untitled?node-id=0-1&t=WBQRCyiSmq0Lw9oz-1
+
 ---
 
 ## Table of Contents
