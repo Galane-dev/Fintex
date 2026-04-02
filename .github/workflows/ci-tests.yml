@@ -1,0 +1,83 @@
+name: CI - Tests
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+    paths:
+      - "Backend/aspnet-core/**"
+      - "Frontend/nextjs/**"
+      - ".github/workflows/**"
+  pull_request:
+    branches:
+      - master
+      - dev
+    paths:
+      - "Backend/aspnet-core/**"
+      - "Frontend/nextjs/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TEST_PROJECT_PATH: Backend/aspnet-core/test/Fintex.Tests/Fintex.Tests.csproj
+  FRONTEND_PATH: Frontend/nextjs
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Run Backend Tests
+        run: dotnet test ${{ env.TEST_PROJECT_PATH }} --configuration Release --verbosity normal
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Frontend Tests
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm run test:e2e
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: |
+            ${{ env.FRONTEND_PATH }}/playwright-report
+            ${{ env.FRONTEND_PATH }}/test-results
+          if-no-files-found: ignore

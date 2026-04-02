@@ -1,27 +1,24 @@
-name: Backend CI/CD to Azure App Service
+name: CD - Deploy Backend To Azure App Service
 
 on:
-  push:
-    branches:
-      - master
-      - dev
-    paths:
-      - "Backend/aspnet-core/**"
-      - ".github/workflows/backend-azure-appservice.yml"
-  pull_request:
-    branches:
-      - master
-      - dev
-    paths:
-      - "Backend/aspnet-core/**"
-      - ".github/workflows/backend-azure-appservice.yml"
+  workflow_run:
+    workflows:
+      - "CI - Tests"
+    types:
+      - completed
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit SHA to deploy"
+        required: false
+        default: "master"
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: backend-azure-${{ github.ref }}
+  group: backend-azure-deploy-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -30,12 +27,74 @@ env:
   PUBLISH_OUTPUT: Backend/aspnet-core/publish
 
 jobs:
-  build:
-    name: Build Backend
+  deploy:
+    name: Deploy To Azure App Service
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        (github.event.workflow_run.head_branch == 'master' || github.event.workflow_run.head_branch == 'dev')
+      )
+    environment: production
     steps:
-      - name: Checkout
+      - name: Verify Build Lint Tests Workflow Statuses
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const requiredWorkflows = ["CI - Build", "CI - Lint", "CI - Tests"];
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = context.payload.workflow_run.head_branch;
+            const headSha = context.payload.workflow_run.head_sha;
+
+            const workflowList = await github.paginate(
+              github.rest.actions.listRepoWorkflows,
+              { owner, repo, per_page: 100 }
+            );
+
+            for (const requiredName of requiredWorkflows) {
+              const workflow = workflowList.find((item) => item.name === requiredName);
+              if (!workflow) {
+                core.setFailed(`Missing required workflow '${requiredName}'.`);
+                return;
+              }
+
+              const runs = await github.paginate(
+                github.rest.actions.listWorkflowRuns,
+                { owner, repo, workflow_id: workflow.id, branch, per_page: 50 }
+              );
+
+              const matchedRun = runs.find((run) => run.head_sha === headSha && run.event === "push");
+              if (!matchedRun) {
+                core.setFailed(`No '${requiredName}' run found for ${headSha}.`);
+                return;
+              }
+
+              if (matchedRun.status !== "completed" || matchedRun.conclusion !== "success") {
+                core.setFailed(
+                  `'${requiredName}' is ${matchedRun.status}/${matchedRun.conclusion} for ${headSha}.`
+                );
+                return;
+              }
+            }
+
+            core.info(`All required workflows passed for ${headSha}.`);
+
+      - name: Checkout Workflow Run Commit
+        if: github.event_name == 'workflow_run'
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Checkout Manual Ref
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -50,25 +109,6 @@ jobs:
 
       - name: Publish Web Host
         run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ env.PUBLISH_OUTPUT }}
-
-      - name: Upload Publish Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: fintex-backend-publish
-          path: ${{ env.PUBLISH_OUTPUT }}
-
-  deploy:
-    name: Deploy to Azure App Service
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')
-    environment: production
-    steps:
-      - name: Download Publish Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: fintex-backend-publish
-          path: ${{ env.PUBLISH_OUTPUT }}
 
       - name: Validate Azure deployment configuration
         run: |

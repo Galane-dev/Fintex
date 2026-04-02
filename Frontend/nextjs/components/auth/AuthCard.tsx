@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Checkbox, Form, Input, Space, Typography } from "antd";
 import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
-import { getFintexButtonLoading } from "@/components/fintex-loader";
+import { FintexLoader, getFintexButtonLoading } from "@/components/fintex-loader";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import type { SignInValues, SignUpValues } from "@/types/auth";
+import { getAcademyStatus } from "@/utils/academy-api";
 import { useStyles } from "./style";
 
 interface AuthCardProps {
@@ -23,29 +24,60 @@ export function AuthCard({ mode }: AuthCardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const redirectPath = searchParams.get("redirect") || ROUTES.academy;
+  const requestedRedirectPath = searchParams.get("redirect");
   const isSignIn = mode === "sign-in";
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace(redirectPath);
+  const resolvePostAuthRoute = useCallback(async () => {
+    if (requestedRedirectPath) {
+      return requestedRedirectPath;
     }
-  }, [isAuthenticated, redirectPath, router]);
+
+    try {
+      const academyStatus = await getAcademyStatus();
+      return academyStatus.hasTradeAcademyAccess ? ROUTES.dashboard : ROUTES.academy;
+    } catch {
+      return ROUTES.academy;
+    }
+  }, [requestedRedirectPath]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const navigate = async () => {
+      const destination = await resolvePostAuthRoute();
+
+      if (!isCancelled) {
+        router.replace(destination);
+      }
+    };
+
+    void navigate();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated, resolvePostAuthRoute, router]);
 
   const copy = useMemo(
     () =>
       isSignIn
         ? {
+            badge: "Secure access",
             title: "Welcome back",
-            subtitle: "Sign in to continue into your protected trading workspace.",
+            subtitle: "Sign in to continue to your protected Fintex trading workspace.",
             button: "Sign in",
             alternateLabel: "Need an account?",
             alternateRoute: ROUTES.signUp,
             alternateAction: "Create one",
           }
         : {
+            badge: "Account setup",
             title: "Create your account",
-            subtitle: "Open your FinteX workspace and start with a secure trading setup.",
+            subtitle: "Open your Fintex workspace and start with a secure trading setup.",
             button: "Create account",
             alternateLabel: "Already have an account?",
             alternateRoute: ROUTES.signIn,
@@ -64,8 +96,6 @@ export function AuthCard({ mode }: AuthCardProps) {
       } else {
         await signUp(values as SignUpValues);
       }
-
-      router.replace(redirectPath);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "We could not complete that request. Please try again.",
@@ -75,11 +105,16 @@ export function AuthCard({ mode }: AuthCardProps) {
     }
   };
 
+  if (isAuthenticated) {
+    return <FintexLoader variant="fullscreen" label="Loading" />;
+  }
+
   return (
     <div className={styles.content}>
       <Card className={styles.card}>
         <Space orientation="vertical" size="large" style={{ width: "100%" }}>
           <div>
+            <Typography.Text className={styles.overline}>{copy.badge}</Typography.Text>
             <Typography.Title level={2} className={styles.heading}>
               {copy.title}
             </Typography.Title>
@@ -92,12 +127,11 @@ export function AuthCard({ mode }: AuthCardProps) {
 
           <Form layout="vertical" requiredMark={false} onFinish={handleSubmit}>
             {!isSignIn ? (
-              <Space size="middle" style={{ display: "flex" }}>
+              <div className={styles.nameGrid}>
                 <Form.Item
                   name="firstName"
                   label="First name"
                   rules={[{ required: true, message: "Enter your first name." }]}
-                  style={{ flex: 1 }}
                 >
                   <Input prefix={<UserOutlined />} placeholder="Ada" />
                 </Form.Item>
@@ -105,11 +139,10 @@ export function AuthCard({ mode }: AuthCardProps) {
                   name="lastName"
                   label="Last name"
                   rules={[{ required: true, message: "Enter your last name." }]}
-                  style={{ flex: 1 }}
                 >
                   <Input prefix={<UserOutlined />} placeholder="Lovelace" />
                 </Form.Item>
-              </Space>
+              </div>
             ) : null}
 
             <Form.Item
@@ -128,7 +161,7 @@ export function AuthCard({ mode }: AuthCardProps) {
               label="Password"
               rules={[{ required: true, message: "Enter your password." }]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
+              <Input.Password prefix={<LockOutlined />} placeholder="********" />
             </Form.Item>
 
             {!isSignIn ? (
@@ -157,6 +190,7 @@ export function AuthCard({ mode }: AuthCardProps) {
                 type="primary"
                 block
                 loading={getFintexButtonLoading(isSubmitting)}
+                className={styles.submitButton}
               >
                 {copy.button}
               </Button>
@@ -165,7 +199,9 @@ export function AuthCard({ mode }: AuthCardProps) {
 
           <div className={styles.footerRow}>
             <Typography.Text type="secondary">{copy.alternateLabel}</Typography.Text>
-            <Link href={copy.alternateRoute}>{copy.alternateAction}</Link>
+            <Link href={copy.alternateRoute} className={styles.link}>
+              {copy.alternateAction}
+            </Link>
           </div>
         </Space>
       </Card>
