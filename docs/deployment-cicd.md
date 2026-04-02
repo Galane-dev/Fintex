@@ -23,11 +23,35 @@ Workflow file:
 
 Add these in GitHub repository settings:
 
-- `AZURE_WEBAPP_NAME`
-  - Example: `fintex`
 - `AZURE_WEBAPP_PUBLISH_PROFILE`
   - Value is the full XML from Azure App Service "Get publish profile"
 
+Recommended GitHub variable:
+
+- `AZURE_WEBAPP_NAME`
+  - Example: `fintex`
+  - Add under `Settings -> Secrets and variables -> Actions -> Variables`
+
+Alternative (if you prefer): store `AZURE_WEBAPP_NAME` as a secret instead.
+
+### Important: runtime app settings are not read from GitHub deploy secrets
+
+Deployment secrets only authenticate/publish the app. Your backend runtime configuration should be set in Azure App Service `Environment variables`.
+
+Use these Azure App Service entries (from current Fintex settings):
+
+- `ConnectionStrings__Default`
+- `Authentication__JwtBearer__SecurityKey`
+- `OpenAI__ApiKey`
+- `Notifications__Email__Username`
+- `Notifications__Email__Password`
+- `MarketData__Oanda__AccountId`
+- `MarketData__Oanda__ApiToken`
+- `MarketData__Oanda__Instruments`
+- `App__SelfUrl`
+- `App__ServerRootAddress`
+- `App__ClientRootAddress`
+- `App__CorsOrigins`
 ### How to get the publish profile
 
 1. Azure Portal -> App Service (`fintex`)
