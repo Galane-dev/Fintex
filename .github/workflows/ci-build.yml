@@ -1,0 +1,74 @@
+name: CI - Build
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+    paths:
+      - "Backend/aspnet-core/**"
+      - "Frontend/nextjs/**"
+      - ".github/workflows/**"
+  pull_request:
+    branches:
+      - master
+      - dev
+    paths:
+      - "Backend/aspnet-core/**"
+      - "Frontend/nextjs/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SOLUTION_PATH: Backend/aspnet-core/Fintex.sln
+  FRONTEND_PATH: Frontend/nextjs
+
+jobs:
+  backend-build:
+    name: Backend Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: ${{ env.FRONTEND_PATH }}
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://fintex.azurewebsites.net
+        run: npm run build
